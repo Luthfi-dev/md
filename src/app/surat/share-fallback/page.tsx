@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileDown, FileText, Edit, AlertTriangle } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { type TemplateDataToShare } from '@/types/surat';
+import { convertHtmlToWord } from '@/ai/flows/file-converter';
 
 const LOCAL_STORAGE_KEY_SURAT_COUNTER = 'suratCounter_v1';
 
@@ -104,11 +105,44 @@ export default function FillSuratPage() {
     };
 
     const handleDownload = async () => {
-        toast({
-            variant: 'destructive',
-            title: 'Fitur Dinonaktifkan',
-            description: 'Pengunduhan dinonaktifkan sementara.',
+        if (!data || !canDownload) return;
+        setIsGenerating(true);
+        
+        let docxContent = data.template;
+        Object.entries(fieldValues).forEach(([id, value]) => {
+            const placeholder = new RegExp(`{{${id}}}`, 'g');
+            docxContent = docxContent.replace(placeholder, value || `[${data.fields.find(f=>f.id===id)?.label || id}]`);
         });
+
+        const autoNumberPlaceholder = /\{\{NOMOR_SURAT_OTOMATIS\}\}/g;
+        if(autoNumberPlaceholder.test(docxContent)) {
+            const nextNumber = getNextSuratNumber();
+            docxContent = docxContent.replace(autoNumberPlaceholder, String(nextNumber).padStart(3, '0'));
+        }
+        
+        try {
+            const response = await convertHtmlToWord({
+                htmlContent: `<div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5;">${docxContent}</div>`,
+                filename: 'surat-yang-dihasilkan.docx'
+            });
+
+            if (response.docxDataUri) {
+                saveAs(response.docxDataUri, 'surat-yang-dihasilkan.docx');
+                toast({ title: 'Berhasil!', description: 'Dokumen Word sedang diunduh.' });
+            } else {
+                throw new Error(response.error || 'Gagal mengonversi file di server.');
+            }
+        } catch (error) {
+             console.error('Download Error:', error);
+             const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal.';
+             toast({
+                variant: 'destructive',
+                title: 'Gagal Mengunduh',
+                description: errorMessage,
+             });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     if (isLoading) {

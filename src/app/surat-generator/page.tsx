@@ -24,7 +24,7 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { SuratField, Template } from '@/types/surat';
+import type { SuratField, Template, TemplateDataToShare } from '@/types/surat';
 import { AdBanner } from '@/components/AdBanner';
 import { loadAppSettings, AppSettings } from '@/data/app-settings';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -244,19 +244,51 @@ export default function SuratGeneratorPage() {
     };
 
     const handleShare = () => {
-         toast({
-            variant: 'destructive',
-            title: 'Fungsi Dinonaktifkan',
-            description: 'Fitur berbagi link dinonaktifkan untuk sementara.',
-        });
+        if (!template) return;
+        
+        if (checkProFeatures(template.content)) return;
+        
+        const dataToShare: TemplateDataToShare = {
+            template: template.content,
+            fields: template.fields,
+            isPro: appSettings?.isPro || false
+        };
+
+        try {
+            const jsonString = JSON.stringify(dataToShare);
+            const base64String = btoa(encodeURIComponent(jsonString));
+            const url = `${window.location.origin}/surat/share?data=${base64String}`;
+            
+            navigator.clipboard.writeText(url);
+            toast({
+                title: 'Link Disalin!',
+                description: 'Link untuk mengisi surat telah disalin ke clipboard.',
+            });
+        } catch (error) {
+            console.error("Error creating share link:", error);
+            toast({ variant: 'destructive', title: 'Gagal Membuat Link' });
+        }
     }
     
     const handlePreview = () => {
-        toast({
-            variant: 'destructive',
-            title: 'Fungsi Dinonaktifkan',
-            description: 'Fitur pratinjau dinonaktifkan untuk sementara.',
-        });
+        if (!template) return;
+         if (checkProFeatures(template.content)) return;
+        
+        const dataToShare: TemplateDataToShare = {
+            template: template.content,
+            fields: template.fields,
+            isPro: appSettings?.isPro || false
+        };
+
+        try {
+            const jsonString = JSON.stringify(dataToShare);
+            const base64String = btoa(encodeURIComponent(jsonString));
+            const url = `/surat/share?data=${base64String}`;
+            router.push(url);
+        } catch (error) {
+             console.error("Error creating preview link:", error);
+             toast({ variant: 'destructive', title: 'Gagal Membuat Pratinjau' });
+        }
     }
   
     if (!template) {
@@ -368,8 +400,8 @@ export default function SuratGeneratorPage() {
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4">
                              <Button onClick={() => setIsSaveDialogOpen(true)} className="w-full"><Save className="mr-2 h-4 w-4" /> Simpan Template</Button>
-                             <Button onClick={handleShare} className="w-full" variant="secondary" disabled><Share2 className="mr-2 h-4 w-4" /> Salin Link (nonaktif)</Button>
-                            <Button onClick={handlePreview} className="w-full" variant="secondary" disabled><Eye className="mr-2 h-4 w-4" /> Pratinjau (nonaktif)</Button>
+                             <Button onClick={handleShare} className="w-full" variant="secondary"><Share2 className="mr-2 h-4 w-4" /> Salin Link</Button>
+                            <Button onClick={handlePreview} className="w-full" variant="secondary"><Eye className="mr-2 h-4 w-4" /> Pratinjau & Isi</Button>
                         </CardContent>
                     </Card>
                     

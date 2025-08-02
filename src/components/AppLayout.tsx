@@ -17,14 +17,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setIsClient(true);
   }, []);
 
-  // Exclude AppLayout wrapper for these specific pages
-  if (pathname.startsWith('/admin') || pathname.startsWith('/account') || pathname.startsWith('/messages') || pathname.startsWith('/surat/')) {
+  const noLayoutPages = [
+    '/admin', 
+    '/account', 
+    '/messages', 
+    '/surat/share-fallback'
+    ];
+    
+  if (noLayoutPages.some(page => pathname.startsWith(page))) {
     return <>{children}</>;
   }
   
   if (!isClient) {
-    // Render a server-side placeholder to avoid layout shifts (FOUC).
-    // This helps improve perceived performance.
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
            <Loader2 className="h-8 w-8 animate-spin" />

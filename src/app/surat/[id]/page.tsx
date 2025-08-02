@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileDown, FileText, Edit } from 'lucide-react';
 import { saveAs } from 'file-saver';
+import { convertHtmlToWord } from '@/ai/flows/file-converter';
 
 
 interface SuratField {
@@ -82,11 +83,38 @@ export default function FillSuratPage() {
     }, [data, fieldValues]);
 
     const handleDownload = async () => {
-        toast({
-            variant: 'destructive',
-            title: 'Fitur Dinonaktifkan',
-            description: 'Pengunduhan dinonaktifkan sementara.',
+        if (!data) return;
+        setIsGenerating(true);
+        
+        let docxContent = data.template;
+        Object.entries(fieldValues).forEach(([id, value]) => {
+            const placeholder = new RegExp(`{{${id}}}`, 'g');
+            docxContent = docxContent.replace(placeholder, value || `[${data.fields.find(f=>f.id===id)?.label || id}]`);
         });
+        
+        try {
+            const response = await convertHtmlToWord({
+                htmlContent: `<div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5;">${docxContent.replace(/\n/g, '<br />')}</div>`,
+                filename: 'surat-yang-dihasilkan.docx'
+            });
+
+            if (response.docxDataUri) {
+                saveAs(response.docxDataUri, 'surat-yang-dihasilkan.docx');
+                toast({ title: 'Berhasil!', description: 'Dokumen Word sedang diunduh.' });
+            } else {
+                throw new Error(response.error || 'Gagal mengonversi file di server.');
+            }
+        } catch (error) {
+             console.error('Download Error:', error);
+             const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal.';
+             toast({
+                variant: 'destructive',
+                title: 'Gagal Mengunduh',
+                description: errorMessage,
+             });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     if (isLoading) {
@@ -150,3 +178,13 @@ export default function FillSuratPage() {
         </div>
     );
 }
+
+// Fallback component for when the ID is just "share" from the old URL structure
+// This is to maintain compatibility with any old links that might be out there.
+const SharePageFallback = () => {
+    return <FillSuratPage />;
+}
+
+export { SharePageFallback as Page };
+
+    

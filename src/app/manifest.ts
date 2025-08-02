@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
  
 export default function manifest(): MetadataRoute.Manifest {
@@ -7,23 +8,23 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'A versatile utility app with daily tools.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#E0FFFF',
-    theme_color: '#3CB371',
+    background_color: '#FFFFFF',
+    theme_color: '#1D88FE',
     icons: [
       {
-        src: 'https://placehold.co/192x192.png',
+        src: '/icon-192x192.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: 'https://placehold.co/512x512.png',
+        src: '/icon-512x512.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
        {
-        src: 'https://placehold.co/512x512.png',
+        src: '/maskable_icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'

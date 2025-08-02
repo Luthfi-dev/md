@@ -21,8 +21,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     '/admin', 
     '/account', 
     '/messages', 
+    '/surat/share',
     '/surat/share-fallback'
-    ];
+  ];
     
   if (noLayoutPages.some(page => pathname.startsWith(page))) {
     return <>{children}</>;

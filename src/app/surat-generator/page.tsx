@@ -20,16 +20,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import * as docx from 'docx-preview';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { SuratField, Template } from '@/types/surat';
 import { AdBanner } from '@/components/AdBanner';
 import { loadAppSettings, AppSettings } from '@/data/app-settings';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const LOCAL_STORAGE_KEY_TEMPLATES = 'surat_templates_v1';
@@ -156,22 +154,7 @@ export default function SuratGeneratorPage() {
     const handleDocxUpload = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && (file.name.endsWith('.docx'))) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const arrayBuffer = event.target?.result;
-                if(arrayBuffer instanceof ArrayBuffer) {
-                    const tempDiv = document.createElement('div');
-                    await docx.renderAsync(arrayBuffer, tempDiv);
-                    tempDiv.querySelectorAll('style').forEach(styleEl => styleEl.remove());
-                    
-                    const newContent = tempDiv.innerHTML;
-                    if(editorRef.current) {
-                        editorRef.current.innerHTML = newContent;
-                        handleContentUpdate();
-                    }
-                }
-            };
-            reader.readAsArrayBuffer(file);
+            toast({ variant: 'destructive', title: 'Fungsi Dinonaktifkan', description: 'Impor dari .docx dinonaktifkan sementara.'})
         } else if(file) {
             toast({ variant: "destructive", title: "Format Salah", description: "Hanya file .docx yang didukung."})
         }
@@ -261,37 +244,19 @@ export default function SuratGeneratorPage() {
     };
 
     const handleShare = () => {
-        if (!template) return;
-        handleContentUpdate();
-        const currentContent = editorRef.current?.innerHTML || '';
-
-        if (checkProFeatures(currentContent)) return;
-
-        const dataToEncode = {
-            template: currentContent,
-            fields: template.fields,
-            isPro: appSettings?.isPro || false
-        };
-        const encodedData = btoa(encodeURIComponent(JSON.stringify(dataToEncode)));
-        const url = `${window.location.origin}/surat/share?data=${encodedData}`;
-
-        navigator.clipboard.writeText(url);
-        toast({ title: 'Link Disalin!', description: 'Link surat telah disalin ke clipboard.' });
+         toast({
+            variant: 'destructive',
+            title: 'Fungsi Dinonaktifkan',
+            description: 'Fitur berbagi link dinonaktifkan untuk sementara.',
+        });
     }
     
     const handlePreview = () => {
-        if (!template) return;
-        handleContentUpdate();
-        const currentContent = editorRef.current?.innerHTML || '';
-        
-        const dataToEncode = {
-            template: currentContent,
-            fields: template.fields,
-            isPro: appSettings?.isPro || false
-        };
-        const encodedData = btoa(encodeURIComponent(JSON.stringify(dataToEncode)));
-        const url = `/surat/share?data=${encodedData}`;
-        window.open(url, '_blank');
+        toast({
+            variant: 'destructive',
+            title: 'Fungsi Dinonaktifkan',
+            description: 'Fitur pratinjau dinonaktifkan untuk sementara.',
+        });
     }
   
     if (!template) {
@@ -403,8 +368,8 @@ export default function SuratGeneratorPage() {
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4">
                              <Button onClick={() => setIsSaveDialogOpen(true)} className="w-full"><Save className="mr-2 h-4 w-4" /> Simpan Template</Button>
-                             <Button onClick={handleShare} className="w-full" variant="secondary"><Share2 className="mr-2 h-4 w-4" /> Salin Link</Button>
-                            <Button onClick={handlePreview} className="w-full" variant="secondary"><Eye className="mr-2 h-4 w-4" /> Pratinjau & Isi</Button>
+                             <Button onClick={handleShare} className="w-full" variant="secondary" disabled><Share2 className="mr-2 h-4 w-4" /> Salin Link (nonaktif)</Button>
+                            <Button onClick={handlePreview} className="w-full" variant="secondary" disabled><Eye className="mr-2 h-4 w-4" /> Pratinjau (nonaktif)</Button>
                         </CardContent>
                     </Card>
                     

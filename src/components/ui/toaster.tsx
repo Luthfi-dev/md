@@ -117,25 +117,36 @@ export function Toaster() {
         const isDestructive = props.variant === 'destructive';
         const Icon = isDestructive ? AnimatedErrorIcon : AnimatedCheckIcon;
 
-        if (!props.open) {
-          return null;
+        // Use a state to control the overlay visibility
+        const [isOverlayVisible, setIsOverlayVisible] = React.useState(props.open);
+        
+        const handleDismiss = () => {
+          setIsOverlayVisible(false);
+          dismiss(id);
         }
 
+        React.useEffect(() => {
+          setIsOverlayVisible(props.open);
+        }, [props.open]);
+
+
         return (
-          <ToastViewport key={id}>
-            <ToastOverlay onClick={() => dismiss(id)} />
-            <Toast {...props} className="z-[101]">
-              <Icon />
-              <div className="grid gap-1">
-                {title && <ToastTitle>{title}</ToastTitle>}
-                {description && (
-                  <ToastDescription>{description}</ToastDescription>
-                )}
-              </div>
-              {action}
-              <ToastClose />
-            </Toast>
-          </ToastViewport>
+          <React.Fragment key={id}>
+            {isOverlayVisible && <ToastOverlay onClick={handleDismiss} />}
+            <ToastViewport>
+              <Toast {...props} className="z-[101]">
+                <Icon />
+                <div className="grid gap-1">
+                  {title && <ToastTitle>{title}</ToastTitle>}
+                  {description && (
+                    <ToastDescription>{description}</ToastDescription>
+                  )}
+                </div>
+                {action}
+                <ToastClose onClick={handleDismiss}/>
+              </Toast>
+            </ToastViewport>
+          </React.Fragment>
         );
       })}
     </ToastProvider>

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/hooks/use-auth';
-import { AppLayout } from '@/components/AppLayout';
+import React from 'react';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -105,9 +105,7 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
           >
-            <AppLayout>
-              {children}
-            </AppLayout>
+            {children}
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

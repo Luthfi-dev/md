@@ -105,7 +105,9 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
           >
-            <AppLayout>{children}</AppLayout>
+            <AppLayout>
+              {children}
+            </AppLayout>
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

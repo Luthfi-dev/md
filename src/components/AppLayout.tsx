@@ -18,7 +18,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Exclude AppLayout wrapper for these specific pages
-  if (pathname.startsWith('/admin') || pathname === '/login' || pathname === '/messages') {
+  if (pathname.startsWith('/admin') || pathname === '/login' || pathname.startsWith('/account') || pathname.startsWith('/messages')) {
     return <>{children}</>;
   }
   

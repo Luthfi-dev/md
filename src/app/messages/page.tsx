@@ -3,43 +3,57 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CardHeader, CardTitle } from "@/components/ui/card";
+import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Bot, User, Loader2, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { chat, ChatMessage } from "@/ai/flows/chat";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
-
-
-// Simulate fetching settings
 import assistantData from '@/data/assistant.json';
 
 const renderContent = (content: string) => {
-    const parts = content.split(/(<Link .*?<\/Link>)/g);
-    return parts.map((part, index) => {
-        const match = part.match(/<Link href="(.+?)">(.+?)<\/Link>/);
-        if (match) {
-            const href = match[1];
-            const text = match[2];
-            return <Link key={index} href={href} className="text-primary underline hover:text-primary/80">{text}</Link>;
+    // This is a placeholder for a more robust markdown-to-react renderer
+    const linkRegex = /<Link href="(.+?)">(.+?)<\/Link>/g;
+    let lastIndex = 0;
+    const parts = [];
+
+    let match;
+    while ((match = linkRegex.exec(content)) !== null) {
+        // Text before the link
+        if (match.index > lastIndex) {
+            parts.push(content.substring(lastIndex, match.index));
         }
-        // Render newlines as <br>
-        const textParts = part.split('\n').map((line, i) => (
-            <span key={i}>
-                {line}
-                {i < part.split('\n').length - 1 && <br />}
-            </span>
-        ));
-        return <span key={index}>{textParts}</span>;
+        // The link itself
+        const href = match[1];
+        const text = match[2];
+        parts.push(<Link key={match.index} href={href} className="text-primary underline hover:text-primary/80">{text}</Link>);
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Text after the last link
+    if (lastIndex < content.length) {
+        parts.push(content.substring(lastIndex));
+    }
+    
+    // Process newlines for all text parts
+    return parts.map((part, index) => {
+        if (typeof part === 'string') {
+            return part.split('\n').map((line, i) => (
+                <React.Fragment key={`${index}-${i}`}>
+                    {line}
+                    {i < part.split('\n').length - 1 && <br />}
+                </React.Fragment>
+            ));
+        }
+        return part;
     });
 };
 
 
 export default function MessagesPage() {
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<any[]>([]); // Simplified for now
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [assistantName, setAssistantName] = useState('Assistant');
@@ -49,7 +63,6 @@ export default function MessagesPage() {
     const isMobile = useIsMobile();
 
     useEffect(() => {
-        // Load assistant settings
         setAssistantName(assistantData.name);
         if (assistantData.avatarUrl) {
             setAssistantAvatar(assistantData.avatarUrl);
@@ -68,30 +81,23 @@ export default function MessagesPage() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isLoading]);
-
+    
+    // Placeholder submit handler
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
 
-        const userMessage: ChatMessage = { role: 'user', content: input };
-        const newMessages = [...messages, userMessage];
-        setMessages(newMessages);
+        const userMessage = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMessage]);
         setInput('');
         
-        setTimeout(() => scrollToBottom(), 100);
-
         setIsLoading(true);
-
-        try {
-            const aiResponse = await chat(newMessages);
+        // Simulate AI response
+        setTimeout(() => {
+            const aiResponse = { role: 'model', content: "Fungsionalitas chat dinonaktifkan untuk sementara." };
             setMessages(prev => [...prev, aiResponse]);
-        } catch (error) {
-            console.error("Error getting AI response:", error);
-            const errorMessage: ChatMessage = { role: 'model', content: "Maaf, terjadi kesalahan. Coba lagi nanti." };
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
             setIsLoading(false);
-        }
+        }, 1000);
     };
 
     return (
@@ -108,7 +114,7 @@ export default function MessagesPage() {
                 </Avatar>
                 <div>
                     <CardTitle className="font-bold text-lg">{assistantName}</CardTitle>
-                    <p className="text-sm text-muted-foreground">Online</p>
+                    <CardDescription className="text-sm text-muted-foreground">Online</CardDescription>
                 </div>
             </CardHeader>
             <div className="flex-grow p-0 overflow-hidden">
@@ -128,7 +134,7 @@ export default function MessagesPage() {
                                         ? "bg-primary text-primary-foreground rounded-br-none"
                                         : "bg-card text-card-foreground border rounded-bl-none"
                                 )}>
-                                    {renderContent(message.content)}
+                                    {message.content}
                                 </div>
                                  {message.role === 'user' && (
                                     <Avatar className="h-8 w-8">
@@ -150,6 +156,13 @@ export default function MessagesPage() {
                                 </div>
                             </div>
                         )}
+                         {messages.length === 0 && (
+                            <div className="text-center py-16 text-muted-foreground">
+                                <Bot className="mx-auto h-12 w-12 mb-4" />
+                                <p className="font-semibold">Selamat Datang!</p>
+                                <p className="text-sm">Fungsionalitas chat AI saat ini sedang dinonaktifkan.</p>
+                            </div>
+                        )}
                     </div>
                 </ScrollArea>
             </div>
@@ -158,11 +171,11 @@ export default function MessagesPage() {
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ketik pesan Anda..."
+                        placeholder="Chatting dinonaktifkan..."
                         className="flex-grow rounded-full h-12 px-5"
-                        disabled={isLoading}
+                        disabled={true}
                     />
-                    <Button type="submit" size="icon" className="rounded-full w-12 h-12" disabled={isLoading || !input.trim()}>
+                    <Button type="submit" size="icon" className="rounded-full w-12 h-12" disabled={true}>
                         <Send className="h-5 w-5" />
                     </Button>
                 </form>

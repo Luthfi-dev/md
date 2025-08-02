@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, Compass, MessageSquare, User, Notebook } from 'lucide-react';
+import { Home, Compass, User, Notebook } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -19,7 +19,6 @@ const navItems = [
   { href: "/", label: "Beranda", icon: Home },
   { href: "/explore", label: "Jelajah", icon: Compass },
   { href: "/notebook", label: "Catatan", icon: Notebook },
-  { href: "/messages", label: "Pesan", icon: MessageSquare },
   { href: "/account", label: "Akun", icon: User },
 ];
 

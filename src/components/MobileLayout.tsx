@@ -1,18 +1,19 @@
+
 'use client';
 
 import BottomNavBar from './BottomNavBar';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import React from 'react';
 
 export function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Exclude BottomNavBar for specific pages
-  const noNavPages = ['/messages', '/login', '/account'];
-  const showBottomNav = !noNavPages.includes(pathname) && !pathname.startsWith('/admin') && !pathname.startsWith('/surat/');
+  const noNavPages = ['/login', '/account', '/messages'];
+  const showBottomNav = !noNavPages.some(page => pathname.startsWith(page)) && !pathname.startsWith('/admin') && !pathname.startsWith('/surat/');
 
   return (
-    <div className="flex flex-col flex-1 h-full">
+    <div className="flex flex-col flex-1 min-h-screen">
       <main className={cn("flex-1", showBottomNav ? "pb-20" : "")}>{children}</main>
       {showBottomNav && <BottomNavBar />}
     </div>

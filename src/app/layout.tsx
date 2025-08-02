@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { PT_Sans } from 'next/font/google';
 import './globals.css';
@@ -68,14 +69,13 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${ptSans.variable}`}>
+    <html lang="id" suppressHydrationWarning className={`${ptSans.variable}`}>
       <head>
         <script
           type="application/ld+json"

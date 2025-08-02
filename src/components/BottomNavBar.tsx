@@ -38,8 +38,8 @@ const BottomNavBar = () => {
             );
           }
           
-          // Add invisible spacer for the center button
-          const spacer = index === 2 ? <div className="w-1/4 h-full"></div> : null;
+          const spacerIndex = Math.floor(navItems.length / 2);
+          const spacer = index === spacerIndex -1 ? <div className="w-1/4 h-full"></div> : null;
 
           return (
             <React.Fragment key={label}>

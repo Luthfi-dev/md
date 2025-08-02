@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { AppDefinition } from "@/app/admin/apps/page";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from "@/hooks/use-auth";
 
 // Simulate fetching data
 import appsData from '@/data/apps.json';
@@ -112,6 +113,8 @@ export default function HomePageContent() {
    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
    const { points, claimState, claimReward, refreshClaimState } = useDailyReward();
    
+   const { user, isAuthenticated } = useAuth();
+   
    const [flyingPointsVisible, setFlyingPointsVisible] = React.useState(false);
    const [startRect, setStartRect] = React.useState<DOMRect | null>(null);
 
@@ -166,8 +169,8 @@ export default function HomePageContent() {
         <header className="bg-primary text-primary-foreground p-6 pb-20 rounded-b-[40px] shadow-lg">
           <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col">
-                  <p className="opacity-80 text-sm">Selamat Datang!</p>
-                  <h1 className="text-2xl font-bold">John Doe</h1>
+                  <p className="opacity-80 text-sm">{isAuthenticated ? 'Selamat Datang!' : 'Selamat Datang, Tamu!'}</p>
+                  <h1 className="text-2xl font-bold">{isAuthenticated && user ? user.name : 'Silakan Login'}</h1>
               </div>
               <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
                 <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

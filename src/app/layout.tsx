@@ -56,7 +56,7 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  manifest: '/manifest.webmanifest',
+  manifest: '/manifest.ts',
 };
 
 export const viewport: Viewport = {
@@ -69,6 +69,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
 }
+
 
 export default function RootLayout({
   children,

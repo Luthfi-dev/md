@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Compass, User, Notebook } from "lucide-react";
 import { cn } from "@/lib/utils";
+import React from "react";
 
 const navItems = [
   { href: "/", label: "Beranda", icon: Home },
@@ -15,10 +16,6 @@ const navItems = [
 
 const BottomNavBar = () => {
   const pathname = usePathname();
-
-  if (pathname.startsWith('/admin') || pathname === '/login') {
-    return null;
-  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 bg-card z-50 shadow-[0_-8px_32px_0_rgba(0,0,0,0.05)] border-t">

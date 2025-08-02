@@ -10,7 +10,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useDailyReward } from "@/hooks/use-daily-reward";
 import { DailyRewardDialog } from "@/components/DailyRewardDialog";
 import { CountUp } from "@/components/CountUp";
@@ -110,7 +109,6 @@ export default function HomePageContent() {
    )
    const router = useRouter();
    const { theme, setTheme } = useTheme();
-   const isMobile = useIsMobile();
    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
    const { points, claimState, claimReward, refreshClaimState } = useDailyReward();
    
@@ -293,11 +291,11 @@ export default function HomePageContent() {
                                 <h3 className="font-bold leading-tight">Tips Belajar Efektif di Era Digital</h3>
                                 <p className="text-sm text-muted-foreground mt-1">Maksimalkan waktumu dengan metode yang terbukti.</p>
                             </div>
-                            {!isMobile && (
+                            
                               <Button variant="ghost" size="icon" className="rounded-full shrink-0">
                                   <ArrowRight className="w-4 h-4 text-muted-foreground"/>
                               </Button>
-                            )}
+                            
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border-0 bg-card">
@@ -307,11 +305,11 @@ export default function HomePageContent() {
                                 <h3 className="font-bold leading-tight">Teknologi dalam Pendidikan</h3>
                                 <p className="text-sm text-muted-foreground mt-1">Peran AI dan teknologi dalam proses belajar.</p>
                             </div>
-                            {!isMobile && (
+                            
                               <Button variant="ghost" size="icon" className="rounded-full shrink-0">
                                   <ArrowRight className="w-4 h-4 text-muted-foreground"/>
                               </Button>
-                            )}
+                            
                         </CardContent>
                     </Card>
                 </div>

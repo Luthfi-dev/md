@@ -7,26 +7,15 @@ import { Loader2 } from 'lucide-react';
 import { DesktopLayout } from '@/components/DesktopLayout';
 import { MobileLayout } from '@/components/MobileLayout';
 import HomePageContent from '@/components/HomePageContent';
-import { usePathname } from 'next/navigation';
+
 
 export default function Home() {
   const isMobile = useIsMobile();
-  const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  // Exclude AppLayout wrapper for these specific pages
-  const isLayoutExcluded = pathname.startsWith('/admin') || 
-                           pathname.startsWith('/account') || 
-                           pathname.startsWith('/messages') || 
-                           pathname.startsWith('/surat/');
-
-  if (isLayoutExcluded) {
-    return <HomePageContent />;
-  }
 
   if (!isClient) {
     return (

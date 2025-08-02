@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { ArrowRight, BrainCircuit, Edit, Grid3x3, Moon, Search, Sun, Gift, Star, Info, Package, FileText, ScanLine, Loader2, ChevronDown } from "lucide-react";
+import { ArrowRight, BrainCircuit, Edit, Grid3x3, Moon, Search, Sun, Gift, Star, Info, Package, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Autoplay from "embla-carousel-autoplay"
 import React, { useEffect, useState } from "react";
@@ -11,7 +11,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import { useDailyReward } from "@/hooks/use-daily-reward";
 import { DailyRewardDialog } from "@/components/DailyRewardDialog";
 import { CountUp } from "@/components/CountUp";
@@ -19,8 +18,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { AppDefinition } from "@/app/admin/apps/page";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
 
 // Simulate fetching data
 import appsData from '@/data/apps.json';
@@ -124,7 +121,6 @@ export default function HomePageContent() {
    const [isLoading, setIsLoading] = useState(true);
 
    useEffect(() => {
-        // In a real app, this will be replaced with logic to fetch admin-defined or recently-used apps.
         const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
         setMainFeatures(sortedApps);
         setIsLoading(false);
@@ -239,7 +235,7 @@ export default function HomePageContent() {
                   </div>
               ) : (
                 <>
-                  {mainFeatures.slice(0, 2).map(feature => (
+                  {mainFeatures.slice(0, 3).map(feature => (
                       <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
                   ))}
                    <CategoryCard 

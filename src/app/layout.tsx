@@ -5,8 +5,8 @@ import './globals.css';
 import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { AppLayout } from '@/components/AppLayout';
 import { AuthProvider } from '@/hooks/use-auth';
+import { AppLayout } from '@/components/AppLayout';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],

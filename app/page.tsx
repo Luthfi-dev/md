@@ -7,36 +7,45 @@ import { Loader2 } from 'lucide-react';
 import { DesktopLayout } from '@/components/DesktopLayout';
 import { MobileLayout } from '@/components/MobileLayout';
 import HomePageContent from '@/components/HomePageContent';
+import RootLayout from '@/src/app/layout';
 
+export default function Page() {
+ return (
+    <RootLayout>
+      {() => {
+        const isMobile = useIsMobile();
+        const [isClient, setIsClient] = useState(false);
 
-export default function Home() {
-  const isMobile = useIsMobile();
-  const [isClient, setIsClient] = useState(false);
+        useEffect(() => {
+          setIsClient(true);
+        }, []);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+        if (!isClient) {
+          return (
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          );
+        }
 
-  if (!isClient) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <MobileLayout>
-        <HomePageContent />
-      </MobileLayout>
-    );
+        if (isMobile) {
+ return (
+ <MobileLayout>
+              <HomePageContent />
+ </MobileLayout>
+ </RootLayout>
+ );
   }
 
   return (
-    <DesktopLayout>
-      <HomePageContent />
-    </DesktopLayout>
+ <RootLayout>
+ <DesktopLayout>
+              <HomePageContent />
+ </DesktopLayout>
+ </RootLayout>
   );
+      }}
+    </RootLayout>
+ );
 }
 

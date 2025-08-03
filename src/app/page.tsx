@@ -1,15 +1,18 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import HomePageContent from '@/components/HomePageContent';
 import { MobileLayout } from '@/components/MobileLayout';
+import { DesktopLayout } from '@/components/DesktopLayout';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 export default function Page() {
-  const [isClient, setIsClient] = React.useState(false);
+  const isMobile = useIsMobile();
+  const [isClient, setIsClient] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setIsClient(true);
   }, []);
 
@@ -21,9 +24,17 @@ export default function Page() {
     );
   }
 
-  return (
-    <MobileLayout>
+  if (isMobile) {
+    return (
+      <MobileLayout>
         <HomePageContent />
-    </MobileLayout>
+      </MobileLayout>
+    );
+  }
+
+  return (
+    <DesktopLayout>
+      <HomePageContent />
+    </DesktopLayout>
   );
 }

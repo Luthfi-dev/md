@@ -30,6 +30,11 @@ const BottomNavBar = () => {
     return href;
   }
 
+  // Hide the nav bar on admin pages
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 bg-card z-50 shadow-[0_-8px_32px_0_rgba(0,0,0,0.05)] border-t">
       <div className="flex justify-around items-center h-full max-w-lg mx-auto">
@@ -40,9 +45,9 @@ const BottomNavBar = () => {
           if (item.isCenter) {
             return (
                <div key={item.label} className="w-1/5 h-full flex justify-center items-center">
-                  <Link href={href} className="flex flex-col items-center justify-center -mt-4">
+                  <Link href={href} className="flex flex-col items-center justify-center">
                     <div className={cn(
-                      "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
+                      "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
                       isActive ? "bg-primary" : "bg-primary/80"
                     )}>
                       <item.icon className="h-7 w-7 text-primary-foreground" />

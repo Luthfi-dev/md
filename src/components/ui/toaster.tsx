@@ -122,9 +122,8 @@ function SingleToast({ toast, onDismiss }: { toast: ToasterToast, onDismiss: (id
   const isDestructive = props.variant === 'destructive';
   const Icon = isDestructive ? AnimatedErrorIcon : AnimatedCheckIcon;
 
-  // Use a state to control the overlay visibility
   const [isOverlayVisible, setIsOverlayVisible] = React.useState(props.open);
-  
+
   const handleDismiss = () => {
     setIsOverlayVisible(false);
     onDismiss(id);
@@ -134,35 +133,40 @@ function SingleToast({ toast, onDismiss }: { toast: ToasterToast, onDismiss: (id
     setIsOverlayVisible(props.open);
   }, [props.open]);
 
+  // If there's no toast to show, don't render anything
+  if (!props.open) {
+    return null;
+  }
+  
   return (
     <React.Fragment key={id}>
-      {isOverlayVisible && <ToastOverlay onClick={handleDismiss} />}
+      <ToastOverlay onClick={handleDismiss} />
       <ToastViewport>
-        <Toast {...props} className="z-[101]">
+        <Toast {...props} className="z-[101] flex-col items-center justify-center text-center p-8 gap-4">
           <Icon />
-          <div className="grid gap-1">
-            {title && <ToastTitle>{title}</ToastTitle>}
+          <div className="grid gap-2">
+            {title && <ToastTitle className="text-xl">{title}</ToastTitle>}
             {description && (
-              <ToastDescription>{description}</ToastDescription>
+              <ToastDescription className="text-base">{description}</ToastDescription>
             )}
           </div>
           {action}
-          <ToastClose onClick={handleDismiss}/>
+          <ToastClose onClick={handleDismiss} className="group-hover:opacity-100 opacity-100"/>
         </Toast>
       </ToastViewport>
     </React.Fragment>
   );
 }
 
-
 export function Toaster() {
   const { toasts, dismiss } = useToast()
 
+  // Since we are showing toasts one by one as modals, we only need to render the first one.
+  const activeToast = toasts[0];
+
   return (
     <ToastProvider>
-      {toasts.map(toast => (
-          <SingleToast key={toast.id} toast={toast} onDismiss={dismiss} />
-      ))}
+      {activeToast && <SingleToast toast={activeToast} onDismiss={dismiss} />}
     </ToastProvider>
   )
 }

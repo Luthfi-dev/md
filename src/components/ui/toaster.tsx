@@ -10,6 +10,8 @@ import {
   ToastTitle,
   ToastViewport,
   ToastOverlay,
+  type ToastProps,
+  type ToastActionElement,
 } from "@/components/ui/toast"
 import { useToast } from "@/hooks/use-toast"
 
@@ -108,48 +110,59 @@ const AnimatedErrorIcon = () => (
   </svg>
 );
 
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+function SingleToast({ toast, onDismiss }: { toast: ToasterToast, onDismiss: (id: string) => void }) {
+  const { id, title, description, action, ...props } = toast;
+  const isDestructive = props.variant === 'destructive';
+  const Icon = isDestructive ? AnimatedErrorIcon : AnimatedCheckIcon;
+
+  // Use a state to control the overlay visibility
+  const [isOverlayVisible, setIsOverlayVisible] = React.useState(props.open);
+  
+  const handleDismiss = () => {
+    setIsOverlayVisible(false);
+    onDismiss(id);
+  }
+
+  React.useEffect(() => {
+    setIsOverlayVisible(props.open);
+  }, [props.open]);
+
+  return (
+    <React.Fragment key={id}>
+      {isOverlayVisible && <ToastOverlay onClick={handleDismiss} />}
+      <ToastViewport>
+        <Toast {...props} className="z-[101]">
+          <Icon />
+          <div className="grid gap-1">
+            {title && <ToastTitle>{title}</ToastTitle>}
+            {description && (
+              <ToastDescription>{description}</ToastDescription>
+            )}
+          </div>
+          {action}
+          <ToastClose onClick={handleDismiss}/>
+        </Toast>
+      </ToastViewport>
+    </React.Fragment>
+  );
+}
+
 
 export function Toaster() {
   const { toasts, dismiss } = useToast()
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        const isDestructive = props.variant === 'destructive';
-        const Icon = isDestructive ? AnimatedErrorIcon : AnimatedCheckIcon;
-
-        // Use a state to control the overlay visibility
-        const [isOverlayVisible, setIsOverlayVisible] = React.useState(props.open);
-        
-        const handleDismiss = () => {
-          setIsOverlayVisible(false);
-          dismiss(id);
-        }
-
-        React.useEffect(() => {
-          setIsOverlayVisible(props.open);
-        }, [props.open]);
-
-
-        return (
-          <React.Fragment key={id}>
-            {isOverlayVisible && <ToastOverlay onClick={handleDismiss} />}
-            <ToastViewport>
-              <Toast {...props} className="z-[101]">
-                <Icon />
-                <div className="grid gap-1">
-                  {title && <ToastTitle>{title}</ToastTitle>}
-                  {description && (
-                    <ToastDescription>{description}</ToastDescription>
-                  )}
-                </div>
-                {action}
-                <ToastClose onClick={handleDismiss}/>
-              </Toast>
-            </ToastViewport>
-          </React.Fragment>
-        );
-      })}
+      {toasts.map(toast => (
+          <SingleToast key={toast.id} toast={toast} onDismiss={dismiss} />
+      ))}
     </ToastProvider>
   )
 }

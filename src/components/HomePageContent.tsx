@@ -103,7 +103,6 @@ const FlyingPoints = ({ isVisible, startRect }: { isVisible: boolean, startRect:
   );
 };
 
-
 export default function HomePageContent() {
    const plugin = React.useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true, stopOnMouseEnter: true })
@@ -122,8 +121,17 @@ export default function HomePageContent() {
    const [isLoading, setIsLoading] = useState(true);
 
    useEffect(() => {
+        // In a real app, this will be replaced with logic to fetch admin-defined or recently-used apps.
         const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
-        setMainFeatures(sortedApps);
+        const allAppsOption = sortedApps.find(app => app.id === 'app_all_apps');
+        const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps').slice(0, 2);
+        
+        const featuresToShow = [...otherApps];
+        if (allAppsOption) {
+            featuresToShow.push(allAppsOption);
+        }
+
+        setMainFeatures(featuresToShow);
         setIsLoading(false);
     }, []);
 
@@ -236,14 +244,9 @@ export default function HomePageContent() {
                   </div>
               ) : (
                 <>
-                  {mainFeatures.slice(0, 3).map(feature => (
+                  {mainFeatures.map(feature => (
                       <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
                   ))}
-                   <CategoryCard 
-                    href="/explore" 
-                    icon={<Grid3x3 className="text-primary"/>} 
-                    label="Semua App" 
-                  />
                 </>
               )}
             </div>
@@ -294,11 +297,9 @@ export default function HomePageContent() {
                                 <h3 className="font-bold leading-tight">Tips Belajar Efektif di Era Digital</h3>
                                 <p className="text-sm text-muted-foreground mt-1">Maksimalkan waktumu dengan metode yang terbukti.</p>
                             </div>
-                            
-                              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                                  <ArrowRight className="w-4 h-4 text-muted-foreground"/>
-                              </Button>
-                            
+                            <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+                                <ArrowRight className="w-4 h-4 text-muted-foreground"/>
+                            </Button>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border-0 bg-card">
@@ -308,11 +309,9 @@ export default function HomePageContent() {
                                 <h3 className="font-bold leading-tight">Teknologi dalam Pendidikan</h3>
                                 <p className="text-sm text-muted-foreground mt-1">Peran AI dan teknologi dalam proses belajar.</p>
                             </div>
-                            
-                              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                                  <ArrowRight className="w-4 h-4 text-muted-foreground"/>
-                              </Button>
-                            
+                            <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+                                <ArrowRight className="w-4 h-4 text-muted-foreground"/>
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>

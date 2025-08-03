@@ -7,8 +7,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/hooks/use-auth';
 import React from 'react';
-import BottomNavBar from '@/components/BottomNavBar';
-import { usePathname } from 'next/navigation';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -70,21 +68,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
 }
-
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  
-  const noNavPages = ['/login', '/account', '/messages', '/admin', '/surat/share', '/surat/share-fallback'];
-  const showBottomNav = !noNavPages.some(page => pathname.startsWith(page));
-
-  return (
-    <div className="flex flex-col flex-1 min-h-screen">
-      <main className={cn("flex-1", showBottomNav ? "pb-20" : "")}>{children}</main>
-      {showBottomNav && <BottomNavBar />}
-    </div>
-  );
-}
-
 
 export default function RootLayout({
   children,

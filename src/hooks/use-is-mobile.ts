@@ -14,12 +14,13 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     };
     
+    // Check only after the component has mounted on the client
     checkDevice();
 
     // Listen for window resize
     window.addEventListener('resize', checkDevice);
 
-    // Cleanup listener
+    // Cleanup listener on component unmount
     return () => {
       window.removeEventListener('resize', checkDevice);
     };

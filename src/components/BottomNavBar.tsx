@@ -12,8 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 const navItems = [
   { href: "/", label: "Beranda", icon: Home },
   { href: "/explore", label: "Jelajah", icon: Compass },
-  { href: "/notebook", label: "Catatan", icon: Notebook, isCenter: true },
-  { href: "/messages", label: "Asisten", icon: MessageSquare },
+  { href: "/messages", label: "Asisten", icon: MessageSquare, isCenter: true },
+  { href: "/notebook", label: "Catatan", icon: Notebook },
   { href: "/account", label: "Akun", icon: User },
 ];
 
@@ -22,8 +22,10 @@ const BottomNavBar = () => {
   const { isAuthenticated } = useAuth();
   
   const getHref = (href: string) => {
+    // If user is not authenticated and clicks the "Akun" tab,
+    // they should be directed to the page that handles login, which is /account.
     if (href === '/account' && !isAuthenticated) {
-        return '/login';
+        return '/account';
     }
     return href;
   }
@@ -38,12 +40,12 @@ const BottomNavBar = () => {
           if (item.isCenter) {
             return (
                <div key={item.label} className="w-1/5 h-full flex justify-center items-center">
-                  <Link href={href} className="flex flex-col items-center justify-center">
+                  <Link href={href} className="flex flex-col items-center justify-center -mt-4">
                     <div className={cn(
-                      "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
+                      "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
                       isActive ? "bg-primary" : "bg-primary/80"
                     )}>
-                      <item.icon className="h-6 w-6 text-primary-foreground" />
+                      <item.icon className="h-7 w-7 text-primary-foreground" />
                     </div>
                   </Link>
               </div>

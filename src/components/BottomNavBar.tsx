@@ -38,7 +38,7 @@ const BottomNavBar = () => {
           if (item.isCenter) {
             return (
                <div key={item.label} className="w-1/5 h-full flex justify-center items-center">
-                  <Link href={href} className="flex flex-col items-center justify-center -mt-4">
+                  <Link href={href} className="flex flex-col items-center justify-center">
                     <div className={cn(
                       "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
                       isActive ? "bg-primary" : "bg-primary/80"
@@ -70,3 +70,4 @@ const BottomNavBar = () => {
 };
 
 export default BottomNavBar;
+

@@ -10,6 +10,7 @@ const updateProfileSchema = z.object({
   name: z.string().min(3, "Nama harus memiliki setidaknya 3 karakter.").optional(),
   phone: z.string().optional(),
   avatar_url: z.string().nullable().optional(),
+  points: z.number().int().optional(),
 });
 
 export async function POST(request: Request) {
@@ -54,6 +55,10 @@ export async function POST(request: Request) {
                 case 'avatar_url':
                      updateFields.push('avatar_url = ?');
                      queryParams.push(value); // value can be string path or null
+                     break;
+                case 'points':
+                     updateFields.push('points = ?');
+                     queryParams.push(value);
                      break;
             }
         }

@@ -33,7 +33,7 @@ const getTodayDateString = (): string => {
 const generateGuestId = (): string => `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
 export function useDailyReward() {
-  const { user, isAuthenticated, updateUser } = useAuth();
+  const { user, isAuthenticated, updateUser, fetchWithAuth } = useAuth();
   const [points, setPoints] = useState<number>(0);
   const [claimState, setClaimState] = useState<ClaimState[]>([]);
   const { toast } = useToast();
@@ -132,22 +132,37 @@ export function useDailyReward() {
         return false;
     }
 
-    const newPoints = data.points + REWARD_AMOUNT;
+    const newPoints = (data.points ?? 0) + REWARD_AMOUNT;
     const newTimestamps = { ...data.lastClaimTimestamps, [todayIndex]: todayStr };
     
     const newData: StoredRewardData = { ...data, points: newPoints, lastClaimTimestamps: newTimestamps };
     
     saveData(newData);
     setPoints(newPoints);
+    
     if(isAuthenticated) {
+        // Update local context immediately for responsiveness
         updateUser({ points: newPoints });
+
+        // Persist to the database in the background
+        try {
+            await fetchWithAuth('/api/user/update', {
+                method: 'POST',
+                body: JSON.stringify({ points: newPoints })
+            });
+        } catch (error) {
+            console.error("Failed to update points on server:", error);
+            // Optionally handle error, e.g., revert local state or show a warning
+            toast({ variant: "destructive", title: 'Gagal Sinkronisasi', description: 'Gagal menyimpan poin ke server. Mohon periksa koneksi Anda.' });
+        }
     }
+
     updateClaimState();
     
     toast({ title: 'Klaim Berhasil!', description: `Selamat! Anda mendapatkan ${REWARD_AMOUNT} Coin. Sampai jumpa besok!` });
     return true;
 
-  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, updateUser]);
+  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, updateUser, fetchWithAuth]);
   
   const refreshClaimState = () => {
     updateClaimState();

@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils';
 export function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  const noNavPages = ['/login', '/account', '/messages'];
+  // Only hide nav bar on very specific pages now
+  const noNavPages = ['/login'];
   const showBottomNav = !noNavPages.some(page => pathname.startsWith(page)) && !pathname.startsWith('/admin') && !pathname.startsWith('/surat/');
 
   return (

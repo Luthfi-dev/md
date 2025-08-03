@@ -7,7 +7,6 @@ import { Loader2 } from 'lucide-react';
 import { DesktopLayout } from '@/components/DesktopLayout';
 import { MobileLayout } from '@/components/MobileLayout';
 import HomePageContent from '@/components/HomePageContent';
-import RootLayout from '@/src/app/layout';
 
 export default function Page() {
  const isMobile = useIsMobile();

@@ -9,8 +9,9 @@ import { cn } from '@/lib/utils';
 export function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Only hide nav bar on login and admin pages.
-  const showBottomNav = !pathname.startsWith('/login') && !pathname.startsWith('/admin');
+  // Hide nav bar only on the exact login page and admin pages.
+  // The nav bar should now appear on `/account/profile`, `/account/edit-profile` etc.
+  const showBottomNav = pathname !== '/account' && !pathname.startsWith('/admin');
 
   return (
     <div className="flex flex-col flex-1 min-h-screen">

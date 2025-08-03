@@ -64,13 +64,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const router = useRouter();
 
     const logout = useCallback(async () => {
+        setIsLoading(true);
         setUser(null);
         setAccessToken(null);
         setIsAuthenticated(false);
         if (typeof window !== 'undefined') {
             localStorage.removeItem('userRewardState'); // Clear user-specific reward state
         }
-        await fetch('/api/auth/logout', { method: 'POST' });
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (error) {
+            console.error("Logout fetch failed:", error);
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
     const silentRefresh = useCallback(async () => {
@@ -81,8 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = await res.json();
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
-                const decodedUser: User = jwtDecode(data.accessToken);
-                setUser(decodedUser);
+                setUser(data.user); // The refresh endpoint now returns the full user object
                 setIsAuthenticated(true);
                 return data.accessToken;
             }
@@ -127,14 +133,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedToken = getAccessToken();
         if (storedToken) {
             if (!isTokenExpired(storedToken)) {
-                setAccessToken(storedToken);
+                // Token is valid, decode and set user.
                 const decodedUser: User = jwtDecode(storedToken);
                 setUser(decodedUser);
                 setIsAuthenticated(true);
             } else {
+                // Token is expired, attempt a silent refresh.
                 await silentRefresh();
             }
         } else {
+            // No token, user is not authenticated.
             setIsAuthenticated(false);
         }
     }, [silentRefresh]);

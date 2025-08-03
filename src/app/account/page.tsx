@@ -37,6 +37,7 @@ export default function AccountPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // If auth state is confirmed and user is authenticated, redirect to profile
     if (isAuthenticated && user) {
         router.push('/account/profile');
     }
@@ -55,12 +56,10 @@ export default function AccountPage() {
     try {
         if (isLogin) {
             const result = await login(email, password);
-            if (result.success) {
-                 toast({ title: 'Login Berhasil!', description: result.message });
-                router.push('/account/profile');
-            } else {
+            if (!result.success) {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
+            // The useEffect above will handle successful redirect
         } else {
             const fingerprint = getBrowserFingerprint();
             const guestData = localStorage.getItem('guestRewardState_v3');
@@ -69,12 +68,8 @@ export default function AccountPage() {
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
                 // Automatically log in the user after successful registration
-                const loginResult = await login(email, password);
-                if (loginResult.success) {
-                    router.push('/account/profile');
-                } else {
-                    setIsLogin(true); // Switch to login form if auto-login fails
-                }
+                await login(email, password);
+                // The useEffect will then handle the redirect
             } else {
                  toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
@@ -90,6 +85,8 @@ export default function AccountPage() {
     }
   };
   
+  // While checking auth state, show a loading screen.
+  // This prevents the login form from flashing for already logged-in users.
   if (isAuthenticated === undefined) {
     return (
       <div className="flex h-screen items-center justify-center">

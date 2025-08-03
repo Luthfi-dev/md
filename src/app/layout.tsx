@@ -1,4 +1,6 @@
 
+'use client';
+
 import type { Metadata, Viewport } from 'next';
 import { PT_Sans } from 'next/font/google';
 import './globals.css';
@@ -6,7 +8,11 @@ import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/hooks/use-auth';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileLayout } from '@/components/MobileLayout';
+import { DesktopLayout } from '@/components/DesktopLayout';
+import { Loader2 } from 'lucide-react';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -15,6 +21,9 @@ const ptSans = PT_Sans({
   display: 'swap',
 });
 
+// Metadata and viewport can be exported from a client component but will be treated as static.
+// See: https://nextjs.org/docs/app/building-your-application/routing/layouts-and-templates#exporting-metadata-from-a-client-component
+/*
 export const metadata: Metadata = {
   title: {
     default: 'All-in-One Toolkit: Aplikasi Cerdas untuk Kebutuhan Harian Anda',
@@ -68,6 +77,30 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
 }
+*/
+
+const AppLayout = ({ children }: { children: React.ReactNode }) => {
+  const isMobile = useIsMobile();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return <MobileLayout>{children}</MobileLayout>;
+  }
+
+  return <DesktopLayout>{children}</DesktopLayout>;
+}
 
 export default function RootLayout({
   children,
@@ -77,6 +110,9 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning className={`${ptSans.variable}`}>
       <head>
+        <title>All-in-One Toolkit</title>
+        <meta name="description" content="Satu aplikasi untuk semua kebutuhan Anda: konverter file, scanner, kalkulator, dan banyak lagi." />
+        <link rel="manifest" href="/manifest.json" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -105,7 +141,9 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
           >
-            {children}
+            <AppLayout>
+              {children}
+            </AppLayout>
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

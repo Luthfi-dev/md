@@ -18,7 +18,7 @@ import type { AppDefinition } from "@/app/admin/apps/page";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Simulate fetching data
 import appsData from '@/data/apps.json';
@@ -265,18 +265,18 @@ export default function HomePageContent() {
               onMouseEnter={plugin.current.stop}
               onMouseLeave={plugin.current.reset}
             >
-              <CarouselContent className="-ml-2">
-                <CarouselItem className="basis-11/12 md:basis-1/2 pl-2">
+              <CarouselContent className="-ml-4">
+                <CarouselItem className="basis-4/5 md:basis-1/2 pl-4">
                   <div className="p-1 h-36">
                     <DailyQuizCard />
                   </div>
                 </CarouselItem>
-                <CarouselItem className="basis-11/12 md:basis-1/2 pl-2">
+                <CarouselItem className="basis-4/5 md:basis-1/2 pl-4">
                   <div className="p-1 h-36">
                   <LatihanSoalCard />
                   </div>
                 </CarouselItem>
-                <CarouselItem className="basis-11/12 md:basis-1/2 pl-2">
+                <CarouselItem className="basis-4/5 md:basis-1/2 pl-4">
                   <div className="p-1 h-36">
                     <DailyQuizCard />
                   </div>

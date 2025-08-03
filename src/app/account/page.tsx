@@ -19,12 +19,11 @@ const getBrowserFingerprint = () => {
   
   const data = `${userAgent}|${language}|${platform}|${hardwareConcurrency}|${deviceMemory}|${screenResolution}|${timezone}`;
   
-  // Simple hash function (not cryptographically secure, but good enough for a fingerprint)
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     const char = data.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   return hash.toString();
 };
@@ -45,46 +44,39 @@ export default function AccountPage() {
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
+    setLoadingMessage(isLogin ? "Lagi cek data kamu, tunggu ya..." : "Tunggu sebentar, aku lagi daftarin data kamu nih...");
+    
     const formData = new FormData(event.currentTarget);
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const repeatPassword = formData.get("repeatPassword") as string;
     
-    setLoadingMessage(isLogin ? "Lagi cek data kamu, tunggu ya..." : "Tunggu sebentar, aku lagi daftarin data kamu nih...");
-    
     try {
         if (isLogin) {
             const result = await login(email, password);
             if (result.success) {
-                 toast({
-                    title: 'Login Berhasil!',
-                    description: result.message,
-                });
+                 toast({ title: 'Login Berhasil!', description: result.message });
                 router.push('/account/profile');
             } else {
-                toast({
-                    variant: 'destructive',
-                    title: 'Login Gagal',
-                    description: result.message || 'Terjadi kesalahan.',
-                });
+                toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
         } else {
             const fingerprint = getBrowserFingerprint();
-            const result = await register({name, email, password, repeatPassword, fingerprint});
+            const guestData = localStorage.getItem('guestRewardState_v3');
+            const result = await register({name, email, password, repeatPassword, fingerprint, guestData});
+
             if (result.success) {
-                toast({
-                    title: 'Registrasi Berhasil!',
-                    description: result.message,
-                });
-                setIsLogin(true);
+                toast({ title: 'Registrasi Berhasil!', description: result.message });
+                // Automatically log in the user after successful registration
+                const loginResult = await login(email, password);
+                if (loginResult.success) {
+                    router.push('/account/profile');
+                } else {
+                    setIsLogin(true); // Switch to login form if auto-login fails
+                }
             } else {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Registrasi Gagal',
-                    description: result.message || 'Terjadi kesalahan.',
-                });
+                 toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
         }
     } catch(error) {

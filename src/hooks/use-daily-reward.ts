@@ -2,10 +2,13 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from './use-toast';
+import { useAuth } from './use-auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 const REWARD_AMOUNT = 50;
 const TOTAL_DAYS = 7;
-const LOCAL_STORAGE_KEY_REWARD = 'dailyRewardState_v2';
+const GUEST_STORAGE_KEY = 'guestRewardState_v3'; // Encrypted
+const USER_STORAGE_KEY_PREFIX = 'userRewardState_'; // Plaintext, user-specific
 
 export interface ClaimState {
   isClaimed: boolean;
@@ -16,45 +19,83 @@ export interface ClaimState {
 interface StoredRewardData {
   points: number;
   lastClaimTimestamps: { [dayIndex: number]: string }; // 'YYYY-MM-DD'
+  guestId?: string; // For guests
 }
 
-const getDayIndex = (date: Date) => {
+const getDayIndex = (date: Date): number => {
     return (date.getDay() + 6) % 7; // Monday = 0, Sunday = 6
 }
 
-const getTodayDateString = () => {
+const getTodayDateString = (): string => {
     return new Date().toISOString().split('T')[0];
 }
 
+const generateGuestId = (): string => `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
 export function useDailyReward() {
+  const { user, isAuthenticated, updateUser } = useAuth();
   const [points, setPoints] = useState<number>(0);
   const [claimState, setClaimState] = useState<ClaimState[]>([]);
   const { toast } = useToast();
 
+  const getStorageKey = useCallback(() => {
+    if (isAuthenticated && user) {
+        return `${USER_STORAGE_KEY_PREFIX}${user.id}`;
+    }
+    return GUEST_STORAGE_KEY;
+  }, [isAuthenticated, user]);
+
   const loadData = useCallback((): StoredRewardData => {
+    if (typeof window === 'undefined') return { points: 0, lastClaimTimestamps: {} };
+    
+    const key = getStorageKey();
+
     try {
-      const storedDataRaw = window.localStorage.getItem(LOCAL_STORAGE_KEY_REWARD);
+      const storedDataRaw = window.localStorage.getItem(key);
       if (storedDataRaw) {
-        const data: StoredRewardData = JSON.parse(storedDataRaw);
-        // Basic validation in case stored data is malformed
+        let data: StoredRewardData;
+        // GUEST data is encrypted, USER data is not
+        if (!isAuthenticated) {
+            data = JSON.parse(decrypt(storedDataRaw));
+        } else {
+            data = JSON.parse(storedDataRaw);
+        }
+
         if (data && typeof data.points === 'number' && typeof data.lastClaimTimestamps === 'object') {
            setPoints(data.points);
            return data;
         }
       }
     } catch (error) {
-      console.error("Failed to load or parse daily reward data from localStorage", error);
+      console.error(`Failed to load or parse reward data from localStorage for key ${key}`, error);
     }
-    // Default initial data if nothing is stored or data is invalid
-    const defaultData: StoredRewardData = { points: 1250, lastClaimTimestamps: {} };
-     try {
-        window.localStorage.setItem(LOCAL_STORAGE_KEY_REWARD, JSON.stringify(defaultData));
-    } catch(e) {
-        console.error("Failed to set default reward data", e)
-    }
+
+    // Default initial data
+    const defaultData: StoredRewardData = isAuthenticated 
+        ? { points: user?.points || 0, lastClaimTimestamps: {} }
+        : { points: 100, lastClaimTimestamps: {}, guestId: generateGuestId() };
+    
     setPoints(defaultData.points);
     return defaultData;
-  }, []);
+  }, [getStorageKey, isAuthenticated, user]);
+
+  const saveData = useCallback((data: StoredRewardData) => {
+    if (typeof window === 'undefined') return;
+    const key = getStorageKey();
+    try {
+        if (!isAuthenticated) {
+            // Encrypt guest data
+            const encryptedData = encrypt(JSON.stringify(data));
+            window.localStorage.setItem(key, encryptedData);
+        } else {
+            // Save user data as plaintext (or could be sent to API)
+            window.localStorage.setItem(key, JSON.stringify(data));
+        }
+    } catch (e) {
+        console.error("Failed to save reward data", e);
+    }
+  }, [getStorageKey, isAuthenticated]);
+
 
   const updateClaimState = useCallback(() => {
     const data = loadData();
@@ -63,16 +104,10 @@ export function useDailyReward() {
 
     const newClaimState = Array.from({ length: TOTAL_DAYS }, (_, i) => {
       const isToday = i === todayIndex;
-      // A day is claimed if the last claim timestamp for that day is today's date.
       const isClaimed = data.lastClaimTimestamps[i] === todayStr;
-      // A day is claimable only if it's today AND it hasn't been claimed yet.
       const isClaimable = isToday && !isClaimed;
 
-      return {
-        isClaimed,
-        isClaimable,
-        isToday,
-      };
+      return { isClaimed, isClaimable, isToday };
     });
     setClaimState(newClaimState);
   }, [loadData]);
@@ -80,60 +115,39 @@ export function useDailyReward() {
 
   useEffect(() => {
     updateClaimState();
-  }, [updateClaimState]);
+  }, [updateClaimState, isAuthenticated, user]);
 
   const claimReward = useCallback(async (dayIndex: number): Promise<boolean> => {
     const data = loadData();
     const todayIndex = getDayIndex(new Date());
 
     if (dayIndex !== todayIndex) {
-        toast({ 
-            variant: "destructive", 
-            title: 'Klaim Gagal', 
-            description: 'Anda hanya dapat mengklaim hadiah untuk hari ini.' 
-        });
+        toast({ variant: "destructive", title: 'Klaim Gagal', description: 'Anda hanya dapat mengklaim hadiah untuk hari ini.' });
         return false;
     }
 
     const todayStr = getTodayDateString();
     if (data.lastClaimTimestamps[todayIndex] === todayStr) {
-        toast({ 
-            variant: 'destructive',
-            title: 'Sudah Diklaim', 
-            description: 'Anda sudah mengklaim hadiah untuk hari ini.' 
-        });
+        toast({ variant: 'destructive', title: 'Sudah Diklaim', description: 'Anda sudah mengklaim hadiah untuk hari ini.' });
         return false;
     }
 
-    try {
-      const newPoints = data.points + REWARD_AMOUNT;
-      const newTimestamps = { ...data.lastClaimTimestamps, [todayIndex]: todayStr };
-      
-      const newData: StoredRewardData = {
-        points: newPoints,
-        lastClaimTimestamps: newTimestamps,
-      };
-      
-      window.localStorage.setItem(LOCAL_STORAGE_KEY_REWARD, JSON.stringify(newData));
-      setPoints(newPoints);
-      updateClaimState(); // Refresh UI state after claiming
-      
-      toast({
-          title: 'Klaim Berhasil!',
-          description: `Selamat! Anda mendapatkan ${REWARD_AMOUNT} Coin. Sampai jumpa besok!`,
-      });
-      return true;
-
-    } catch (error) {
-        console.error("Failed to save to localStorage", error);
-        toast({
-            variant: 'destructive',
-            title: 'Gagal Menyimpan',
-            description: 'Tidak dapat menyimpan progres klaim Coin Anda.'
-        });
-        return false;
+    const newPoints = data.points + REWARD_AMOUNT;
+    const newTimestamps = { ...data.lastClaimTimestamps, [todayIndex]: todayStr };
+    
+    const newData: StoredRewardData = { ...data, points: newPoints, lastClaimTimestamps: newTimestamps };
+    
+    saveData(newData);
+    setPoints(newPoints);
+    if(isAuthenticated) {
+        updateUser({ points: newPoints });
     }
-  }, [loadData, toast, updateClaimState]);
+    updateClaimState();
+    
+    toast({ title: 'Klaim Berhasil!', description: `Selamat! Anda mendapatkan ${REWARD_AMOUNT} Coin. Sampai jumpa besok!` });
+    return true;
+
+  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, updateUser]);
   
   const refreshClaimState = () => {
     updateClaimState();

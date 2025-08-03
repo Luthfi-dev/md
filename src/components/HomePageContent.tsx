@@ -112,9 +112,8 @@ export default function HomePageContent() {
    const { theme, setTheme } = useTheme();
    const isMobile = useIsMobile();
    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-   const { points, claimState, claimReward, refreshClaimState } = useDailyReward();
-   
    const { user, isAuthenticated } = useAuth();
+   const { points: rewardPoints, claimState, claimReward, refreshClaimState } = useDailyReward();
    
    const [flyingPointsVisible, setFlyingPointsVisible] = React.useState(false);
    const [startRect, setStartRect] = React.useState<DOMRect | null>(null);
@@ -122,8 +121,10 @@ export default function HomePageContent() {
    const [mainFeatures, setMainFeatures] = useState<AppDefinition[]>([]);
    const [isLoading, setIsLoading] = useState(true);
 
+   // Determine which points to display (user's or guest's)
+   const displayPoints = isAuthenticated && user ? user.points : rewardPoints;
+
    useEffect(() => {
-        // In a real app, this will be replaced with logic to fetch admin-defined or recently-used apps.
         const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
         const allAppsOption = sortedApps.find(app => app.id === 'app_all_apps');
         const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps').slice(0, 2);
@@ -215,7 +216,7 @@ export default function HomePageContent() {
                     </Popover>
                   </div>
                   <div className="text-2xl font-bold">
-                    <CountUp end={points} />
+                    <CountUp end={displayPoints ?? 0} />
                   </div>
               </div>
               <Button variant="secondary" className="bg-white/90 hover:bg-white text-primary rounded-full font-bold" onClick={() => onOpenChange(true) }>
@@ -265,18 +266,18 @@ export default function HomePageContent() {
               onMouseEnter={plugin.current.stop}
               onMouseLeave={plugin.current.reset}
             >
-              <CarouselContent className="-ml-2">
-                <CarouselItem className="basis-4/5 md:basis-1/2 pl-2">
+              <CarouselContent className="-ml-2 basis-11/12">
+                <CarouselItem className="pl-2">
                   <div className="p-1 h-36">
                     <DailyQuizCard />
                   </div>
                 </CarouselItem>
-                <CarouselItem className="basis-4/5 md:basis-1/2 pl-2">
+                <CarouselItem className="pl-2">
                   <div className="p-1 h-36">
                   <LatihanSoalCard />
                   </div>
                 </CarouselItem>
-                <CarouselItem className="basis-4/5 md:basis-1/2 pl-2">
+                <CarouselItem className="pl-2">
                   <div className="p-1 h-36">
                     <DailyQuizCard />
                   </div>

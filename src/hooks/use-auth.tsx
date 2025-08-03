@@ -19,11 +19,11 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean | undefined;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<{success: boolean, message: string}>;
+    login: (email: string, password: string) => Promise<{success: boolean, message: string, user?: User}>;
     register: (data: any) => Promise<{success: boolean, message: string}>;
     logout: () => Promise<void>;
     fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
-    updateUser: (newUser: User) => void;
+    updateUser: (newUser: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,6 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setAccessToken(null);
         setIsAuthenticated(false);
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('userRewardState'); // Clear user-specific reward state
+        }
         await fetch('/api/auth/logout', { method: 'POST' });
     }, []);
 
@@ -99,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            logout(); // Force logout if no token is available after refresh attempt
+            await logout(); // Ensure clean state
             router.push('/account'); // Redirect to login
             throw new Error('Not authenticated');
         }
@@ -151,9 +154,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = await res.json();
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
-                const decodedUser: User = jwtDecode(data.accessToken);
-                setUser(decodedUser);
+                setUser(data.user);
                 setIsAuthenticated(true);
+                 // Clean up guest data after successful login
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('guestRewardState_v3');
+                }
             }
             return data;
         } finally {
@@ -175,18 +181,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
     
-    const updateUser = (newUser: User) => {
-        setUser(newUser);
-        // Regenerate token with new user data to keep session consistent
-        // This is a client-side update for immediate UI changes.
-        // The real token will be updated on the next refresh.
-        const currentToken = getAccessToken();
-        if(currentToken) {
-            const decoded: any = jwtDecode(currentToken);
-            const updatedPayload = { ...decoded, ...newUser };
-            // Note: This does not generate a new valid JWT, it's just for state consistency.
-            // The next fetchWithAuth will handle getting a new valid token if needed.
-        }
+    const updateUser = (newUser: Partial<User>) => {
+        setUser(prevUser => {
+            if (!prevUser) return null;
+            const updatedUser = { ...prevUser, ...newUser };
+            
+            // To keep the session token updated, we'd ideally get a new token from the server
+            // But for immediate UI consistency, we can update the client-side user object.
+            // The `fetchWithAuth` flow will handle refreshing the token if it expires.
+            
+            return updatedUser;
+        });
     }
 
     return (

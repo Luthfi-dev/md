@@ -1,4 +1,6 @@
 
+'use client';
+
 import { NextResponse, type NextRequest } from 'next/server';
 import { hashPassword } from '@/lib/auth-utils';
 import { z } from 'zod';
@@ -64,10 +66,12 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password);
     const referralCode = generateReferralCode();
+    const encryptedPoints = encrypt(String(initialPoints));
+
 
     const [userResult] = await connection.execute<ResultSetHeader>(
       'INSERT INTO users (name, email, password, role_id, referral_code, browser_fingerprint, points) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name, email, hashedPassword, ROLE_ID_USER, referralCode, fingerprint, initialPoints]
+      [name, email, hashedPassword, ROLE_ID_USER, referralCode, fingerprint, encryptedPoints]
     );
 
     const newUserId = userResult.insertId;

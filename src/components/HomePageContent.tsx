@@ -228,7 +228,7 @@ export default function HomePageContent() {
         
         <main className="flex-1 flex flex-col -mt-10 z-10">
           <div className="w-full px-6">
-              <form className="relative mb-8" onSubmit={handleSearch}>
+              <form className="relative" onSubmit={handleSearch}>
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     name="search"
@@ -239,8 +239,8 @@ export default function HomePageContent() {
               </form>
           </div>
 
-          <section id="features" className="mb-8 px-6">
-            <div className="flex justify-around items-start gap-y-4 gap-x-2 bg-card p-4 rounded-2xl shadow-md">
+          <section id="features" className="my-4 px-6">
+            <div className="flex justify-around items-start gap-y-4 gap-x-2">
               {isLoading ? (
                   <div className="col-span-4 flex justify-center items-center h-20 w-full">
                       <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -255,7 +255,7 @@ export default function HomePageContent() {
             </div>
           </section>
 
-          <section id="interactive-cards" className="mb-8 w-full">
+          <section id="interactive-cards" className="mb-4 w-full">
             <Carousel
               opts={{
                 align: "center",

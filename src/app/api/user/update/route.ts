@@ -58,7 +58,7 @@ export async function POST(request: Request) {
                      break;
                 case 'points':
                      updateFields.push('points = ?');
-                     queryParams.push(value);
+                     queryParams.push(encrypt(String(value)));
                      break;
             }
         }
@@ -72,7 +72,8 @@ export async function POST(request: Request) {
        }
        const currentUser = currentRows[0];
        const decryptedPhone = currentUser.phone_number ? decrypt(currentUser.phone_number) : undefined;
-       const userForToken = { ...currentUser, phone: decryptedPhone };
+       const decryptedPoints = currentUser.points ? parseInt(decrypt(currentUser.points), 10) : 0;
+       const userForToken = { ...currentUser, phone: decryptedPhone, points: decryptedPoints };
 
        return NextResponse.json({ success: true, message: 'Tidak ada data untuk diperbarui.', user: userForToken });
     }
@@ -101,6 +102,8 @@ export async function POST(request: Request) {
 
     const updatedUserDb = rows[0];
     const decryptedPhone = updatedUserDb.phone_number ? decrypt(updatedUserDb.phone_number) : undefined;
+    const decryptedPoints = updatedUserDb.points ? parseInt(decrypt(updatedUserDb.points), 10) : 0;
+
 
     const updatedUserForToken = {
         id: updatedUserDb.id,
@@ -109,7 +112,7 @@ export async function POST(request: Request) {
         role: updatedUserDb.role_id,
         avatar: updatedUserDb.avatar_url,
         phone: decryptedPhone,
-        points: updatedUserDb.points,
+        points: decryptedPoints,
         referralCode: updatedUserDb.referral_code
     };
 

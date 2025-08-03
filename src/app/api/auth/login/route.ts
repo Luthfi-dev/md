@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
     );
 
     const decryptedPhone = user.phone_number ? decrypt(user.phone_number) : undefined;
+    const decryptedPoints = user.points ? parseInt(decrypt(user.points), 10) : 0;
+
 
     const userForToken: UserForToken = {
         id: user.id,
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
         role: user.role_id,
         avatar: user.avatar_url,
         phone: decryptedPhone,
-        points: user.points,
+        points: decryptedPoints,
         referralCode: user.referral_code
     };
     

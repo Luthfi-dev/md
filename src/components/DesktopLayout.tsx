@@ -83,6 +83,12 @@ function DesktopSidebar() {
 }
 
 export function DesktopLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const noLayoutPages = ['/admin', '/login', '/account', '/messages', '/surat/share', '/surat/share-fallback'];
+  if (noLayoutPages.some(page => pathname.startsWith(page))) {
+    return <>{children}</>;
+  }
+
   return (
     // 'hidden' by default, 'md:flex' for medium screens and up
     <div className="hidden md:flex min-h-screen w-full">

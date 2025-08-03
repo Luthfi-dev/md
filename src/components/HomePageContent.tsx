@@ -32,7 +32,7 @@ const getIcon = (iconName: string): React.ReactNode => {
 };
 
 const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: string, href: string }) => (
-  <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 w-20 text-center">
+  <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 text-center">
     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-white shadow-md`}>
       {icon}
     </div>
@@ -126,11 +126,14 @@ export default function HomePageContent() {
 
    useEffect(() => {
         const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
+        // Get the "All Apps" definition and remove it from the list for now
         const allAppsOption = sortedApps.find(app => app.id === 'app_all_apps');
-        const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps').slice(0, 2);
+        const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps');
         
-        const featuresToShow = [...otherApps];
+        // Take the first 5 other apps
+        const featuresToShow = otherApps.slice(0, 5);
         if (allAppsOption) {
+            // Add "All Apps" as the 6th item
             featuresToShow.push(allAppsOption);
         }
 
@@ -240,9 +243,9 @@ export default function HomePageContent() {
           </div>
 
           <section id="features" className="my-4 px-6">
-            <div className="flex justify-around items-start gap-y-4 gap-x-2">
+            <div className="grid grid-cols-3 gap-y-4 gap-x-2">
               {isLoading ? (
-                  <div className="col-span-4 flex justify-center items-center h-20 w-full">
+                  <div className="col-span-3 flex justify-center items-center h-24 w-full">
                       <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   </div>
               ) : (

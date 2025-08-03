@@ -7,6 +7,7 @@ import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 // A simple function to generate a browser fingerprint
 const getBrowserFingerprint = () => {
@@ -32,6 +33,7 @@ const getBrowserFingerprint = () => {
 export default function AccountPage() {
   const [isLogin, setIsLogin] = useState(true);
   const { isLoading, login, register, isAuthenticated, user } = useAuth();
+  const [loadingMessage, setLoadingMessage] = useState('');
   const { toast } = useToast();
   const router = useRouter();
 
@@ -49,6 +51,8 @@ export default function AccountPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const repeatPassword = formData.get("repeatPassword") as string;
+    
+    setLoadingMessage(isLogin ? "Lagi cek data kamu, tunggu ya..." : "Tunggu sebentar, aku lagi daftarin data kamu nih...");
     
     try {
         if (isLogin) {
@@ -89,6 +93,8 @@ export default function AccountPage() {
           title: 'Error',
           description: error instanceof Error ? error.message : 'Tidak dapat terhubung ke server.',
         });
+    } finally {
+        setLoadingMessage('');
     }
   };
   
@@ -101,62 +107,61 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-primary/5 via-background to-background">
-      <div className="flex-grow flex items-center justify-center p-4">
-        <div className="w-full max-w-md mx-auto">
-          <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold font-headline text-foreground tracking-tight">
-              {isLogin ? "Selamat Datang" : "Buat Akun"}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {isLogin ? "Masuk untuk melanjutkan" : "Mulai perjalananmu bersama kami"}
-            </p>
-          </div>
+    <>
+      <LoadingOverlay isLoading={isLoading} message={loadingMessage} />
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-primary/5 via-background to-background">
+        <div className="flex-grow flex items-center justify-center p-4">
+          <div className="w-full max-w-md mx-auto">
+            <div className="text-center mb-10">
+              <h1 className="text-4xl font-bold font-headline text-foreground tracking-tight">
+                {isLogin ? "Selamat Datang" : "Buat Akun"}
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                {isLogin ? "Masuk untuk melanjutkan" : "Mulai perjalananmu bersama kami"}
+              </p>
+            </div>
 
-          <div className="bg-card p-8 rounded-2xl shadow-xl">
-            <form onSubmit={handleFormSubmit} className="space-y-6">
-              {!isLogin && (
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input id="name" name="name" type="text" placeholder="Nama Lengkap" className="pl-10 h-12 rounded-full" required />
-                </div>
-              )}
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="email" name="email" type="email" placeholder="m@example.com" required className="pl-10 h-12 rounded-full" />
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
-              </div>
-              {!isLogin && (
-                 <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input id="repeatPassword" name="repeatPassword" type="password" required placeholder="Ulangi Kata Sandi" className="pl-10 h-12 rounded-full" />
-                </div>
-              )}
-              
-              <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-lg font-bold group" disabled={isLoading}>
-                {isLoading ? <Loader2 className="animate-spin" /> : (
-                  <>
-                    {isLogin ? "Masuk" : "Daftar"}
-                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </>
+            <div className="bg-card p-8 rounded-2xl shadow-xl">
+              <form onSubmit={handleFormSubmit} className="space-y-6">
+                {!isLogin && (
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input id="name" name="name" type="text" placeholder="Nama Lengkap" className="pl-10 h-12 rounded-full" required />
+                  </div>
                 )}
-              </Button>
-            </form>
-          </div>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input id="email" name="email" type="email" placeholder="m@example.com" required className="pl-10 h-12 rounded-full" />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
+                </div>
+                {!isLogin && (
+                  <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input id="repeatPassword" name="repeatPassword" type="password" required placeholder="Ulangi Kata Sandi" className="pl-10 h-12 rounded-full" />
+                  </div>
+                )}
+                
+                <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-lg font-bold group" disabled={isLoading}>
+                  {isLogin ? "Masuk" : "Daftar"}
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </form>
+            </div>
 
-          <div className="text-center mt-8">
-            <p className="text-muted-foreground">
-              {isLogin ? "Belum punya akun?" : "Sudah punya akun?"}{' '}
-              <button onClick={() => setIsLogin(!isLogin)} className="font-semibold text-primary hover:underline" disabled={isLoading}>
-                {isLogin ? "Daftar sekarang" : "Masuk"}
-              </button>
-            </p>
+            <div className="text-center mt-8">
+              <p className="text-muted-foreground">
+                {isLogin ? "Belum punya akun?" : "Sudah punya akun?"}{' '}
+                <button onClick={() => setIsLogin(!isLogin)} className="font-semibold text-primary hover:underline" disabled={isLoading}>
+                  {isLogin ? "Daftar sekarang" : "Masuk"}
+                </button>
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

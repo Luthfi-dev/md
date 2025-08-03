@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useRef, useEffect, FormEvent } from "react";
+import React, { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,9 +9,10 @@ import { Send, Bot, User, Loader2, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
+import { chat, type ChatMessage } from '@/ai/flows/chat';
 
 const renderContent = (content: string) => {
     // This is a placeholder for a more robust markdown-to-react renderer
@@ -53,7 +54,7 @@ const renderContent = (content: string) => {
 
 
 export default function MessagesPage() {
-    const [messages, setMessages] = useState<any[]>([]); // Simplified for now
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [assistantName, setAssistantName] = useState('Assistant');
@@ -82,22 +83,30 @@ export default function MessagesPage() {
         scrollToBottom();
     }, [messages, isLoading]);
     
-    // Placeholder submit handler
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
 
-        const userMessage = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMessage]);
+        const userMessage: ChatMessage = { role: 'user', content: input };
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
         setInput('');
         
         setIsLoading(true);
-        // Simulate AI response
-        setTimeout(() => {
-            const aiResponse = { role: 'model', content: "Fungsionalitas chat dinonaktifkan untuk sementara." };
+
+        try {
+            const aiResponse = await chat(newMessages);
             setMessages(prev => [...prev, aiResponse]);
+        } catch (error) {
+             console.error("Chat error:", error);
+             const errorMessage: ChatMessage = {
+                role: 'model',
+                content: "Waduh, ada sedikit gangguan di koneksiku. Coba tanya lagi ya."
+             };
+             setMessages(prev => [...prev, errorMessage]);
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     return (
@@ -134,7 +143,7 @@ export default function MessagesPage() {
                                         ? "bg-primary text-primary-foreground rounded-br-none"
                                         : "bg-card text-card-foreground border rounded-bl-none"
                                 )}>
-                                    {message.content}
+                                    {renderContent(message.content)}
                                 </div>
                                  {message.role === 'user' && (
                                     <Avatar className="h-8 w-8">
@@ -156,11 +165,11 @@ export default function MessagesPage() {
                                 </div>
                             </div>
                         )}
-                         {messages.length === 0 && (
+                         {messages.length === 0 && !isLoading && (
                             <div className="text-center py-16 text-muted-foreground">
                                 <Bot className="mx-auto h-12 w-12 mb-4" />
                                 <p className="font-semibold">Selamat Datang!</p>
-                                <p className="text-sm">Fungsionalitas chat AI saat ini sedang dinonaktifkan.</p>
+                                <p className="text-sm">Tanyakan apa saja kepada {assistantName}.</p>
                             </div>
                         )}
                     </div>
@@ -171,12 +180,12 @@ export default function MessagesPage() {
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Chatting dinonaktifkan..."
+                        placeholder={`Ketik pesan untuk ${assistantName}...`}
                         className="flex-grow rounded-full h-12 px-5"
-                        disabled={true}
+                        disabled={isLoading}
                     />
-                    <Button type="submit" size="icon" className="rounded-full w-12 h-12" disabled={true}>
-                        <Send className="h-5 w-5" />
+                    <Button type="submit" size="icon" className="rounded-full w-12 h-12" disabled={isLoading || !input.trim()}>
+                       {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                 </form>
             </div>

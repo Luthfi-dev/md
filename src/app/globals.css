@@ -92,26 +92,6 @@ body {
   overflow-x: auto;
 }
 
-.custom-nav {
-  position: relative;
-  background: white;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-}
-.custom-nav::before {
-  content: '';
-  position: absolute;
-  top: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 40px;
-  border-bottom-left-radius: 40px;
-  border-bottom-right-radius: 40px;
-  background: transparent;
-  box-shadow: 0 20px 0 0 white;
-}
-
 .custom-tooltip {
   @apply absolute right-full top-1/2 -translate-y-1/2 mr-3;
   @apply bg-primary text-primary-foreground text-xs font-semibold;

@@ -46,12 +46,12 @@ const BottomNavBar = () => {
             {leftItems.map(renderNavItem)}
          </div>
          <div className="w-1/5 h-full flex justify-center items-center">
-             <Link href={centerItem.href} className="flex flex-col items-center justify-center -mt-6">
+             <Link href={centerItem.href} className="flex flex-col items-center justify-center">
                 <div className={cn(
-                    "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
+                    "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-md",
                     pathname.startsWith(centerItem.href) ? "bg-primary" : "bg-primary/80"
                 )}>
-                    <centerItem.icon className="h-7 w-7 text-primary-foreground" />
+                    <centerItem.icon className="h-6 w-6 text-primary-foreground" />
                 </div>
             </Link>
          </div>

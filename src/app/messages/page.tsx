@@ -9,7 +9,7 @@ import { Send, Bot, User, Loader2, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
 import { chat, type ChatMessage } from '@/ai/flows/chat';
@@ -110,73 +110,75 @@ export default function MessagesPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-background">
-             <CardHeader className="flex flex-row items-center gap-3 border-b bg-card z-10 shrink-0">
-                 {isMobile && (
-                    <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
-                        <ArrowLeft />
-                    </Button>
-                 )}
-                 <Avatar>
-                    <AvatarImage src={assistantAvatar} alt={assistantName} />
-                    <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
-                </Avatar>
-                <div>
-                    <CardTitle className="font-bold text-lg">{assistantName}</CardTitle>
-                    <CardDescription className="text-sm text-muted-foreground">Online</CardDescription>
-                </div>
-            </CardHeader>
-            <div className="flex-grow p-0 overflow-hidden">
-                <ScrollArea className="h-full" viewportRef={viewportRef}>
-                    <div className="space-y-6 p-4">
-                        {messages.map((message, index) => (
-                            <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
-                                {message.role === 'model' && (
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={assistantAvatar} alt={assistantName} />
-                                        <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
-                                    </Avatar>
-                                )}
-                                <div className={cn(
-                                    "max-w-[75%] rounded-2xl px-4 py-2 text-sm",
-                                    message.role === 'user'
-                                        ? "bg-primary text-primary-foreground rounded-br-none"
-                                        : "bg-card text-card-foreground border rounded-bl-none"
-                                )}>
-                                    {renderContent(message.content)}
-                                </div>
-                                 {message.role === 'user' && (
-                                    <Avatar className="h-8 w-8">
-                                         <AvatarFallback><User /></AvatarFallback>
-                                    </Avatar>
-                                )}
-                            </div>
-                        ))}
-                        {isLoading && (
-                             <div className="flex items-end gap-2 justify-start">
-                                 <Avatar className="h-8 w-8">
+        <div className="relative h-full">
+             <header className="fixed top-0 left-0 right-0 z-10">
+                <CardHeader className="flex flex-row items-center gap-3 border-b bg-card">
+                    {isMobile && (
+                        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                            <ArrowLeft />
+                        </Button>
+                    )}
+                    <Avatar>
+                        <AvatarImage src={assistantAvatar} alt={assistantName} />
+                        <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <CardTitle className="font-bold text-lg">{assistantName}</CardTitle>
+                        <CardDescription className="text-sm text-muted-foreground">Online</CardDescription>
+                    </div>
+                </CardHeader>
+             </header>
+
+            <ScrollArea className="h-full pt-20 pb-24 md:pb-28" viewportRef={viewportRef}>
+                <div className="space-y-6 p-4">
+                    {messages.map((message, index) => (
+                        <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
+                            {message.role === 'model' && (
+                                <Avatar className="h-8 w-8">
                                     <AvatarImage src={assistantAvatar} alt={assistantName} />
                                     <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
                                 </Avatar>
-                                <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1">
-                                    <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '0ms'}}></span>
-                                    <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '200ms'}}></span>
-                                    <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '400ms'}}></span>
-                                </div>
+                            )}
+                            <div className={cn(
+                                "max-w-[75%] rounded-2xl px-4 py-2 text-sm",
+                                message.role === 'user'
+                                    ? "bg-primary text-primary-foreground rounded-br-none"
+                                    : "bg-card text-card-foreground border rounded-bl-none"
+                            )}>
+                                {renderContent(message.content)}
                             </div>
-                        )}
-                         {messages.length === 0 && !isLoading && (
-                            <div className="text-center py-16 text-muted-foreground">
-                                <Bot className="mx-auto h-12 w-12 mb-4" />
-                                <p className="font-semibold">Selamat Datang!</p>
-                                <p className="text-sm">Tanyakan apa saja kepada {assistantName}.</p>
+                                {message.role === 'user' && (
+                                <Avatar className="h-8 w-8">
+                                        <AvatarFallback><User /></AvatarFallback>
+                                </Avatar>
+                            )}
+                        </div>
+                    ))}
+                    {isLoading && (
+                            <div className="flex items-end gap-2 justify-start">
+                                <Avatar className="h-8 w-8">
+                                <AvatarImage src={assistantAvatar} alt={assistantName} />
+                                <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
+                            </Avatar>
+                            <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '0ms'}}></span>
+                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '200ms'}}></span>
+                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '400ms'}}></span>
                             </div>
-                        )}
-                    </div>
-                </ScrollArea>
-            </div>
-            <div className="p-4 border-t bg-card shrink-0">
-                <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
+                        </div>
+                    )}
+                        {messages.length === 0 && !isLoading && (
+                        <div className="text-center py-16 text-muted-foreground">
+                            <Bot className="mx-auto h-12 w-12 mb-4" />
+                            <p className="font-semibold">Selamat Datang!</p>
+                            <p className="text-sm">Tanyakan apa saja kepada {assistantName}.</p>
+                        </div>
+                    )}
+                </div>
+            </ScrollArea>
+           
+            <footer className={cn("fixed bottom-0 left-0 right-0 z-10 p-4 border-t bg-card", isMobile && 'bottom-16')}>
+                <form onSubmit={handleSubmit} className="flex w-full items-center gap-2 max-w-4xl mx-auto">
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -185,10 +187,10 @@ export default function MessagesPage() {
                         disabled={isLoading}
                     />
                     <Button type="submit" size="icon" className="rounded-full w-12 h-12" disabled={isLoading || !input.trim()}>
-                       {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                 </form>
-            </div>
+            </footer>
         </div>
     );
 }

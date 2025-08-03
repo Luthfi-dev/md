@@ -18,6 +18,7 @@ import type { AppDefinition } from "@/app/admin/apps/page";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 // Simulate fetching data
 import appsData from '@/data/apps.json';
@@ -109,6 +110,7 @@ export default function HomePageContent() {
    )
    const router = useRouter();
    const { theme, setTheme } = useTheme();
+   const isMobile = useIsMobile();
    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
    const { points, claimState, claimReward, refreshClaimState } = useDailyReward();
    
@@ -263,18 +265,18 @@ export default function HomePageContent() {
               onMouseEnter={plugin.current.stop}
               onMouseLeave={plugin.current.reset}
             >
-              <CarouselContent className="-ml-4">
-                <CarouselItem className="basis-4/5 md:basis-1/2 pl-4">
+              <CarouselContent className="-ml-2">
+                <CarouselItem className="basis-11/12 md:basis-1/2 pl-2">
                   <div className="p-1 h-36">
                     <DailyQuizCard />
                   </div>
                 </CarouselItem>
-                <CarouselItem className="basis-4/5 md:basis-1/2 pl-4">
+                <CarouselItem className="basis-11/12 md:basis-1/2 pl-2">
                   <div className="p-1 h-36">
                   <LatihanSoalCard />
                   </div>
                 </CarouselItem>
-                <CarouselItem className="basis-4/5 md:basis-1/2 pl-4">
+                <CarouselItem className="basis-11/12 md:basis-1/2 pl-2">
                   <div className="p-1 h-36">
                     <DailyQuizCard />
                   </div>
@@ -297,9 +299,11 @@ export default function HomePageContent() {
                                 <h3 className="font-bold leading-tight">Tips Belajar Efektif di Era Digital</h3>
                                 <p className="text-sm text-muted-foreground mt-1">Maksimalkan waktumu dengan metode yang terbukti.</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                                <ArrowRight className="w-4 h-4 text-muted-foreground"/>
-                            </Button>
+                            {!isMobile && (
+                              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+                                  <ArrowRight className="w-4 h-4 text-muted-foreground"/>
+                              </Button>
+                            )}
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border-0 bg-card">
@@ -309,9 +313,11 @@ export default function HomePageContent() {
                                 <h3 className="font-bold leading-tight">Teknologi dalam Pendidikan</h3>
                                 <p className="text-sm text-muted-foreground mt-1">Peran AI dan teknologi dalam proses belajar.</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                                <ArrowRight className="w-4 h-4 text-muted-foreground"/>
-                            </Button>
+                            {!isMobile && (
+                              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+                                  <ArrowRight className="w-4 h-4 text-muted-foreground"/>
+                              </Button>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

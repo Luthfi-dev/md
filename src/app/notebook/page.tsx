@@ -1,35 +1,16 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Notebook, Trash2, Edit, Users, MessageSquare, Phone, UserPlus, Lock } from 'lucide-react';
+import { Plus, Notebook, Trash2, Edit, Users, MessageSquare, Phone, UserPlus, Lock, Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { type Note, type NotebookGroup } from '@/types/notebook';
 import { Progress } from '@/components/ui/progress';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -37,24 +18,114 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useAuth } from '@/hooks/use-auth';
-
-
-// Simulate data
-import notebookGroupsData from '@/data/notebook-groups.json';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
+const LOCAL_STORAGE_KEY_SYNC = 'notebook_sync_enabled';
+
+const useCloudSync = () => {
+    const [isSyncEnabled, setIsSyncEnabled] = useState(false);
+
+    useEffect(() => {
+        try {
+            const storedValue = localStorage.getItem(LOCAL_STORAGE_KEY_SYNC);
+            setIsSyncEnabled(storedValue === 'true');
+        } catch (error) {
+            console.error("Failed to read sync setting from localStorage", error);
+        }
+    }, []);
+
+    const toggleSync = (enabled: boolean) => {
+        setIsSyncEnabled(enabled);
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY_SYNC, String(enabled));
+        } catch (error) {
+            console.error("Failed to save sync setting to localStorage", error);
+        }
+    };
+
+    return { isSyncEnabled, toggleSync };
+};
+
+const TagInput = ({ onTagsChange }: { onTagsChange: (tags: string[]) => void }) => {
+    const [inputValue, setInputValue] = useState('');
+    const [tags, setTags] = useState<string[]>([]);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && inputValue.trim()) {
+            e.preventDefault();
+            const newTag = inputValue.trim();
+            if (!tags.includes(newTag)) {
+                const newTags = [...tags, newTag];
+                setTags(newTags);
+                onTagsChange(newTags);
+            }
+            setInputValue('');
+        }
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        const newTags = tags.filter(tag => tag !== tagToRemove);
+        setTags(newTags);
+        onTagsChange(newTags);
+    };
+
+    return (
+        <div className="p-2 border rounded-lg flex flex-wrap gap-2 items-center">
+            {tags.map(tag => (
+                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <button onClick={() => removeTag(tag)} className="rounded-full hover:bg-destructive/20 p-0.5">
+                        <X className="w-3 h-3" />
+                    </button>
+                </Badge>
+            ))}
+            <Input
+                type="text"
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ketik email, username, atau no. HP..."
+                className="flex-1 border-0 shadow-none focus-visible:ring-0 p-0 h-auto"
+            />
+        </div>
+    );
+};
 
 const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: NotebookGroup) => void }) => {
     const [groupName, setGroupName] = useState('');
+    const [invitees, setInvitees] = useState<string[]>([]);
     const { toast } = useToast();
     const isMobile = useIsMobile();
-    const { user } = useAuth();
+    const { user, fetchWithAuth } = useAuth();
+
+    const handleSelectContacts = async () => {
+        if (!('contacts' in navigator && 'select' in (navigator as any).contacts)) {
+            toast({ variant: 'destructive', title: 'API Kontak Tidak Didukung', description: 'Browser Anda tidak mendukung fitur ini.' });
+            return;
+        }
+        try {
+            const contacts = await (navigator as any).contacts.select(['name', 'email', 'tel'], { multiple: true });
+            if (contacts.length > 0) {
+                const newInvitees = contacts.map((c: any) => c.tel?.[0] || c.email?.[0] || c.name?.[0]).filter(Boolean);
+                const updatedInvitees = [...new Set([...invitees, ...newInvitees])];
+                setInvitees(updatedInvitees);
+            }
+        } catch (error) {
+            console.error("Error selecting contacts:", error);
+            toast({ variant: 'destructive', title: 'Gagal Membaca Kontak' });
+        }
+    };
 
     const handleCreateGroup = () => {
         if (!groupName.trim()) {
             toast({ variant: 'destructive', title: 'Nama Grup Wajib Diisi' });
             return;
         }
+        // In a real app, you would send `groupName` and `invitees` to the server.
+        // The server would validate users and create the group.
+        // For now, we simulate this.
         const newGroup: NotebookGroup = {
             id: `group_${Date.now()}`,
             title: groupName,
@@ -65,13 +136,14 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
         };
         onGroupCreated(newGroup);
         setGroupName('');
+        setInvitees([]);
     };
 
     return (
         <Dialog>
             <DialogTrigger asChild>
                 <Button className="w-full md:w-auto">
-                    <Plus className="mr-2" /> Buat Grup Baru
+                    <UserPlus className="mr-2" /> Buat Grup Baru
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -87,24 +159,18 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
                         <Input id="group-name" placeholder="Contoh: Proyek Desain Ulang Web" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                        <Label>Undang Anggota (Opsional)</Label>
-                        <div className="p-4 border-2 border-dashed rounded-lg text-center space-y-3">
-                             <Input placeholder="Ketik nama, username, atau email..." />
-                             <p className="text-xs text-muted-foreground">ATAU</p>
-                             <div className='flex flex-col sm:flex-row gap-2 justify-center'>
-                                <Button variant="outline" size="sm" className="w-full"><Phone className="mr-2"/> Undang {isMobile ? '' : 'dari Kontak'}</Button>
-                                <Button variant="outline" size="sm" className="w-full"><MessageSquare className="mr-2"/> Undang {isMobile ? '' : 'via WhatsApp'}</Button>
-                             </div>
-                        </div>
+                        <Label>Undang Anggota</Label>
+                        <TagInput onTagsChange={setInvitees} />
+                        <p className="text-xs text-muted-foreground">Tekan Enter setelah mengetik untuk menambahkan.</p>
+                         <div className='flex flex-col sm:flex-row gap-2 justify-center'>
+                            <Button variant="outline" size="sm" className="w-full" onClick={handleSelectContacts}><Phone className="mr-2"/> Undang dari Kontak</Button>
+                            <Button variant="outline" size="sm" className="w-full"><MessageSquare className="mr-2"/> Undang via WhatsApp</Button>
+                         </div>
                     </div>
                 </div>
                 <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Batal</Button>
-                    </DialogClose>
-                    <DialogClose asChild>
-                        <Button onClick={handleCreateGroup}>Buat Grup</Button>
-                    </DialogClose>
+                    <DialogClose asChild><Button variant="outline">Batal</Button></DialogClose>
+                    <DialogClose asChild><Button onClick={handleCreateGroup}>Buat Grup</Button></DialogClose>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -115,21 +181,44 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
 export default function NotebookListPage() {
   const [personalNotes, setPersonalNotes] = useState<Note[]>([]);
   const [groupNotes, setGroupNotes] = useState<NotebookGroup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { isSyncEnabled, toggleSync } = useCloudSync();
+
+  const fetchNotes = useCallback(async () => {
+    setIsLoading(true);
+    if (isAuthenticated) {
+        if (isSyncEnabled) {
+            // TODO: Fetch from API
+            console.log("Fetching notes from cloud...");
+            setPersonalNotes([]); // Placeholder
+        } else {
+            try {
+                const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
+                setPersonalNotes(storedNotes ? JSON.parse(storedNotes) : []);
+            } catch (error) {
+                console.error("Failed to load local notes", error);
+            }
+        }
+        // TODO: Fetch groups from API
+        setGroupNotes(notebookGroupsData); 
+    } else {
+        // Guest user logic (always local)
+        try {
+            const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
+            setPersonalNotes(storedNotes ? JSON.parse(storedNotes) : []);
+        } catch (error) {
+            console.error("Failed to load guest notes", error);
+        }
+        setGroupNotes([]);
+    }
+    setIsLoading(false);
+  }, [isAuthenticated, isSyncEnabled]);
 
   useEffect(() => {
-    try {
-      const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
-      if (storedNotes) {
-        setPersonalNotes(JSON.parse(storedNotes));
-      }
-      // In a real app, this would be an API call based on user's groups
-      setGroupNotes(notebookGroupsData); 
-    } catch (error) {
-      console.error("Failed to load notes", error);
-    }
-  }, []);
+    fetchNotes();
+  }, [fetchNotes]);
 
   const handleCreateNewPersonalNote = () => {
     router.push(`/notebook/new`);
@@ -150,6 +239,7 @@ export default function NotebookListPage() {
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    // TODO: Add logic for both cloud and local deletion
     try {
       const updatedNotes = personalNotes.filter(n => n.id !== id);
       setPersonalNotes(updatedNotes);
@@ -172,11 +262,28 @@ export default function NotebookListPage() {
   
   const renderPersonalNotes = () => (
     <div className="space-y-4">
-      <Button onClick={handleCreateNewPersonalNote} className="w-full md:w-auto">
-        <Plus className="mr-2" /> Buat Catatan Baru
-      </Button>
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+        <Button onClick={handleCreateNewPersonalNote} className="w-full md:w-auto">
+            <Plus className="mr-2" /> Buat Catatan Baru
+        </Button>
+        {isAuthenticated && (
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-secondary">
+                <Switch 
+                    id="sync-switch"
+                    checked={isSyncEnabled}
+                    onCheckedChange={toggleSync}
+                />
+                <Label htmlFor="sync-switch" className="flex items-center gap-2 text-sm">
+                    {isSyncEnabled ? <Cloud className="text-primary"/> : <CloudOff/>}
+                    Simpan ke Cloud
+                </Label>
+            </div>
+        )}
+      </div>
       
-      {personalNotes.length > 0 ? (
+      {isLoading ? (
+        <div className="text-center py-16"><Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" /></div>
+      ) : personalNotes.length > 0 ? (
         personalNotes.map(note => {
           const progress = getProgress(note);
           const isCompleted = progress === 100 && note.items.length > 0;
@@ -255,7 +362,9 @@ export default function NotebookListPage() {
     return (
         <div className="space-y-4">
           <CreateGroupDialog onGroupCreated={handleCreateGroup} />
-          {groupNotes.length > 0 ? (
+          {isLoading ? (
+            <div className="text-center py-16"><Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" /></div>
+          ) : groupNotes.length > 0 ? (
             groupNotes.map(group => (
               <Card key={group.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleGroupCardClick(group.id)}>
                 <CardHeader>

@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook } from 'lucide-react';
 import { type NotebookGroup, type GroupTask, type GroupMember } from '@/types/notebook';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -103,6 +103,7 @@ export default function GroupNotebookPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // TODO: Replace with API call to fetch group details
     if (!isAuthenticated) {
         router.push('/notebook');
         return;
@@ -120,6 +121,7 @@ export default function GroupNotebookPage() {
   }, [id, router, isAuthenticated]);
 
   const toggleTaskCompletion = useCallback((taskId: string) => {
+    // TODO: API call to update task status
     setGroup(currentGroup => {
         if (!currentGroup) return null;
         return { 
@@ -132,6 +134,7 @@ export default function GroupNotebookPage() {
   }, []);
 
   const handleAddTask = useCallback((newTask: GroupTask) => {
+      // TODO: API call to add task
       setGroup(currentGroup => {
           if (!currentGroup) return null;
           return { ...currentGroup, tasks: [...currentGroup.tasks, newTask] };
@@ -140,6 +143,7 @@ export default function GroupNotebookPage() {
   }, [toast]);
   
   const handleRemoveTask = useCallback((taskId: string) => {
+      // TODO: API call to remove task
       setGroup(currentGroup => {
           if(!currentGroup) return null;
           return {...currentGroup, tasks: currentGroup.tasks.filter(t => t.id !== taskId)};

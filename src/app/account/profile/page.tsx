@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { CountUp } from "@/components/CountUp";
 import { Coins } from "lucide-react";
+import React, { useEffect } from "react";
 
 const menuItems = [
     { label: "Edit Profil", icon: Edit, href: "/account/edit-profile" },
@@ -27,12 +28,19 @@ export default function ProfilePage() {
     const router = useRouter();
     const { user, logout, isAuthenticated, isLoading } = useAuth();
 
-    if (isLoading || (isAuthenticated && !user)) {
+    useEffect(() => {
+        // Redirect if auth check is complete and user is not authenticated
+        if (isAuthenticated === false) {
+            router.push('/account');
+        }
+    }, [isAuthenticated, router]);
+
+    if (isLoading || isAuthenticated === undefined || (isAuthenticated && !user)) {
         return <LoadingOverlay isLoading={true} message="Memuat profil Anda..." />;
     }
     
+    // While redirecting, it's good practice to render null or a loader
     if (!isAuthenticated) {
-        router.push('/account');
         return null;
     }
 

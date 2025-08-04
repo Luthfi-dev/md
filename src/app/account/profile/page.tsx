@@ -76,7 +76,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-3 gap-4 my-8">
                     <div className="flex flex-col items-center p-3 rounded-lg bg-background/50">
                         <Coins className="w-6 h-6 text-primary mb-1" />
-                        <p className="text-xl font-bold"><CountUp end={user?.points || 0} /></p>
+                        <p className="text-xl font-bold"><CountUp end={user?.points ?? 0} /></p>
                         <p className="text-xs text-muted-foreground">Poin</p>
                     </div>
                      <div className="flex flex-col items-center p-3 rounded-lg bg-background/50">

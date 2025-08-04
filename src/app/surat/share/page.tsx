@@ -18,7 +18,7 @@ export default function ShareRedirectPage() {
         const data = searchParams.get('data');
         if (data) {
             // Forward the data to the new dynamic route
-            router.replace(`/surat/share-fallback?data=${data}`);
+            router.replace(`/surat/shared-template?data=${data}`);
         } else {
             // If no data, just go to the main surat page
             router.replace('/surat');

@@ -82,6 +82,7 @@ export default function AccountPage() {
     }
   };
   
+  // Render loading overlay while checking auth status to prevent login form flash
   if (isAuthenticated === undefined) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }

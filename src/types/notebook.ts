@@ -28,6 +28,7 @@ export interface GroupTask {
 export interface NotebookGroup {
     id: string;
     title: string;
+    avatarUrl?: string; // Optional avatar for the group itself
     members: GroupMember[];
     tasks: GroupTask[];
 }

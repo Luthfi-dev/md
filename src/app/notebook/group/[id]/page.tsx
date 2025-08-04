@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,14 +10,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2 } from 'lucide-react';
 import { type NotebookGroup, type GroupTask, type GroupMember } from '@/types/notebook';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import notebookGroupsData from '@/data/notebook-groups.json';
-
+import { useAuth } from '@/hooks/use-auth';
 
 // --- Child Components for Readability ---
 
@@ -67,7 +66,11 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
 
     return (
          <Dialog>
-            <DialogTrigger asChild><Button className="w-full"><Plus className="mr-2"/> Tambah Tugas</Button></DialogTrigger>
+            <DialogTrigger asChild>
+                <Button className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20">
+                    <Plus className="h-8 w-8" />
+                </Button>
+            </DialogTrigger>
             <DialogContent>
                 <DialogHeader><DialogTitle>Buat Tugas Baru</DialogTitle></DialogHeader>
                 <div className="py-4 space-y-4">
@@ -94,12 +97,19 @@ export default function GroupNotebookPage() {
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
+  const { isAuthenticated, user } = useAuth();
   
   const [group, setGroup] = useState<NotebookGroup | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+        router.push('/notebook');
+        return;
+    }
     if (!id) return;
+
+    // Simulate fetching group data
     const currentGroup = (notebookGroupsData as NotebookGroup[]).find(g => g.id === id);
     if (currentGroup) {
       setGroup(currentGroup);
@@ -107,7 +117,7 @@ export default function GroupNotebookPage() {
       router.push('/notebook');
     }
     setIsLoading(false);
-  }, [id, router]);
+  }, [id, router, isAuthenticated]);
 
   const toggleTaskCompletion = useCallback((taskId: string) => {
     setGroup(currentGroup => {
@@ -151,113 +161,99 @@ export default function GroupNotebookPage() {
   
   if (isLoading || !group) {
     return (
-        <div className="flex justify-center items-center h-screen">
+        <div className="flex justify-center items-center h-screen bg-card">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 pb-24">
-        <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-                <div className='flex justify-between items-start'>
-                    <div>
-                        <CardTitle className="text-2xl font-bold">{group.title}</CardTitle>
-                        <CardDescription className="flex items-center gap-2 mt-2">
-                             <Progress value={progress} className="w-32" />
-                             <span>{Math.round(progress)}% Selesai</span>
-                        </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="hidden sm:flex"><UserPlus className="mr-2" /> Undang</Button>
-                            </DialogTrigger>
-                             <DialogContent>
-                                 <DialogHeader><DialogTitle>Undang Anggota Baru</DialogTitle></DialogHeader>
-                                <div className="py-4"><Input placeholder="Ketik nama, username, atau email..." /></div>
-                                <DialogFooter>
-                                    <DialogClose asChild><Button variant="outline">Batal</Button></DialogClose>
-                                    <Button>Kirim Undangan</Button>
-                                </DialogFooter>
-                             </DialogContent>
-                        </Dialog>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem><UserPlus className="mr-2"/> Undang Anggota</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive"><Trash className="mr-2"/> Hapus Grup</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+    <div className="min-h-screen bg-card flex flex-col">
+        <header className="p-4 flex items-center gap-4 sticky top-0 bg-card/80 backdrop-blur-sm z-10 border-b">
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <ArrowLeft />
+            </Button>
+            <div className='flex items-center gap-3'>
+                <Avatar>
+                    <AvatarImage src={group.avatarUrl || `https://placehold.co/40x40.png?text=${group.title.charAt(0)}`}/>
+                    <AvatarFallback>{group.title.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className='flex-1'>
+                    <h1 className="font-bold text-lg truncate">{group.title}</h1>
+                    <p className="text-xs text-muted-foreground">{group.members.length} Anggota</p>
                 </div>
-
-                <div className="flex items-center gap-2 pt-4">
-                    <div className="flex -space-x-2 overflow-hidden">
-                        {group.members.map(member => (
-                            <Avatar key={member.id} className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
-                            <AvatarImage src={member.avatarUrl} alt={member.name} />
-                            <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        ))}
-                    </div>
-                    <span className="text-sm text-muted-foreground">{group.members.length} anggota</span>
-                </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
-                  {group.tasks.map((task) => (
-                    <div key={task.id} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
-                      <Checkbox 
-                        id={`task-${task.id}`}
-                        checked={task.completed}
-                        onCheckedChange={() => toggleTaskCompletion(task.id)}
-                        className="w-5 h-5 mt-1"
-                      />
-                      <div className="flex-1">
-                          <Label htmlFor={`task-${task.id}`} className={task.completed ? 'line-through text-muted-foreground' : ''}>
-                            {task.label || <span className="text-muted-foreground italic">Tugas kosong</span>}
-                          </Label>
-                          <div className="flex items-center gap-2 mt-1.5">
-                             {getAssigneeAvatars(task).map(assignee => (
-                                 assignee.id === 'all' 
-                                 ? <Badge key="all" variant="secondary" className="flex items-center gap-1"><Users className="w-3 h-3"/>Semua</Badge>
-                                 : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
-                             ))}
-                          </div>
-                      </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus Tugas Ini?</AlertDialogTitle>
-                            <AlertDialogDescription>Tindakan ini tidak bisa dibatalkan.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleRemoveTask(task.id)}>Hapus</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  ))}
-                  {group.tasks.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground"><p>Belum ada tugas di grup ini.</p></div>
-                  )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <AddTaskDialog members={group.members} onTaskAdded={handleAddTask} />
-                    <Button onClick={() => router.push('/notebook')} variant="outline" className="w-full">
-                        <ArrowLeft className="mr-2"/> Kembali ke Daftar
+            </div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="ml-auto">
+                        <MoreVertical />
                     </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem><UserPlus className="mr-2"/> Undang Anggota</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive"><Trash className="mr-2"/> Hapus Grup</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </header>
+
+        <main className="flex-1 p-4 pb-24 overflow-y-auto">
+            <div className='mb-6'>
+                <Label className='text-xs text-muted-foreground'>Progres Penyelesaian</Label>
+                <div className='flex items-center gap-2 mt-1'>
+                    <Progress value={progress} />
+                    <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{Math.round(progress)}%</span>
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+
+            <div className="space-y-3">
+              {group.tasks.map((task) => (
+                <div key={task.id} className="flex items-start gap-3 p-3 bg-background rounded-lg">
+                  <Checkbox 
+                    id={`task-${task.id}`}
+                    checked={task.completed}
+                    onCheckedChange={() => toggleTaskCompletion(task.id)}
+                    className="w-5 h-5 mt-1"
+                  />
+                  <div className="flex-1">
+                      <Label htmlFor={`task-${task.id}`} className={task.completed ? 'line-through text-muted-foreground' : ''}>
+                        {task.label || <span className="text-muted-foreground italic">Tugas kosong</span>}
+                      </Label>
+                      <div className="flex items-center gap-2 mt-1.5">
+                         {getAssigneeAvatars(task).map(assignee => (
+                             assignee.id === 'all' 
+                             ? <Badge key="all" variant="secondary" className="flex items-center gap-1"><Users className="w-3 h-3"/>Semua</Badge>
+                             : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
+                         ))}
+                      </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Hapus Tugas Ini?</AlertDialogTitle>
+                        <AlertDialogDescription>Tindakan ini tidak bisa dibatalkan.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleRemoveTask(task.id)}>Hapus</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ))}
+              {group.tasks.length === 0 && (
+                  <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <Notebook className="mx-auto h-12 w-12 mb-4" />
+                    <h3 className="font-semibold">Belum Ada Tugas</h3>
+                    <p className="text-sm">Klik tombol '+' untuk menambahkan tugas baru.</p>
+                  </div>
+              )}
+            </div>
+        </main>
+        
+        <AddTaskDialog members={group.members} onTaskAdded={handleAddTask} />
     </div>
   );
 }

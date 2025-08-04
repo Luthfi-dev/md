@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Notebook, Trash2, Edit, Users, MessageSquare, Phone, UserPlus } from 'lucide-react';
+import { Plus, Notebook, Trash2, Edit, Users, MessageSquare, Phone, UserPlus, Lock } from 'lucide-react';
 import { type Note, type NotebookGroup } from '@/types/notebook';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useAuth } from '@/hooks/use-auth';
 
 
 // Simulate data
@@ -46,6 +47,7 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
     const [groupName, setGroupName] = useState('');
     const { toast } = useToast();
     const isMobile = useIsMobile();
+    const { user } = useAuth();
 
     const handleCreateGroup = () => {
         if (!groupName.trim()) {
@@ -56,12 +58,11 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
             id: `group_${Date.now()}`,
             title: groupName,
             members: [
-                { id: "user_0", name: "Anda", avatarUrl: "https://placehold.co/40x40/3B82F6/FFFFFF.png?text=Y" }
+                { id: user!.id.toString(), name: "Anda", avatarUrl: user!.avatar || `https://placehold.co/40x40/3B82F6/FFFFFF.png?text=${user!.name.charAt(0)}` }
             ],
             tasks: []
         };
         onGroupCreated(newGroup);
-        // Reset state for next use
         setGroupName('');
     };
 
@@ -114,6 +115,7 @@ export default function NotebookListPage() {
   const [personalNotes, setPersonalNotes] = useState<Note[]>([]);
   const [groupNotes, setGroupNotes] = useState<NotebookGroup[]>([]);
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     try {
@@ -121,7 +123,8 @@ export default function NotebookListPage() {
       if (storedNotes) {
         setPersonalNotes(JSON.parse(storedNotes));
       }
-      setGroupNotes(notebookGroupsData);
+      // In a real app, this would be an API call based on user's groups
+      setGroupNotes(notebookGroupsData); 
     } catch (error) {
       console.error("Failed to load notes", error);
     }
@@ -235,43 +238,57 @@ export default function NotebookListPage() {
     </div>
   );
 
-  const renderGroupNotes = () => (
-    <div className="space-y-4">
-      <CreateGroupDialog onGroupCreated={handleCreateGroup} />
-      {groupNotes.length > 0 ? (
-        groupNotes.map(group => (
-          <Card key={group.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleGroupCardClick(group.id)}>
-            <CardHeader>
-              <CardTitle>{group.title}</CardTitle>
-              <CardDescription>{group.tasks.length} Tugas Aktif</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex -space-x-2 overflow-hidden">
-                  {group.members.slice(0, 5).map(member => (
-                    <Avatar key={member.id} className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
-                      <AvatarImage src={member.avatarUrl} />
-                      <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                  ))}
-                   {group.members.length > 5 && <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{group.members.length - 5}</AvatarFallback></Avatar>}
-                </div>
-                <Users className="text-muted-foreground"/>
-              </div>
-            </CardContent>
-          </Card>
-        ))
-      ) : (
-        <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-medium">Belum Ada Grup</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Klik "Buat Grup Baru" untuk memulai kolaborasi.
-          </p>
+  const renderGroupNotes = () => {
+    if (!isAuthenticated) {
+        return (
+             <div className="text-center py-16 border-2 border-dashed rounded-lg">
+              <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-medium">Fitur Grup</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Silakan <Link href="/account" className='text-primary font-bold hover:underline'>masuk</Link> untuk membuat atau melihat catatan grup.
+              </p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="space-y-4">
+          <CreateGroupDialog onGroupCreated={handleCreateGroup} />
+          {groupNotes.length > 0 ? (
+            groupNotes.map(group => (
+              <Card key={group.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleGroupCardClick(group.id)}>
+                <CardHeader>
+                  <CardTitle>{group.title}</CardTitle>
+                  <CardDescription>{group.tasks.length} Tugas Aktif</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex -space-x-2 overflow-hidden">
+                      {group.members.slice(0, 5).map(member => (
+                        <Avatar key={member.id} className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
+                          <AvatarImage src={member.avatarUrl} />
+                          <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                      ))}
+                       {group.members.length > 5 && <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{group.members.length - 5}</AvatarFallback></Avatar>}
+                    </div>
+                    <Users className="text-muted-foreground"/>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-16 border-2 border-dashed rounded-lg">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-medium">Belum Ada Grup</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Klik "Buat Grup Baru" untuk memulai kolaborasi.
+              </p>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+      );
+    }
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24">

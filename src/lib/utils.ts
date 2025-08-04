@@ -48,3 +48,22 @@ export function optimizeImage(file: File, maxWidth: number = 1024, quality: numb
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Gets a cookie by name from the browser's document.cookie.
+ * @param name The name of the cookie to retrieve.
+ * @returns The cookie value or an empty string if not found.
+ */
+export function getCookie(name: string): string {
+  if (typeof document === 'undefined') {
+    return '';
+  }
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(';');
+  for(let i=0;i < ca.length;i++) {
+    let c = ca[i];
+    while (c.charAt(0)==' ') c = c.substring(1,c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+  }
+  return '';
+}

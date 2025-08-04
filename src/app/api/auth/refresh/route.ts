@@ -1,12 +1,12 @@
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyRefreshToken, generateTokens, setTokenCookie } from '@/lib/jwt';
 import type { UserForToken } from '@/lib/jwt';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const cookieStore = cookies();
   const refreshToken = cookieStore.get('refreshToken')?.value;
 
@@ -14,16 +14,16 @@ export async function POST() {
     return NextResponse.json({ success: false, message: 'Refresh token tidak ditemukan.' }, { status: 401 });
   }
 
+  let connection;
   try {
     const decoded = verifyRefreshToken(refreshToken) as UserForToken;
     
     // Re-fetch user from DB to get the latest data, including encrypted points
-    const connection = await db.getConnection();
+    connection = await db.getConnection();
     const [rows]: [any[], any] = await connection.execute(
       'SELECT id, name, email, role_id, avatar_url, phone_number, points, referral_code FROM users WHERE id = ?',
       [decoded.id]
     );
-    connection.release();
 
     if (rows.length === 0) {
       throw new Error('User not found during token refresh.');
@@ -63,5 +63,7 @@ export async function POST() {
     const response = NextResponse.json({ success: false, message: 'Sesi tidak valid, silakan login kembali.' }, { status: 401 });
     response.cookies.set('refreshToken', '', { expires: new Date(0), path: '/' });
     return response;
+  } finally {
+    if (connection) connection.release();
   }
 }

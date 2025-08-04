@@ -3,6 +3,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useRouter } from 'next/navigation';
+import { getCookie } from '@/lib/utils'; // We'll create this utility
 
 export interface User {
     id: number;
@@ -88,6 +89,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [setAccessToken]);
 
     const silentRefresh = useCallback(async () => {
+        // Only attempt to refresh if a refresh token cookie exists.
+        const refreshToken = getCookie('refreshToken');
+        if (!refreshToken) {
+            setIsAuthenticated(false);
+            return null;
+        }
+
         try {
             const res = await fetch('/api/auth/refresh', { method: 'POST' });
             if (!res.ok) throw new Error('Refresh failed');
@@ -143,7 +151,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await silentRefresh();
             }
         } else {
-            setIsAuthenticated(false);
+            // Also attempt a silent refresh in case there's a refresh cookie but no access token
+            await silentRefresh();
         }
     }, [silentRefresh, setAccessToken]);
 

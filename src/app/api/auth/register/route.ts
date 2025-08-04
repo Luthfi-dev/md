@@ -5,14 +5,15 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import type { ResultSetHeader } from 'mysql2';
 import { randomBytes } from 'crypto';
-import { encrypt } from '@/lib/encryption';
+import { decrypt, encrypt } from '@/lib/encryption';
 
 const registerSchema = z.object({
   name: z.string().min(3, { message: "Nama harus memiliki setidaknya 3 karakter." }),
   email: z.string().email({ message: "Format email tidak valid." }),
   password: z.string().min(8, { message: "Kata sandi harus memiliki setidaknya 8 karakter." }),
   repeatPassword: z.string(),
-  fingerprint: z.string().optional()
+  fingerprint: z.string().optional(),
+  guestData: z.string().optional(), // Encrypted guest data
 }).refine(data => data.password === data.repeatPassword, {
   message: "Kata sandi tidak cocok.",
   path: ["repeatPassword"],
@@ -37,7 +38,19 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { name, email, password, fingerprint } = validationResult.data;
+    const { name, email, password, fingerprint, guestData } = validationResult.data;
+    
+    let initialPoints = 0;
+    if (guestData) {
+        try {
+            const decryptedGuestData = JSON.parse(decrypt(guestData));
+            if (decryptedGuestData && typeof decryptedGuestData.points === 'number') {
+                initialPoints = decryptedGuestData.points;
+            }
+        } catch (e) {
+            console.warn("Could not parse guest data during registration:", e);
+        }
+    }
     
     connection = await db.getConnection();
     await connection.beginTransaction();
@@ -51,10 +64,12 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password);
     const referralCode = generateReferralCode();
+    const encryptedPoints = encrypt(String(initialPoints));
+
 
     const [userResult] = await connection.execute<ResultSetHeader>(
-      'INSERT INTO users (name, email, password, role_id, referral_code, browser_fingerprint) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, email, hashedPassword, ROLE_ID_USER, referralCode, fingerprint]
+      'INSERT INTO users (name, email, password, role_id, referral_code, browser_fingerprint, points) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, email, hashedPassword, ROLE_ID_USER, referralCode, fingerprint, encryptedPoints]
     );
 
     const newUserId = userResult.insertId;

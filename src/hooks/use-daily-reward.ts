@@ -128,7 +128,7 @@ export function useDailyReward() {
         return false;
     }
 
-    const newPoints = (data.points ?? 0) + REWARD_AMOUNT;
+    const newPoints = (isAuthenticated ? (user?.points ?? 0) : data.points) + REWARD_AMOUNT;
     const newTimestamps = { ...data.lastClaimTimestamps, [todayIndex]: todayStr };
     
     const newData: StoredRewardData = { ...data, points: newPoints, lastClaimTimestamps: newTimestamps };
@@ -149,10 +149,11 @@ export function useDailyReward() {
             console.error("Failed to update points on server:", error);
             toast({ variant: "destructive", title: 'Gagal Sinkronisasi', description: 'Gagal menyimpan poin ke server. Mohon periksa koneksi Anda.' });
             // Optionally revert points update
-            const revertedData = { ...newData, points: data.points };
+            const revertedPoints = user?.points ?? 0;
+            const revertedData = { ...newData, points: revertedPoints };
             saveData(revertedData);
-            setPoints(data.points);
-            updateUser({ points: data.points });
+            setPoints(revertedPoints);
+            updateUser({ points: revertedPoints });
             return false;
         }
     }
@@ -162,7 +163,7 @@ export function useDailyReward() {
     toast({ title: 'Klaim Berhasil!', description: `Selamat! Anda mendapatkan ${REWARD_AMOUNT} Coin. Sampai jumpa besok!` });
     return true;
 
-  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, updateUser, fetchWithAuth]);
+  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, user, updateUser, fetchWithAuth]);
   
   const refreshClaimState = () => {
     updateClaimState();

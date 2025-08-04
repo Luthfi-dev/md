@@ -1,7 +1,6 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,9 +100,9 @@ export default function InvitePage() {
     }
 
     return (
-        <div className="min-h-screen bg-secondary/30">
-            <div className="container mx-auto max-w-2xl px-4 py-8 pb-24">
-                <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+        <div className="min-h-screen bg-card">
+            <div className="px-4 py-8 pb-24">
+                <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Kembali
                 </Button>
@@ -115,39 +114,35 @@ export default function InvitePage() {
                         Bagikan kode referral Anda. Untuk setiap teman yang bergabung, Anda berdua akan mendapatkan 200 Poin Coin gratis!
                     </p>
                 </div>
-
-                <Card className="mb-8">
-                     <CardHeader>
-                        <CardTitle>Bagikan Undangan Anda</CardTitle>
-                        <CardDescription>Salin link atau kode di bawah ini dan bagikan ke teman-teman Anda.</CardDescription>
-                    </CardHeader>
-                     <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="referral-link">Link Referral Anda</Label>
-                            <div className="flex gap-2">
-                                <Input id="referral-link" value={referralLink} readOnly />
-                                <Button size="icon" variant="outline" onClick={() => copyToClipboard(referralLink, 'link')}><Copy/></Button>
-                            </div>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="referral-code">Atau Gunakan Kode</Label>
-                            <div className="flex gap-2">
-                                <Input id="referral-code" value={user.referralCode} readOnly className="text-center font-bold tracking-widest uppercase" />
-                                <Button size="icon" variant="outline" onClick={() => copyToClipboard(user.referralCode || '', 'code')}><Copy/></Button>
-                            </div>
-                        </div>
-                        <Button className="w-full" onClick={handleShare}>
-                            <Share2 className="mr-2" /> Bagikan Sekarang
-                        </Button>
-                    </CardContent>
-                </Card>
                 
-                 <Card>
-                     <CardHeader>
-                        <CardTitle>Punya Kode Referral?</CardTitle>
-                        <CardDescription>Masukkan kode dari teman Anda untuk mengklaim bonus Poin Coin.</CardDescription>
-                    </CardHeader>
-                     <CardContent>
+                <div className="space-y-8">
+                    <div className="p-4 rounded-xl bg-background">
+                        <h2 className="font-bold text-lg">Bagikan Undangan Anda</h2>
+                        <p className="text-sm text-muted-foreground mb-4">Salin link atau kode di bawah ini dan bagikan.</p>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="referral-link">Link Referral Anda</Label>
+                                <div className="flex gap-2">
+                                    <Input id="referral-link" value={referralLink} readOnly />
+                                    <Button size="icon" variant="outline" onClick={() => copyToClipboard(referralLink, 'link')}><Copy/></Button>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="referral-code">Atau Gunakan Kode</Label>
+                                <div className="flex gap-2">
+                                    <Input id="referral-code" value={user.referralCode} readOnly className="text-center font-bold tracking-widest uppercase" />
+                                    <Button size="icon" variant="outline" onClick={() => copyToClipboard(user.referralCode || '', 'code')}><Copy/></Button>
+                                </div>
+                            </div>
+                            <Button className="w-full" onClick={handleShare}>
+                                <Share2 className="mr-2" /> Bagikan Sekarang
+                            </Button>
+                        </div>
+                    </div>
+                
+                    <div className="p-4 rounded-xl bg-background">
+                         <h2 className="font-bold text-lg">Punya Kode Referral?</h2>
+                         <p className="text-sm text-muted-foreground mb-4">Masukkan kode dari teman untuk mengklaim bonus.</p>
                          <form onSubmit={handleApplyCode} className="space-y-2">
                             <Label htmlFor="enter-code">Masukkan Kode Referral</Label>
                              <div className="flex gap-2">
@@ -157,15 +152,11 @@ export default function InvitePage() {
                                 </Button>
                             </div>
                          </form>
-                    </CardContent>
-                </Card>
+                    </div>
 
-                <Card className="mt-8">
-                    <CardHeader>
-                        <CardTitle>Teman yang Diundang</CardTitle>
-                        <CardDescription>Daftar teman yang menggunakan kode referral Anda.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                    <div className="p-4 rounded-xl bg-background">
+                        <h2 className="font-bold text-lg">Teman yang Diundang</h2>
+                        <p className="text-sm text-muted-foreground mb-4">Daftar teman yang menggunakan kode Anda.</p>
                         {invitedFriends.length > 0 ? (
                              <div className="space-y-3">
                                 {invitedFriends.map(friend => (
@@ -187,9 +178,8 @@ export default function InvitePage() {
                                 <p>Belum ada teman yang Anda undang.</p>
                             </div>
                         )}
-                    </CardContent>
-                </Card>
-
+                    </div>
+                </div>
             </div>
         </div>
     );

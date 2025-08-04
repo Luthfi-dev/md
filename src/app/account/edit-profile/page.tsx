@@ -5,10 +5,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Camera, Loader2, Mail, Save, User, Phone } from "lucide-react";
+import { ArrowLeft, Camera, Mail, Save, User, Phone } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
@@ -139,77 +138,72 @@ export default function EditProfilePage() {
     return (
         <>
             <LoadingOverlay isLoading={isUploading || isSaving} message={loadingMessage} />
-            <div className="min-h-screen bg-secondary/30">
-                <div className="container mx-auto max-w-2xl px-4 py-8 pb-24">
-                    <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+            <div className="min-h-screen bg-card">
+                <div className="px-4 py-8 pb-24">
+                    <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Kembali
                     </Button>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Edit Profil</CardTitle>
-                            <CardDescription>Perbarui informasi pribadi dan foto profil Anda.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-8">
-                                <div className="flex flex-col items-center gap-4">
-                                    <div className="relative">
-                                        <Avatar className="w-32 h-32 text-5xl">
-                                            <AvatarImage src={avatarUrl} data-ai-hint="profile picture" />
-                                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                                        </Avatar>
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            size="icon" 
-                                            className="absolute bottom-1 right-1 rounded-full h-10 w-10 bg-background"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={isUploading || isSaving}
-                                        >
-                                            <Camera className="w-5 h-5" />
-                                        </Button>
-                                        <Input 
-                                            type="file" 
-                                            className="hidden" 
-                                            ref={fileInputRef} 
-                                            onChange={handleImageChange} 
-                                            accept="image/png, image/jpeg, image/webp"
-                                        />
-                                    </div>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Nama Lengkap</Label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pl-10"/>
-                                    </div>
-                                </div>
+                    <h1 className="text-2xl font-bold mb-2">Edit Profil</h1>
+                    <p className="text-muted-foreground mb-8">Perbarui informasi pribadi dan foto profil Anda.</p>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Alamat Email</Label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                        <Input id="email" value={user.email} disabled className="pl-10"/>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">Email tidak dapat diubah.</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Nomor Telepon (Opsional)</Label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                        <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Contoh: 08123456789" className="pl-10"/>
-                                    </div>
-                                </div>
-
-                                <Button type="submit" disabled={isSaving || isUploading} className="w-full">
-                                    <Save className="mr-2" />
-                                    Simpan Perubahan
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="relative">
+                                <Avatar className="w-32 h-32 text-5xl">
+                                    <AvatarImage src={avatarUrl} data-ai-hint="profile picture" />
+                                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                </Avatar>
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="absolute bottom-1 right-1 rounded-full h-10 w-10 bg-background"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading || isSaving}
+                                >
+                                    <Camera className="w-5 h-5" />
                                 </Button>
-                            </form>
-                        </CardContent>
-                    </Card>
+                                <Input 
+                                    type="file" 
+                                    className="hidden" 
+                                    ref={fileInputRef} 
+                                    onChange={handleImageChange} 
+                                    accept="image/png, image/jpeg, image/webp"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Nama Lengkap</Label>
+                            <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pl-10"/>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Alamat Email</Label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input id="email" value={user.email} disabled className="pl-10"/>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Email tidak dapat diubah.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Nomor Telepon (Opsional)</Label>
+                            <div className="relative">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Contoh: 08123456789" className="pl-10"/>
+                            </div>
+                        </div>
+
+                        <Button type="submit" disabled={isSaving || isUploading} className="w-full">
+                            <Save className="mr-2" />
+                            Simpan Perubahan
+                        </Button>
+                    </form>
                 </div>
             </div>
         </>

@@ -33,7 +33,7 @@ const getTodayDateString = (): string => {
 const generateGuestId = (): string => `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
 export function useDailyReward() {
-  const { user, isAuthenticated, updateUser, fetchWithAuth } = useAuth();
+  const { user, isAuthenticated, updateUser, fetchWithAuth, setAccessToken } = useAuth();
   const [points, setPoints] = useState<number>(0);
   const [claimState, setClaimState] = useState<ClaimState[]>([]);
   const { toast } = useToast();
@@ -137,18 +137,30 @@ export function useDailyReward() {
     setPoints(newPoints);
     
     if(isAuthenticated) {
+        // Immediately update UI
         updateUser({ points: newPoints });
 
         try {
-            await fetchWithAuth('/api/user/update', {
+            const response = await fetchWithAuth('/api/user/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ points: newPoints })
             });
+
+            const result = await response.json();
+            if(!result.success){
+                throw new Error(result.message || 'Server update failed');
+            }
+            
+            // If the server returns a new token, update it
+            if(result.accessToken) {
+                setAccessToken(result.accessToken);
+            }
+
         } catch (error) {
             console.error("Failed to update points on server:", error);
             toast({ variant: "destructive", title: 'Gagal Sinkronisasi', description: 'Gagal menyimpan poin ke server. Mohon periksa koneksi Anda.' });
-            // Optionally revert points update
+            // Revert points update on failure
             const revertedPoints = user?.points ?? 0;
             const revertedData = { ...newData, points: revertedPoints };
             saveData(revertedData);
@@ -163,7 +175,7 @@ export function useDailyReward() {
     toast({ title: 'Klaim Berhasil!', description: `Selamat! Anda mendapatkan ${REWARD_AMOUNT} Coin. Sampai jumpa besok!` });
     return true;
 
-  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, user, updateUser, fetchWithAuth]);
+  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, user, updateUser, fetchWithAuth, setAccessToken]);
   
   const refreshClaimState = () => {
     updateClaimState();

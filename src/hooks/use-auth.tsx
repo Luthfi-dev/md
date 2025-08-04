@@ -24,6 +24,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
     updateUser: (newUser: Partial<User>) => void;
+    setAccessToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,14 +40,14 @@ const isTokenExpired = (token: string): boolean => {
 
 let accessToken: string | null = null;
 
-const getAccessToken = () => {
+const getAccessTokenClient = () => {
     if (typeof window !== 'undefined') {
         return localStorage.getItem('accessToken');
     }
     return accessToken;
 };
 
-const setAccessToken = (token: string | null) => {
+const setAccessTokenClient = (token: string | null) => {
     accessToken = token;
     if (typeof window !== 'undefined') {
         if(token) {
@@ -66,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = useCallback(async () => {
         setIsLoading(true);
         setUser(null);
-        setAccessToken(null);
+        setAccessTokenClient(null);
         setIsAuthenticated(false);
         // Do not clear guest data on logout, only on login/register
         try {
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             const data = await res.json();
             if (data.success && data.accessToken) {
-                setAccessToken(data.accessToken);
+                setAccessTokenClient(data.accessToken);
                 setUser(data.user);
                 setIsAuthenticated(true);
                 return data.accessToken;
@@ -99,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [logout]);
 
     const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
-        let token = getAccessToken();
+        let token = getAccessTokenClient();
         
         if (token && isTokenExpired(token)) {
             token = await silentRefresh();
@@ -128,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [silentRefresh, logout, router]);
 
     const initializeAuth = useCallback(async () => {
-        const storedToken = getAccessToken();
+        const storedToken = getAccessTokenClient();
         if (storedToken) {
             if (!isTokenExpired(storedToken)) {
                 const decodedUser: User = jwtDecode(storedToken);
@@ -156,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             const data = await res.json();
             if (data.success && data.accessToken) {
-                setAccessToken(data.accessToken);
+                setAccessTokenClient(data.accessToken);
                 setUser(data.user);
                 setIsAuthenticated(true);
                 if (typeof window !== 'undefined') {
@@ -191,7 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, register, logout, fetchWithAuth, updateUser }}>
+        <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, register, logout, fetchWithAuth, updateUser, setAccessToken: setAccessTokenClient }}>
             {children}
         </AuthContext.Provider>
     );

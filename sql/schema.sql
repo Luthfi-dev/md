@@ -1,157 +1,129 @@
+-- Inisialisasi Database Anda
+-- Harap sesuaikan nama database `maudigi_db` jika Anda menggunakan nama yang berbeda.
+CREATE DATABASE IF NOT EXISTS maudigi_db;
+USE maudigi_db;
 
--- Skema Database untuk Aplikasi Toolkit All-in-One
+-- Tabel Pengguna & Peran (Asumsi sudah ada dari setup awal)
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
 
--- Tabel Pengguna
-CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `role_id` int(11) NOT NULL DEFAULT 3,
-  `status` enum('active','deactivated','blocked') NOT NULL DEFAULT 'active',
-  `avatar_url` varchar(255) DEFAULT NULL,
-  `phone_number` varchar(255) DEFAULT NULL, -- Encrypted
-  `points` varchar(255) DEFAULT NULL, -- Encrypted
-  `referral_code` varchar(255) DEFAULT NULL,
-  `browser_fingerprint` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`),
-  KEY `referral_code` (`referral_code`),
-  KEY `browser_fingerprint` (`browser_fingerprint`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+INSERT INTO roles (id, name) VALUES (1, 'superadmin'), (2, 'admin'), (3, 'user') ON DUPLICATE KEY UPDATE name=name;
 
--- Tabel Peran
-CREATE TABLE `roles` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  `description` text DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role_id INT DEFAULT 3,
+    status ENUM('active', 'deactivated', 'blocked') DEFAULT 'active',
+    avatar_url VARCHAR(255),
+    phone_number VARCHAR(255),
+    points TEXT, -- Encrypted
+    referral_code VARCHAR(10) UNIQUE,
+    browser_fingerprint VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
 
--- Tabel Penghubung Peran Pengguna
-CREATE TABLE `user_roles` (
-  `user_id` int(11) NOT NULL,
-  `role_id` int(11) NOT NULL,
-  PRIMARY KEY (`user_id`,`role_id`),
-  KEY `role_id` (`role_id`),
-  CONSTRAINT `user_roles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `user_roles_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE user_roles (
+    user_id INT NOT NULL,
+    role_id INT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+);
 
--- Tabel Riwayat Login
-CREATE TABLE `login_history` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `login_time` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ip_address` varchar(45) DEFAULT NULL,
-  `user_agent` text DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `login_history_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE login_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
--- Tabel Referral
-CREATE TABLE `referrals` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `referrer_id` int(11) NOT NULL,
-  `referred_id` int(11) NOT NULL,
-  `status` enum('valid','invalid','pending') NOT NULL DEFAULT 'pending',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `referred_id` (`referred_id`),
-  KEY `referrer_id` (`referrer_id`),
-  CONSTRAINT `referrals_ibfk_1` FOREIGN KEY (`referrer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `referrals_ibfk_2` FOREIGN KEY (`referred_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE referrals (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    referrer_id INT NOT NULL,
+    referred_id INT NOT NULL,
+    status ENUM('valid', 'invalid', 'pending') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (referrer_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (referred_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_referral (referrer_id, referred_id)
+);
 
 
--- MODUL CATATAN CERDAS --
+-- ===============================================
+-- MODUL CATATAN CERDAS (NOTEBOOK)
+-- ===============================================
 
--- Tabel Catatan Pribadi (Personal Notes)
-CREATE TABLE `notes` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL,
-  `title` VARCHAR(255) NOT NULL,
-  `content` TEXT DEFAULT NULL, -- For simple notes, maybe not checklist-based
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `notes_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Tabel untuk catatan pribadi (dengan sinkronisasi cloud)
+CREATE TABLE notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    uuid VARCHAR(255) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
--- Tabel Item Checklist untuk Catatan Pribadi
-CREATE TABLE `note_items` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `note_id` INT(11) NOT NULL,
-  `label` VARCHAR(255) NOT NULL,
-  `is_completed` TINYINT(1) NOT NULL DEFAULT 0,
-  `order` INT(11) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`id`),
-  KEY `note_id` (`note_id`),
-  CONSTRAINT `note_items_ibfk_1` FOREIGN KEY (`note_id`) REFERENCES `notes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Tabel untuk item checklist di dalam catatan pribadi
+CREATE TABLE note_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    note_id BIGINT NOT NULL,
+    uuid VARCHAR(255) NOT NULL UNIQUE,
+    label TEXT NOT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
+);
 
--- Tabel Grup Catatan (Notebook Groups)
-CREATE TABLE `note_groups` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `title` VARCHAR(255) NOT NULL,
-  `description` TEXT DEFAULT NULL,
-  `avatar_url` VARCHAR(255) DEFAULT NULL,
-  `created_by` INT(11) NOT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `created_by` (`created_by`),
-  CONSTRAINT `note_groups_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Tabel untuk grup catatan
+CREATE TABLE note_groups (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(255) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    avatar_url VARCHAR(255),
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
 
--- Tabel Anggota Grup (Group Members)
-CREATE TABLE `group_members` (
-  `group_id` INT(11) NOT NULL,
-  `user_id` INT(11) NOT NULL,
-  `role` ENUM('admin', 'member') NOT NULL DEFAULT 'member',
-  `joined_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`group_id`, `user_id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `group_members_ibfk_1` FOREIGN KEY (`group_id`) REFERENCES `note_groups` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `group_members_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Tabel pivot untuk anggota grup
+CREATE TABLE group_members (
+    group_id BIGINT NOT NULL,
+    user_id INT NOT NULL,
+    role ENUM('admin', 'member') DEFAULT 'member',
+    PRIMARY KEY (group_id, user_id),
+    FOREIGN KEY (group_id) REFERENCES note_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
--- Tabel Tugas Grup (Group Tasks)
-CREATE TABLE `group_tasks` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `group_id` INT(11) NOT NULL,
-  `label` VARCHAR(255) NOT NULL,
-  `is_completed` TINYINT(1) NOT NULL DEFAULT 0,
-  `due_date` TIMESTAMP NULL DEFAULT NULL,
-  `created_by` INT(11) NOT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `group_id` (`group_id`),
-  KEY `created_by` (`created_by`),
-  CONSTRAINT `group_tasks_ibfk_1` FOREIGN KEY (`group_id`) REFERENCES `note_groups` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `group_tasks_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Tabel untuk tugas di dalam grup
+CREATE TABLE group_tasks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    group_id BIGINT NOT NULL,
+    uuid VARCHAR(255) NOT NULL UNIQUE,
+    label TEXT NOT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES note_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
 
--- Tabel Penugasan Tugas (Task Assignees)
--- Jika sebuah tugas tidak memiliki entri di sini, berarti ditugaskan ke semua anggota.
-CREATE TABLE `task_assignees` (
-  `task_id` INT(11) NOT NULL,
-  `user_id` INT(11) NOT NULL,
-  PRIMARY KEY (`task_id`, `user_id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `task_assignees_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `group_tasks` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `task_assignees_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-
--- Data Awal
-INSERT INTO `roles` (`id`, `name`, `description`) VALUES
-(1, 'superadmin', 'Akses penuh ke semua fitur dan pengaturan sistem.'),
-(2, 'admin', 'Akses ke panel admin untuk mengelola konten.'),
-(3, 'user', 'Pengguna standar aplikasi.');
+-- Tabel pivot untuk menugaskan tugas ke anggota
+CREATE TABLE task_assignees (
+    task_id BIGINT NOT NULL,
+    user_id INT NOT NULL,
+    PRIMARY KEY (task_id, user_id),
+    FOREIGN KEY (task_id) REFERENCES group_tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

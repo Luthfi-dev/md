@@ -11,12 +11,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook } from 'lucide-react';
 import { type NotebookGroup, type GroupTask, type GroupMember } from '@/types/notebook';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
-import notebookGroupsData from '@/data/notebook-groups.json';
 import { useAuth } from '@/hooks/use-auth';
 
 // --- Child Components for Readability ---
@@ -51,14 +50,17 @@ const AssigneeSelector = ({ members, selected, onSelectionChange }: { members: G
 const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTaskAdded: (task: GroupTask) => void }) => {
     const [taskLabel, setTaskLabel] = useState('');
     const [assignedTo, setAssignedTo] = useState<string[]>([]);
+    const { user } = useAuth();
 
     const handleAddTask = () => {
-        if (!taskLabel.trim()) return;
+        if (!taskLabel.trim() || !user) return;
         onTaskAdded({
-            id: `task_${Date.now()}`,
+            id: `local_task_${Date.now()}`,
+            uuid: `task_${Date.now()}`,
             label: taskLabel,
             completed: false,
             assignedTo: assignedTo,
+            createdBy: user.id
         });
         setTaskLabel('');
         setAssignedTo([]);
@@ -95,60 +97,98 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
 export default function GroupNotebookPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params.id as string;
+  const id = params.id as string; // Group UUID
   const { toast } = useToast();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, fetchWithAuth } = useAuth();
   
   const [group, setGroup] = useState<NotebookGroup | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // TODO: Replace with API call to fetch group details
-    if (!isAuthenticated) {
+  const fetchGroupDetails = useCallback(async () => {
+    if (!isAuthenticated || !id) {
         router.push('/notebook');
         return;
     }
-    if (!id) return;
-
-    // Simulate fetching group data
-    const currentGroup = (notebookGroupsData as NotebookGroup[]).find(g => g.id === id);
-    if (currentGroup) {
-      setGroup(currentGroup);
-    } else {
-      router.push('/notebook');
+    setIsLoading(true);
+    try {
+        const res = await fetchWithAuth(`/api/notebook/group/${id}`);
+        if (!res.ok) {
+            throw new Error("Gagal mengambil data grup atau Anda bukan anggota.");
+        }
+        const data = await res.json();
+        setGroup(data.group);
+    } catch (e) {
+        console.error(e);
+        toast({variant: 'destructive', title: "Error", description: (e as Error).message});
+        router.push('/notebook');
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [id, router, isAuthenticated]);
+  }, [id, router, isAuthenticated, fetchWithAuth, toast]);
 
-  const toggleTaskCompletion = useCallback((taskId: string) => {
-    // TODO: API call to update task status
-    setGroup(currentGroup => {
-        if (!currentGroup) return null;
-        return { 
-            ...currentGroup, 
-            tasks: currentGroup.tasks.map(task => 
-                task.id === taskId ? { ...task, completed: !task.completed } : task
-            ) 
-        };
-    });
-  }, []);
+  useEffect(() => {
+    fetchGroupDetails();
+  }, [fetchGroupDetails]);
 
-  const handleAddTask = useCallback((newTask: GroupTask) => {
-      // TODO: API call to add task
-      setGroup(currentGroup => {
-          if (!currentGroup) return null;
-          return { ...currentGroup, tasks: [...currentGroup.tasks, newTask] };
-      });
-      toast({title: "Tugas Ditambahkan!", description: `"${newTask.label}" telah ditambahkan ke grup.`});
-  }, [toast]);
+  const toggleTaskCompletion = useCallback(async (task: GroupTask) => {
+    if (!group) return;
+
+    const updatedTask = { ...task, completed: !task.completed };
+    
+    // Optimistic UI update
+    setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.id === task.id ? updatedTask : t) } : null);
+
+    try {
+        const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, {
+            method: 'PUT',
+            body: JSON.stringify(updatedTask)
+        });
+        if (!res.ok) throw new Error("Gagal memperbarui tugas");
+    } catch (error) {
+        // Revert on failure
+        setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.id === task.id ? task : t) } : null);
+        toast({ variant: 'destructive', title: 'Gagal Memperbarui Tugas'});
+    }
+  }, [group, fetchWithAuth, toast]);
+
+  const handleAddTask = useCallback(async (newTask: GroupTask) => {
+    if (!group) return;
+    
+    // Optimistic UI update
+    setGroup(g => g ? { ...g, tasks: [...g.tasks, newTask] } : null);
+
+    try {
+        const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task`, {
+            method: 'POST',
+            body: JSON.stringify(newTask)
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        
+        toast({title: "Tugas Ditambahkan!"});
+        fetchGroupDetails(); // Re-fetch to get server-generated ID and confirm state
+    } catch (error) {
+        setGroup(g => g ? { ...g, tasks: g.tasks.filter(t => t.id !== newTask.id)} : null);
+        toast({ variant: 'destructive', title: "Gagal Menambah Tugas", description: (error as Error).message });
+    }
+  }, [group, fetchWithAuth, toast, fetchGroupDetails]);
   
-  const handleRemoveTask = useCallback((taskId: string) => {
-      // TODO: API call to remove task
-      setGroup(currentGroup => {
-          if(!currentGroup) return null;
-          return {...currentGroup, tasks: currentGroup.tasks.filter(t => t.id !== taskId)};
-      });
-  }, []);
+  const handleRemoveTask = useCallback(async (task: GroupTask) => {
+    if (!group) return;
+
+    const originalTasks = group.tasks;
+    // Optimistic UI update
+    setGroup(g => g ? {...g, tasks: g.tasks.filter(t => t.id !== task.id)} : null);
+    
+    try {
+        const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error("Gagal menghapus tugas");
+        toast({title: "Tugas Dihapus"});
+    } catch (error) {
+        setGroup(g => g ? { ...g, tasks: originalTasks } : null);
+        toast({variant: 'destructive', title: 'Gagal Menghapus Tugas'});
+    }
+  }, [group, fetchWithAuth, toast]);
 
   const progress = useMemo(() => {
     if (!group || group.tasks.length === 0) return 0;
@@ -215,7 +255,7 @@ export default function GroupNotebookPage() {
                   <Checkbox 
                     id={`task-${task.id}`}
                     checked={task.completed}
-                    onCheckedChange={() => toggleTaskCompletion(task.id)}
+                    onCheckedChange={() => toggleTaskCompletion(task)}
                     className="w-5 h-5 mt-1"
                   />
                   <div className="flex-1">
@@ -241,7 +281,7 @@ export default function GroupNotebookPage() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleRemoveTask(task.id)}>Hapus</AlertDialogAction>
+                        <AlertDialogAction onClick={() => handleRemoveTask(task)}>Hapus</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>

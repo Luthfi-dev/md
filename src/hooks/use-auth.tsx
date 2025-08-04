@@ -68,9 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setAccessToken(null);
         setIsAuthenticated(false);
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('userRewardState'); // Clear user-specific reward state
-        }
+        // Do not clear guest data on logout, only on login/register
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
         } catch (error) {
@@ -88,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = await res.json();
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
-                setUser(data.user); // The refresh endpoint now returns the full user object
+                setUser(data.user);
                 setIsAuthenticated(true);
                 return data.accessToken;
             }
@@ -108,8 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            await logout(); // Ensure clean state
-            router.push('/account'); // Redirect to login
+            await logout();
+            router.push('/account');
             throw new Error('Not authenticated');
         }
 
@@ -133,16 +131,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedToken = getAccessToken();
         if (storedToken) {
             if (!isTokenExpired(storedToken)) {
-                // Token is valid, decode and set user.
                 const decodedUser: User = jwtDecode(storedToken);
                 setUser(decodedUser);
                 setIsAuthenticated(true);
             } else {
-                // Token is expired, attempt a silent refresh.
                 await silentRefresh();
             }
         } else {
-            // No token, user is not authenticated.
             setIsAuthenticated(false);
         }
     }, [silentRefresh]);
@@ -164,7 +159,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setAccessToken(data.accessToken);
                 setUser(data.user);
                 setIsAuthenticated(true);
-                 // Clean up guest data after successful login
                 if (typeof window !== 'undefined') {
                     localStorage.removeItem('guestRewardState_v3');
                 }
@@ -192,13 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updateUser = (newUser: Partial<User>) => {
         setUser(prevUser => {
             if (!prevUser) return null;
-            const updatedUser = { ...prevUser, ...newUser };
-            
-            // To keep the session token updated, we'd ideally get a new token from the server
-            // But for immediate UI consistency, we can update the client-side user object.
-            // The `fetchWithAuth` flow will handle refreshing the token if it expires.
-            
-            return updatedUser;
+            return { ...prevUser, ...newUser };
         });
     }
 

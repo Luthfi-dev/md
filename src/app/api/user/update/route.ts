@@ -33,16 +33,18 @@ export async function POST(request: Request) {
 
     const dataToUpdate = validation.data;
     
-    // --- Dynamic SQL Query Builder ---
+    if (Object.keys(dataToUpdate).length === 0) {
+      return NextResponse.json({ success: false, message: 'Tidak ada data untuk diperbarui.' });
+    }
+    
     const updateFields: string[] = [];
     const queryParams: any[] = [];
     
-    // The Object.keys().forEach approach is safer against undefined values
     Object.keys(dataToUpdate).forEach(key => {
         const fieldKey = key as keyof typeof dataToUpdate;
         const value = dataToUpdate[fieldKey];
 
-        if (value !== undefined) { // Check for undefined, allow null and empty strings
+        if (value !== undefined) {
             switch(fieldKey) {
                 case 'name':
                     updateFields.push('name = ?');
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
                     break;
                 case 'avatar_url':
                      updateFields.push('avatar_url = ?');
-                     queryParams.push(value); // value can be string path or null
+                     queryParams.push(value);
                      break;
                 case 'points':
                      updateFields.push('points = ?');
@@ -63,20 +65,6 @@ export async function POST(request: Request) {
             }
         }
     });
-    
-    if (updateFields.length === 0) {
-      // Fetch current data and return it if nothing changed, to ensure consistency
-       const [currentRows] : [any[], any] = await db.execute('SELECT id, name, email, role_id, status, avatar_url, phone_number, points, referral_code FROM users WHERE id = ?', [user.id]);
-       if (currentRows.length === 0) {
-           return NextResponse.json({ success: false, message: 'Pengguna tidak ditemukan.' }, { status: 404 });
-       }
-       const currentUser = currentRows[0];
-       const decryptedPhone = currentUser.phone_number ? decrypt(currentUser.phone_number) : undefined;
-       const decryptedPoints = currentUser.points ? parseInt(decrypt(currentUser.points), 10) : 0;
-       const userForToken = { ...currentUser, phone: decryptedPhone, points: decryptedPoints };
-
-       return NextResponse.json({ success: true, message: 'Tidak ada data untuk diperbarui.', user: userForToken });
-    }
     
     const setClause = updateFields.join(', ');
     const sql = `UPDATE users SET ${setClause} WHERE id = ?`;
@@ -90,7 +78,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: 'Gagal memperbarui profil, pengguna tidak ditemukan.' }, { status: 404 });
     }
 
-    // Fetch the updated user data to return, ensuring data consistency
     const [rows]: [any[], any] = await connection.execute(
       'SELECT id, name, email, role_id, status, avatar_url, phone_number, points, referral_code FROM users WHERE id = ?',
       [user.id]

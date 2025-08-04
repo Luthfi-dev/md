@@ -54,7 +54,6 @@ export function useDailyReward() {
       const storedDataRaw = window.localStorage.getItem(key);
       if (storedDataRaw) {
         let data: StoredRewardData;
-        // GUEST data is encrypted, USER data is not
         if (!isAuthenticated) {
             data = JSON.parse(decrypt(storedDataRaw));
         } else {
@@ -70,7 +69,6 @@ export function useDailyReward() {
       console.error(`Failed to load or parse reward data from localStorage for key ${key}`, error);
     }
 
-    // Default initial data
     const defaultData: StoredRewardData = isAuthenticated 
         ? { points: user?.points || 0, lastClaimTimestamps: {} }
         : { points: 100, lastClaimTimestamps: {}, guestId: generateGuestId() };
@@ -84,11 +82,9 @@ export function useDailyReward() {
     const key = getStorageKey();
     try {
         if (!isAuthenticated) {
-            // Encrypt guest data
             const encryptedData = encrypt(JSON.stringify(data));
             window.localStorage.setItem(key, encryptedData);
         } else {
-            // Save user data as plaintext (or could be sent to API)
             window.localStorage.setItem(key, JSON.stringify(data));
         }
     } catch (e) {
@@ -141,19 +137,23 @@ export function useDailyReward() {
     setPoints(newPoints);
     
     if(isAuthenticated) {
-        // Update local context immediately for responsiveness
         updateUser({ points: newPoints });
 
-        // Persist to the database in the background
         try {
             await fetchWithAuth('/api/user/update', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ points: newPoints })
             });
         } catch (error) {
             console.error("Failed to update points on server:", error);
-            // Optionally handle error, e.g., revert local state or show a warning
             toast({ variant: "destructive", title: 'Gagal Sinkronisasi', description: 'Gagal menyimpan poin ke server. Mohon periksa koneksi Anda.' });
+            // Optionally revert points update
+            const revertedData = { ...newData, points: data.points };
+            saveData(revertedData);
+            setPoints(data.points);
+            updateUser({ points: data.points });
+            return false;
         }
     }
 

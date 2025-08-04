@@ -2,7 +2,7 @@
 'use client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Loader2, Lock, Mail, User } from "lucide-react";
+import { ArrowRight, Lock, Mail, User } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -59,7 +59,6 @@ export default function AccountPage() {
             if (!result.success) {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
-            // The useEffect above will handle successful redirect
         } else {
             const fingerprint = getBrowserFingerprint();
             const guestData = localStorage.getItem('guestRewardState_v3');
@@ -67,9 +66,7 @@ export default function AccountPage() {
 
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
-                // Automatically log in the user after successful registration
                 await login(email, password);
-                // The useEffect will then handle the redirect
             } else {
                  toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
@@ -85,14 +82,8 @@ export default function AccountPage() {
     }
   };
   
-  // While checking auth state, show a loading screen.
-  // This prevents the login form from flashing for already logged-in users.
   if (isAuthenticated === undefined) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+     return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
 
   return (

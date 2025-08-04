@@ -47,29 +47,37 @@ const getAccessTokenClient = () => {
     return accessToken;
 };
 
-const setAccessTokenClient = (token: string | null) => {
-    accessToken = token;
-    if (typeof window !== 'undefined') {
-        if(token) {
-            localStorage.setItem('accessToken', token);
-        } else {
-            localStorage.removeItem('accessToken');
-        }
-    }
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
+    const setAccessToken = useCallback((token: string | null) => {
+        accessToken = token;
+        if (typeof window !== 'undefined') {
+            if(token) {
+                localStorage.setItem('accessToken', token);
+                try {
+                    const decodedUser: User = jwtDecode(token);
+                    setUser(decodedUser);
+                    setIsAuthenticated(true);
+                } catch(e) {
+                    console.error("Failed to decode new access token", e);
+                    setUser(null);
+                    setIsAuthenticated(false);
+                }
+            } else {
+                localStorage.removeItem('accessToken');
+                setUser(null);
+                setIsAuthenticated(false);
+            }
+        }
+    }, []);
+
     const logout = useCallback(async () => {
         setIsLoading(true);
-        setUser(null);
-        setAccessTokenClient(null);
-        setIsAuthenticated(false);
-        // Do not clear guest data on logout, only on login/register
+        setAccessToken(null);
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
         } catch (error) {
@@ -77,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [setAccessToken]);
 
     const silentRefresh = useCallback(async () => {
         try {
@@ -86,9 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             const data = await res.json();
             if (data.success && data.accessToken) {
-                setAccessTokenClient(data.accessToken);
-                setUser(data.user);
-                setIsAuthenticated(true);
+                setAccessToken(data.accessToken);
                 return data.accessToken;
             }
             throw new Error('Refresh token invalid');
@@ -97,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await logout();
             return null;
         }
-    }, [logout]);
+    }, [logout, setAccessToken]);
 
     const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
         let token = getAccessTokenClient();
@@ -132,16 +138,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedToken = getAccessTokenClient();
         if (storedToken) {
             if (!isTokenExpired(storedToken)) {
-                const decodedUser: User = jwtDecode(storedToken);
-                setUser(decodedUser);
-                setIsAuthenticated(true);
+                setAccessToken(storedToken);
             } else {
                 await silentRefresh();
             }
         } else {
             setIsAuthenticated(false);
         }
-    }, [silentRefresh]);
+    }, [silentRefresh, setAccessToken]);
 
     useEffect(() => {
         initializeAuth();
@@ -157,9 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             const data = await res.json();
             if (data.success && data.accessToken) {
-                setAccessTokenClient(data.accessToken);
-                setUser(data.user);
-                setIsAuthenticated(true);
+                setAccessToken(data.accessToken);
                 if (typeof window !== 'undefined') {
                     localStorage.removeItem('guestRewardState_v3');
                 }
@@ -192,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, register, logout, fetchWithAuth, updateUser, setAccessToken: setAccessTokenClient }}>
+        <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, register, logout, fetchWithAuth, updateUser, setAccessToken }}>
             {children}
         </AuthContext.Provider>
     );

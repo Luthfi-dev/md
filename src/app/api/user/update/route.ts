@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { getAuthFromRequest } from '@/lib/auth-utils';
 import type { ResultSetHeader } from 'mysql2';
 import { encrypt, decrypt } from '@/lib/encryption';
+import { generateTokens } from '@/lib/jwt';
+import type { UserForToken } from '@/lib/jwt';
 
 const updateProfileSchema = z.object({
   name: z.string().min(3, "Nama harus memiliki setidaknya 3 karakter.").optional(),
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
     const decryptedPoints = updatedUserDb.points ? parseInt(decrypt(updatedUserDb.points), 10) : 0;
 
 
-    const updatedUserForToken = {
+    const updatedUserForToken: UserForToken = {
         id: updatedUserDb.id,
         name: updatedUserDb.name,
         email: updatedUserDb.email,
@@ -102,11 +104,15 @@ export async function POST(request: Request) {
         points: decryptedPoints,
         referralCode: updatedUserDb.referral_code
     };
+    
+    // Generate a new access token with the updated data
+    const { accessToken } = generateTokens(updatedUserForToken);
 
     return NextResponse.json({ 
         success: true, 
         message: 'Profil berhasil diperbarui.',
-        user: updatedUserForToken
+        user: updatedUserForToken,
+        accessToken: accessToken // Return the new token
     });
 
   } catch (error) {

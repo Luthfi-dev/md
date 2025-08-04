@@ -133,13 +133,7 @@ export function useDailyReward() {
     
     const newData: StoredRewardData = { ...data, points: newPoints, lastClaimTimestamps: newTimestamps };
     
-    saveData(newData);
-    setPoints(newPoints);
-    
-    if(isAuthenticated) {
-        // Immediately update UI
-        updateUser({ points: newPoints });
-
+    if(isAuthenticated && user) {
         try {
             const response = await fetchWithAuth('/api/user/update', {
                 method: 'POST',
@@ -152,7 +146,7 @@ export function useDailyReward() {
                 throw new Error(result.message || 'Server update failed');
             }
             
-            // If the server returns a new token, update it
+            // If the server returns a new token, set it. This will trigger a re-render with new user data.
             if(result.accessToken) {
                 setAccessToken(result.accessToken);
             }
@@ -160,22 +154,20 @@ export function useDailyReward() {
         } catch (error) {
             console.error("Failed to update points on server:", error);
             toast({ variant: "destructive", title: 'Gagal Sinkronisasi', description: 'Gagal menyimpan poin ke server. Mohon periksa koneksi Anda.' });
-            // Revert points update on failure
-            const revertedPoints = user?.points ?? 0;
-            const revertedData = { ...newData, points: revertedPoints };
-            saveData(revertedData);
-            setPoints(revertedPoints);
-            updateUser({ points: revertedPoints });
             return false;
         }
+    } else {
+      // For guests, just save locally
+      saveData(newData);
+      setPoints(newPoints);
     }
-
+    
     updateClaimState();
     
     toast({ title: 'Klaim Berhasil!', description: `Selamat! Anda mendapatkan ${REWARD_AMOUNT} Coin. Sampai jumpa besok!` });
     return true;
 
-  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, user, updateUser, fetchWithAuth, setAccessToken]);
+  }, [loadData, saveData, toast, updateClaimState, isAuthenticated, user, fetchWithAuth, setAccessToken]);
   
   const refreshClaimState = () => {
     updateClaimState();

@@ -2,7 +2,7 @@
 'use client';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Gem, LogOut, Edit, Shield, Bell, Users, Coins, Star, Settings } from "lucide-react";
+import { ChevronRight, Gem, LogOut, Edit, Shield, Bell, Users, Settings } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { CountUp } from "@/components/CountUp";
+import { Coins } from "lucide-react";
 
 const menuItems = [
     { label: "Edit Profil", icon: Edit, href: "/account/edit-profile" },
@@ -53,86 +54,68 @@ export default function ProfilePage() {
             <div className="container mx-auto max-w-2xl px-4 py-8 pb-24">
                 
                 {/* Profile Header */}
-                <div className="flex items-center gap-4 mb-8">
-                    <Avatar className="w-20 h-20 text-3xl border-4 border-background shadow-md">
+                <div className="flex flex-col items-center pt-8 text-center">
+                    <Avatar className="w-24 h-24 text-4xl mb-4 border-4 border-background shadow-lg">
                         <AvatarImage src={avatarUrl} data-ai-hint="profile picture" />
                         <AvatarFallback>{getInitials(user?.name || 'U')}</AvatarFallback>
                     </Avatar>
-                    <div>
-                        <h1 className="text-2xl font-bold text-foreground">{user?.name}</h1>
-                        <Badge variant="outline" className="mt-1 border-primary/20 bg-primary/5 text-primary">
-                            {user?.email}
-                        </Badge>
-                    </div>
+                    <h1 className="text-3xl font-bold text-foreground">{user?.name}</h1>
+                    <Badge variant="outline" className="mt-2 text-muted-foreground bg-secondary/80 border border-border shadow-inner px-4 py-1.5">
+                        {user?.email}
+                    </Badge>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                    <Card>
-                        <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                            <Coins className="w-6 h-6 text-primary mb-1" />
-                            <p className="text-2xl font-bold"><CountUp end={user?.points || 0} /></p>
-                            <p className="text-xs text-muted-foreground">Poin Coin</p>
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                            <Gem className="w-6 h-6 text-primary mb-1" />
-                            <p className="text-lg font-bold">Gratis</p>
-                            <p className="text-xs text-muted-foreground">Langganan</p>
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                            <Users className="w-6 h-6 text-primary mb-1" />
-                            <p className="text-2xl font-bold">0</p>
-                            <p className="text-xs text-muted-foreground">Teman</p>
-                        </CardContent>
-                    </Card>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 my-8">
+                    <div className="flex flex-col items-center p-3 rounded-lg bg-card/50">
+                        <Coins className="w-6 h-6 text-primary mb-1" />
+                        <p className="text-xl font-bold"><CountUp end={user?.points || 0} /></p>
+                        <p className="text-xs text-muted-foreground">Poin</p>
+                    </div>
+                     <div className="flex flex-col items-center p-3 rounded-lg bg-card/50">
+                        <Gem className="w-6 h-6 text-primary mb-1" />
+                        <p className="text-lg font-bold">Gratis</p>
+                        <p className="text-xs text-muted-foreground">Langganan</p>
+                    </div>
+                     <div className="flex flex-col items-center p-3 rounded-lg bg-card/50">
+                        <Users className="w-6 h-6 text-primary mb-1" />
+                        <p className="text-xl font-bold">0</p>
+                        <p className="text-xs text-muted-foreground">Teman</p>
+                    </div>
                 </div>
 
                 {/* Menu List */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <h2 className="font-semibold text-foreground">Akun Saya</h2>
-                        </CardHeader>
-                        <CardContent className="p-2 pt-0">
-                            {menuItems.map((item, index) => (
-                                <button key={index} onClick={() => router.push(item.href)} className="w-full text-left p-3 rounded-lg hover:bg-secondary flex items-center justify-between transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <item.icon className="w-5 h-5 text-muted-foreground" />
-                                        <span className="font-medium text-base text-foreground">{item.label}</span>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                                </button>
-                            ))}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                             <h2 className="font-semibold text-foreground">Engagement</h2>
-                        </CardHeader>
-                         <CardContent className="p-2 pt-0">
-                           {engagementItems.map((item, index) => (
-                                <button key={index} onClick={() => router.push(item.href)} className="w-full text-left p-3 rounded-lg hover:bg-secondary flex items-center justify-between transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <item.icon className="w-5 h-5 text-muted-foreground" />
-                                        <span className="font-medium text-base text-foreground">{item.label}</span>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                                </button>
-                            ))}
-                        </CardContent>
-                    </Card>
-
-                    <div>
-                        <Button onClick={handleLogout} variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
-                            <LogOut className="mr-2 w-5 h-5" />
-                            <span className="font-semibold text-base">Keluar dari Akun</span>
-                        </Button>
+                <div className="bg-card rounded-2xl shadow-sm p-2">
+                    <div className="space-y-1">
+                       {menuItems.map((item) => (
+                            <button key={item.label} onClick={() => router.push(item.href)} className="w-full text-left p-4 rounded-lg hover:bg-secondary flex items-center justify-between transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <item.icon className="w-6 h-6 text-muted-foreground" />
+                                    <span className="font-semibold text-base text-foreground">{item.label}</span>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                       ))}
                     </div>
+                    <Separator className="my-2" />
+                     <div className="space-y-1">
+                         {engagementItems.map((item) => (
+                            <button key={item.label} onClick={() => router.push(item.href)} className="w-full text-left p-4 rounded-lg hover:bg-secondary flex items-center justify-between transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <item.icon className="w-6 h-6 text-muted-foreground" />
+                                    <span className="font-semibold text-base text-foreground">{item.label}</span>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                       ))}
+                    </div>
+                    <Separator className="my-2" />
+                    <button onClick={handleLogout} className="w-full text-left p-4 rounded-lg hover:bg-destructive/10 flex items-center transition-colors text-destructive">
+                        <div className="flex items-center gap-4">
+                            <LogOut className="w-6 h-6" />
+                            <span className="font-semibold text-base">Keluar dari Akun</span>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>

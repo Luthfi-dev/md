@@ -19,33 +19,28 @@ import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
-
+import { Badge } from '@/components/ui/badge';
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
 const LOCAL_STORAGE_KEY_SYNC_INFO = 'notebook_sync_info_dismiss_count';
 const MAX_DISMISS_COUNT = 3;
 
-const TagInput = ({ onTagsChange }: { onTagsChange: (tags: string[]) => void }) => {
+const TagInput = ({ tags, onTagsChange }: { tags: string[], onTagsChange: (tags: string[]) => void }) => {
     const [inputValue, setInputValue] = useState('');
-    const [tags, setTags] = useState<string[]>([]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && inputValue.trim()) {
             e.preventDefault();
             const newTag = inputValue.trim();
             if (!tags.includes(newTag)) {
-                const newTags = [...tags, newTag];
-                setTags(newTags);
-                onTagsChange(newTags);
+                onTagsChange([...tags, newTag]);
             }
             setInputValue('');
         }
     };
 
     const removeTag = (tagToRemove: string) => {
-        const newTags = tags.filter(tag => tag !== tagToRemove);
-        setTags(newTags);
-        onTagsChange(newTags);
+        onTagsChange(tags.filter(tag => tag !== tagToRemove));
     };
 
     return (
@@ -63,22 +58,18 @@ const TagInput = ({ onTagsChange }: { onTagsChange: (tags: string[]) => void }) 
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ketik email, username, atau no. HP..."
+                placeholder="Ketik email, lalu tekan Enter..."
                 className="flex-1 border-0 shadow-none focus-visible:ring-0 p-0 h-auto"
             />
         </div>
     );
 };
 
-const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: NotebookGroup) => void }) => {
-    const [groupName, setGroupName] = useState('');
-    const [invitees, setInvitees] = useState<string[]>([]);
-    const [isCreating, setIsCreating] = useState(false);
+// Separate component for Contact Picker to avoid calling API from inside a dialog
+const ContactPicker = ({ onContactsSelected }: { onContactsSelected: (contacts: string[]) => void }) => {
     const { toast } = useToast();
-    const { user, fetchWithAuth } = useAuth();
-    const router = useRouter();
-
-    const handleSelectContacts = useCallback(async () => {
+    
+    const handleSelectContacts = async () => {
         if (!('contacts' in navigator && 'select' in (navigator as any).contacts)) {
             toast({ variant: 'destructive', title: 'API Kontak Tidak Didukung', description: 'Browser Anda tidak mendukung fitur ini.' });
             return;
@@ -87,7 +78,7 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
             const contacts = await (navigator as any).contacts.select(['name', 'email', 'tel'], { multiple: true });
             if (contacts.length > 0) {
                 const newInvitees = contacts.map((c: any) => c.email?.[0] || c.tel?.[0] || c.name?.[0]).filter(Boolean);
-                setInvitees(prev => [...new Set([...prev, ...newInvitees])]);
+                onContactsSelected(newInvitees);
             }
         } catch (error) {
             console.error("Error selecting contacts:", error);
@@ -95,7 +86,24 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
               toast({ variant: 'destructive', title: 'Gagal Membaca Kontak' });
             }
         }
-    }, [toast]);
+    };
+    
+    return (
+        <Button variant="outline" size="sm" className="w-full" onClick={handleSelectContacts}>
+            <Phone className="mr-2"/> Undang dari Kontak
+        </Button>
+    )
+}
+
+
+const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: NotebookGroup) => void }) => {
+    const [groupName, setGroupName] = useState('');
+    const [invitees, setInvitees] = useState<string[]>([]);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const { toast } = useToast();
+    const { user, fetchWithAuth } = useAuth();
+    const router = useRouter();
 
     const handleCreateAndClose = async () => {
         if (!groupName.trim()) {
@@ -117,6 +125,7 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
             toast({ title: "Grup Dibuat!", description: `Grup "${groupName}" berhasil dibuat.` });
             setGroupName('');
             setInvitees([]);
+            setIsDialogOpen(false); // Close dialog on success
             router.push(`/notebook/group/${data.group.uuid}`);
             return true;
         } catch (error) {
@@ -127,46 +136,53 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
         }
     };
 
+    const handleContactsSelected = (selectedContacts: string[]) => {
+        setInvitees(prev => [...new Set([...prev, ...selectedContacts])]);
+        // Open the dialog after contacts have been selected and state is updated
+        setIsDialogOpen(true);
+    };
+
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button className="w-full md:w-auto">
-                    <UserPlus className="mr-2" /> Buat Grup Baru
-                </Button>
-            </DialogTrigger>
-            <DialogContent onInteractOutside={(e) => { if (isCreating) e.preventDefault(); }}>
-                <DialogHeader>
-                    <DialogTitle>Buat Grup Catatan Baru</DialogTitle>
-                    <DialogDescription>
-                        Mulai kolaborasi dengan membuat grup baru. Anda akan otomatis menjadi admin.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="group-name">Nama Grup</Label>
-                        <Input id="group-name" placeholder="Contoh: Proyek Desain Ulang Web" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Undang Anggota</Label>
-                        <TagInput onTagsChange={setInvitees} />
-                        <p className="text-xs text-muted-foreground">Tekan Enter setelah mengetik untuk menambahkan.</p>
-                        <div className='flex flex-col sm:flex-row gap-2 justify-center'>
-                            <Button variant="outline" size="sm" className="w-full" onClick={handleSelectContacts}><Phone className="mr-2" /> Undang dari Kontak</Button>
-                            <Button variant="outline" size="sm" className="w-full"><MessageSquare className="mr-2" /> Undang via WhatsApp</Button>
+        <>
+            <div className="flex flex-col md:flex-row gap-2">
+                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="w-full">
+                            <UserPlus className="mr-2" /> Buat Grup Baru
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent onInteractOutside={(e) => { if (isCreating) e.preventDefault(); }}>
+                        <DialogHeader>
+                            <DialogTitle>Buat Grup Catatan Baru</DialogTitle>
+                            <DialogDescription>
+                                Mulai kolaborasi dengan membuat grup baru. Anda akan otomatis menjadi admin.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="group-name">Nama Grup</Label>
+                                <Input id="group-name" placeholder="Contoh: Proyek Desain Ulang Web" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Undang Anggota</Label>
+                                <TagInput tags={invitees} onTagsChange={setInvitees} />
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="outline" disabled={isCreating}>Batal</Button></DialogClose>
-                    <Button onClick={handleCreateAndClose} disabled={isCreating}>
-                        {isCreating ? <Loader2 className="animate-spin mr-2" /> : <Plus className="mr-2"/>}
-                        Buat & Masuk Grup
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isCreating}>Batal</Button>
+                            <Button onClick={handleCreateAndClose} disabled={isCreating}>
+                                {isCreating ? <Loader2 className="animate-spin mr-2" /> : <Plus className="mr-2"/>}
+                                Buat & Masuk Grup
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                <ContactPicker onContactsSelected={handleContactsSelected} />
+            </div>
+        </>
     );
 };
+
 
 export default function NotebookListPage() {
   const [personalNotes, setPersonalNotes] = useState<Note[]>([]);
@@ -381,24 +397,26 @@ export default function NotebookListPage() {
                                   <Edit className="h-4 w-4" />
                               </Button>
                           )}
-                          <AlertDialog>
+                          <AlertDialog onOpenChange={(open) => !open && setDeletingNoteId(null)}>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingNoteId(note.uuid); }}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={(e) => { e.stopPropagation(); setDeletingNoteId(null); }}>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleDelete(note); }}>Hapus</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
+                            {deletingNoteId === note.uuid && (
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleDelete(note); }}>Hapus</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                            )}
                           </AlertDialog>
                       </div>
                   </CardTitle>
@@ -485,10 +503,6 @@ export default function NotebookListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24">
-      <AlertDialog open={!!deletingNoteId} onOpenChange={(open) => !open && setDeletingNoteId(null)}>
-        {/* The content of this dialog is now managed per-card to avoid key errors */}
-      </AlertDialog>
-      
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center">
             <h1 className="text-4xl font-bold font-headline tracking-tight">Catatan Cerdas</h1>

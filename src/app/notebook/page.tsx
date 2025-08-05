@@ -244,7 +244,7 @@ export default function NotebookListPage() {
   const handleCreateNewPersonalNote = async () => {
     const newNote: Note = {
       uuid: uuidv4(),
-      title: 'Catatan Baru Tanpa Judul',
+      title: '', // User will fill this in
       items: [],
       createdAt: new Date().toISOString(),
       isSynced: false,
@@ -305,7 +305,7 @@ export default function NotebookListPage() {
       try {
           const res = await fetchWithAuth('/api/notebook/personal/sync', {
               method: 'POST',
-              body: JSON.stringify({ notes: [note] })
+              body: JSON.stringify({ notes: [note] }) // Send as an array with one note
           });
           if (!res.ok) {
             const errorData = await res.json();
@@ -313,7 +313,7 @@ export default function NotebookListPage() {
           }
 
           setPersonalNotes(prev => prev.map(n => n.uuid === note.uuid ? {...n, isSynced: true} : n));
-          toast({ title: 'Berhasil!', description: `Catatan "${note.title}" berhasil disimpan ke cloud.`});
+          toast({ title: 'Berhasil!', description: `Catatan "${note.title || 'Tanpa Judul'}" berhasil disimpan ke cloud.`});
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal Sinkronisasi', description: (error as Error).message });
       } finally {
@@ -485,7 +485,7 @@ export default function NotebookListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24">
-       <AlertDialog open={!!deletingNoteId} onOpenChange={(open) => !open && setDeletingNoteId(null)}>
+      <AlertDialog open={!!deletingNoteId} onOpenChange={(open) => !open && setDeletingNoteId(null)}>
         {/* The content of this dialog is now managed per-card to avoid key errors */}
       </AlertDialog>
       

@@ -63,27 +63,16 @@ export async function POST(request: NextRequest) {
 
                 const itemsToSync = note.items || [];
                 
-                if (itemsToSync.length > 0) {
-                     for (const item of itemsToSync) {
-                        await connection.execute(
-                            `INSERT INTO note_items (note_id, uuid, label, completed)
-                             VALUES (?, ?, ?, ?)
-                             ON DUPLICATE KEY UPDATE label = VALUES(label), completed = VALUES(completed)`,
-                            [noteId, item.uuid, item.label, item.completed]
-                        );
-                    }
-                }
+                // Clear existing items for this note to ensure a clean sync
+                await connection.execute('DELETE FROM note_items WHERE note_id = ?', [noteId]);
                 
-                const incomingItemUuids = itemsToSync.map(i => i.uuid);
-                if (incomingItemUuids.length > 0) {
-                    await connection.execute(
-                        'DELETE FROM note_items WHERE note_id = ? AND uuid NOT IN (?)',
-                        [noteId, incomingItemUuids]
+                if (itemsToSync.length > 0) {
+                    const itemValues = itemsToSync.map(item => [noteId, item.uuid, item.label, item.completed]);
+                    await connection.query(
+                        'INSERT INTO note_items (note_id, uuid, label, completed) VALUES ?',
+                        [itemValues]
                     );
-                } else {
-                    await connection.execute('DELETE FROM note_items WHERE note_id = ?', [noteId]);
                 }
-
 
                 await connection.commit();
             } catch (innerError) {

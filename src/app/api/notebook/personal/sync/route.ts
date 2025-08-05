@@ -20,6 +20,7 @@ const noteSchema = z.object({
   items: z.array(noteItemSchema),
   createdAt: z.string().datetime(),
   userId: z.number().optional(),
+  isSynced: z.boolean().optional(),
 });
 
 const syncSchema = z.object({
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
         const existingNotesMap = new Map(existingNoteRows.map(row => [row.uuid, row.id]));
 
         for (const note of localNotes) {
+            // Only sync if it doesn't already exist in the cloud for this user
             if (!existingNotesMap.has(note.uuid)) {
                 // Insert new note
                 const [noteResult]: [ResultSetHeader, any] = await connection.execute(
@@ -67,13 +69,13 @@ export async function POST(request: NextRequest) {
                 // Insert items for the new note
                 if (note.items.length > 0) {
                     const itemValues = note.items.map(item => [newNoteId, item.uuid, item.label, item.completed]);
-                    await connection.query(
-                        'INSERT INTO note_items (note_id, uuid, label, completed) VALUES ?',
-                        [itemValues]
-                    );
+                    if (itemValues.length > 0) {
+                       await connection.query(
+                           'INSERT INTO note_items (note_id, uuid, label, completed) VALUES ?',
+                           [itemValues]
+                       );
+                    }
                 }
-            } else {
-                // Note exists, could implement update logic here if needed, but for now we just insert new ones.
             }
         }
         

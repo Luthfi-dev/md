@@ -22,9 +22,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
+const LOCAL_STORAGE_KEY_SYNC_INFO = 'notebook_sync_info_dismiss_count';
+const MAX_DISMISS_COUNT = 3;
 
 const TagInput = ({ onTagsChange }: { onTagsChange: (tags: string[]) => void }) => {
     const [inputValue, setInputValue] = useState('');
@@ -97,13 +100,13 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
             }
         }
     };
-
-    const handleCreateGroup = async () => {
+    
+    const handleAndClose = async () => {
         if (!groupName.trim()) {
             toast({ variant: 'destructive', title: 'Nama Grup Wajib Diisi' });
-            return false;
+            return;
         }
-        if (!user) return false;
+        if (!user) return;
         
         setIsCreating(true);
 
@@ -127,11 +130,6 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
         } finally {
             setIsCreating(false);
         }
-    };
-    
-     const handleAndClose = async () => {
-        const success = await handleCreateGroup();
-        return success; // Dialog will only close if this is true
     }
 
     return (
@@ -141,7 +139,7 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
                     <UserPlus className="mr-2" /> Buat Grup Baru
                 </Button>
             </DialogTrigger>
-            <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+            <DialogContent onInteractOutside={(e) => { if (isCreating) e.preventDefault(); }}>
                 <DialogHeader>
                     <DialogTitle>Buat Grup Catatan Baru</DialogTitle>
                     <DialogDescription>
@@ -165,7 +163,11 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Batal</Button></DialogClose>
-                    <Button onClick={handleAndClose} disabled={isCreating}>
+                    <Button onClick={async () => {
+                        const success = await handleAndClose();
+                        // This logic should be handled by the Dialog component itself if it supports async close.
+                        // For now, we assume the dialog closes on button click, but won't re-open.
+                    }} disabled={isCreating}>
                         {isCreating ? <Loader2 className="animate-spin" /> : "Buat Grup"}
                     </Button>
                 </DialogFooter>
@@ -181,6 +183,7 @@ export default function NotebookListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [syncingNoteId, setSyncingNoteId] = useState<string | number | null>(null);
+  const [showSyncInfo, setShowSyncInfo] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { isAuthenticated, user, fetchWithAuth } = useAuth();
@@ -196,7 +199,6 @@ export default function NotebookListPage() {
                 notes = data.notes.map((n: Note) => ({ ...n, isSynced: true })) || [];
             }
         }
-        // Always load local notes and mark them as not synced unless they are already in the cloud list
         const localNotesRaw = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
         const localNotes: Note[] = localNotesRaw ? JSON.parse(localNotesRaw) : [];
         
@@ -211,26 +213,21 @@ export default function NotebookListPage() {
     }
   }, [isAuthenticated, fetchWithAuth]);
 
-  const fetchGroupNotes = useCallback(async () => {
-     if (!isAuthenticated) return;
-     setIsLoadingGroups(true);
-     try {
-         const res = await fetchWithAuth('/api/notebook/group');
-         if(res.ok) {
-            const data = await res.json();
-            setGroupNotes(data.groups || []);
-         }
-     } catch(e) {
-         console.error("Failed to fetch group notes", e);
-     } finally {
-        setIsLoadingGroups(false);
-     }
-  }, [isAuthenticated, fetchWithAuth]);
-
   useEffect(() => {
     fetchPersonalNotes();
-    fetchGroupNotes();
-  }, [fetchPersonalNotes, fetchGroupNotes]);
+    if(typeof window !== 'undefined'){
+       const dismissCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10);
+       if(dismissCount < MAX_DISMISS_COUNT) {
+         setShowSyncInfo(true);
+       }
+    }
+  }, [fetchPersonalNotes]);
+
+  const handleDismissSyncInfo = () => {
+     const newCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10) + 1;
+     localStorage.setItem(LOCAL_STORAGE_KEY_SYNC_INFO, String(newCount));
+     setShowSyncInfo(false);
+  }
 
   const handleCreateNewPersonalNote = async () => {
     const newNote: Note = {
@@ -280,7 +277,7 @@ export default function NotebookListPage() {
         
         toast({title: "Catatan Dihapus"});
     } catch (error) {
-        setPersonalNotes(originalNotes); // Revert
+        setPersonalNotes(originalNotes);
         toast({variant: 'destructive', title: "Gagal Menghapus Catatan"});
     }
   };
@@ -301,12 +298,15 @@ export default function NotebookListPage() {
               method: 'POST',
               body: JSON.stringify({ notes: [note] })
           });
-          if (!res.ok) throw new Error('Gagal sinkronisasi');
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Gagal sinkronisasi');
+          }
           
           setPersonalNotes(prev => prev.map(n => n.uuid === note.uuid ? {...n, isSynced: true} : n));
           toast({ title: 'Berhasil!', description: `Catatan "${note.title}" berhasil disimpan ke cloud.`});
       } catch (error) {
-          toast({ variant: 'destructive', title: 'Gagal Sinkronisasi' });
+          toast({ variant: 'destructive', title: 'Gagal Sinkronisasi', description: (error as Error).message });
       } finally {
           setSyncingNoteId(null);
       }
@@ -325,6 +325,26 @@ export default function NotebookListPage() {
             <Plus className="mr-2" /> Buat Catatan Baru
         </Button>
       </div>
+
+      {isAuthenticated && showSyncInfo && (
+        <Alert>
+           <div className='flex items-start gap-3'>
+              <div>
+                <AlertTitle className="font-bold flex items-center gap-2">Status Sinkronisasi</AlertTitle>
+                <AlertDescription className="text-xs">
+                    <CloudOff className="inline-block w-4 h-4 text-destructive mr-1"/>
+                    Berarti catatan hanya ada di perangkat ini. Klik ikon tersebut untuk menyimpan ke cloud.
+                    <br/>
+                    <Cloud className="inline-block w-4 h-4 text-green-500 mr-1"/>
+                    Berarti catatan sudah aman di cloud.
+                </AlertDescription>
+              </div>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleDismissSyncInfo}>
+                <X className="w-4 h-4" />
+              </Button>
+           </div>
+        </Alert>
+      )}
       
       {isLoading ? (
         <div className="text-center py-16"><Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" /></div>

@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,7 +68,6 @@ export default function NotebookEditPage() {
 
   useEffect(() => {
     const editModeParam = searchParams.get('edit') === 'true';
-    setIsEditMode(editModeParam);
     setIsLoading(true);
 
     const loadNote = () => {

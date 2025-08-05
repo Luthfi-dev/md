@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,37 +35,35 @@ export default function NotebookEditPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const saveNote = useCallback(async (noteToSave: Note) => {
+  const saveNote = useDebouncedCallback(async (noteToSave: Note) => {
     // Always save to localStorage as a backup
-    const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
-    const existingIndex = storedNotes.findIndex(n => n.uuid === noteToSave.uuid);
-    if (existingIndex > -1) {
-        storedNotes[existingIndex] = noteToSave;
-    } else {
-        storedNotes.unshift(noteToSave);
+    try {
+        const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+        const existingIndex = storedNotes.findIndex(n => n.uuid === noteToSave.uuid);
+        if (existingIndex > -1) {
+            storedNotes[existingIndex] = noteToSave;
+        } else {
+            storedNotes.unshift(noteToSave);
+        }
+        localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
+    } catch (error) {
+        console.error("Gagal menyimpan catatan ke lokal:", error);
     }
-    localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
-
-    // If authenticated, also save to cloud
-    if (isAuthenticated) {
+    
+    if (isAuthenticated && noteToSave.isSynced) {
         setIsSaving(true);
         try {
             await fetchWithAuth(`/api/notebook/personal/sync`, {
                 method: 'POST',
                 body: JSON.stringify({ notes: [noteToSave] })
             });
-            // Update sync status on successful save
-            setNote(n => n ? ({ ...n, isSynced: true }) : null);
         } catch (error) {
             console.error("Auto-save to cloud failed:", error);
-            toast({ variant: 'destructive', title: "Gagal Simpan ke Cloud", description: "Perubahan disimpan lokal."});
         } finally {
             setIsSaving(false);
         }
     }
-  }, [fetchWithAuth, isAuthenticated, toast]);
-
-  const debouncedSave = useDebouncedCallback(saveNote, 1500);
+  }, 1500);
 
   useEffect(() => {
     const editModeParam = searchParams.get('edit') === 'true';
@@ -79,6 +77,10 @@ export default function NotebookEditPage() {
             const currentNote = storedNotes.find(n => n.uuid === id);
             if (currentNote) {
                 setNote(currentNote);
+                // If it's a new note (determined by title) or edit param is present, force edit mode
+                if (editModeParam || currentNote.title === 'Catatan Baru Tanpa Judul') {
+                    setIsEditMode(true);
+                }
             } else {
                 router.push('/notebook');
             }
@@ -93,16 +95,17 @@ export default function NotebookEditPage() {
     loadNote();
   }, [id, router, searchParams, toast]);
 
-  const updateNote = useCallback((updatedNote: Note) => {
+  const updateNote = useCallback((updatedNote: Note | null) => {
+    if (!updatedNote) return;
     setNote(updatedNote);
-    debouncedSave(updatedNote);
-  }, [debouncedSave]);
+    saveNote(updatedNote);
+  }, [saveNote]);
 
   const updateNoteField = (field: keyof Note, value: any) => {
     setNote(currentNote => {
       if (!currentNote) return null;
       const newNote = { ...currentNote, [field]: value };
-      debouncedSave(newNote);
+      saveNote(newNote);
       return newNote;
     });
   };
@@ -114,7 +117,8 @@ export default function NotebookEditPage() {
       label: '',
       completed: false,
     };
-    updateNote({ ...note, items: [...note.items, newItem] });
+    const newNote = { ...note, items: [...note.items, newItem] };
+    updateNote(newNote);
   };
 
   const updateItem = (itemUuid: string, newLabel: string) => {

@@ -1,13 +1,12 @@
-
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Notebook, Trash2, Edit, Users, MessageSquare, Phone, UserPlus, Lock, Cloud, CloudOff, Loader2, X } from 'lucide-react';
-import { type Note, type NotebookGroup, type GroupMember } from '@/types/notebook';
+import { type Note, type NotebookGroup } from '@/types/notebook';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
@@ -20,32 +19,62 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
+
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
 const LOCAL_STORAGE_KEY_SYNC = 'notebook_sync_enabled';
 
-const useCloudSync = () => {
+const useCloudSync = (isAuthenticated: boolean | undefined) => {
     const [isSyncEnabled, setIsSyncEnabled] = useState(false);
+    const [isMigrating, setIsMigrating] = useState(false);
+    const { fetchWithAuth } = useAuth();
+    const { toast } = useToast();
 
     useEffect(() => {
+        if (!isAuthenticated) return;
         try {
             const storedValue = localStorage.getItem(LOCAL_STORAGE_KEY_SYNC);
             setIsSyncEnabled(storedValue === 'true');
         } catch (error) {
-            console.error("Failed to read sync setting from localStorage", error);
+            console.error("Gagal membaca pengaturan sinkronisasi dari localStorage", error);
         }
-    }, []);
+    }, [isAuthenticated]);
 
-    const toggleSync = (enabled: boolean) => {
-        setIsSyncEnabled(enabled);
-        try {
-            localStorage.setItem(LOCAL_STORAGE_KEY_SYNC, String(enabled));
-        } catch (error) {
-            console.error("Failed to save sync setting to localStorage", error);
+    const handleSyncToggle = async (enabled: boolean) => {
+        if (enabled) {
+            setIsMigrating(true);
+            try {
+                const localNotesRaw = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
+                const localNotes = localNotesRaw ? JSON.parse(localNotesRaw) : [];
+
+                if (localNotes.length > 0) {
+                    const res = await fetchWithAuth('/api/notebook/personal/sync', {
+                        method: 'POST',
+                        body: JSON.stringify({ notes: localNotes })
+                    });
+                    if (!res.ok) {
+                        throw new Error('Gagal memindahkan catatan ke cloud.');
+                    }
+                }
+                
+                setIsSyncEnabled(true);
+                localStorage.setItem(LOCAL_STORAGE_KEY_SYNC, 'true');
+                toast({ title: "Sinkronisasi Diaktifkan", description: "Catatan lokal Anda telah dipindahkan ke cloud." });
+
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Gagal Sinkronisasi', description: (error as Error).message });
+            } finally {
+                setIsMigrating(false);
+            }
+        } else {
+            setIsSyncEnabled(false);
+            localStorage.setItem(LOCAL_STORAGE_KEY_SYNC, 'false');
+            toast({ title: "Sinkronisasi Dinonaktifkan", description: "Catatan baru akan disimpan di perangkat ini." });
         }
     };
 
-    return { isSyncEnabled, toggleSync };
+    return { isSyncEnabled, handleSyncToggle, isMigrating };
 };
 
 const TagInput = ({ onTagsChange }: { onTagsChange: (tags: string[]) => void }) => {
@@ -114,7 +143,9 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
             }
         } catch (error) {
             console.error("Error selecting contacts:", error);
-            toast({ variant: 'destructive', title: 'Gagal Membaca Kontak' });
+            if ((error as DOMException).name !== 'AbortError') {
+              toast({ variant: 'destructive', title: 'Gagal Membaca Kontak' });
+            }
         }
     };
 
@@ -199,13 +230,13 @@ export default function NotebookListPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { isAuthenticated, user, fetchWithAuth } = useAuth();
-  const { isSyncEnabled, toggleSync } = useCloudSync();
+  const { isSyncEnabled, handleSyncToggle, isMigrating } = useCloudSync(isAuthenticated);
+
 
   const fetchNotes = useCallback(async () => {
     setIsLoading(true);
     if (isAuthenticated) {
         if (isSyncEnabled) {
-            // Fetch from API
             try {
                 const res = await fetchWithAuth('/api/notebook/personal');
                 if (res.ok) {
@@ -213,26 +244,23 @@ export default function NotebookListPage() {
                     setPersonalNotes(data.notes || []);
                 }
             } catch (e) {
-                console.error("Failed to fetch cloud notes", e);
+                console.error("Gagal mengambil catatan dari cloud", e);
             }
         } else {
-            // Fetch from localStorage
             try {
                 const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
                 setPersonalNotes(storedNotes ? JSON.parse(storedNotes) : []);
             } catch (error) {
-                console.error("Failed to load local notes", error);
+                console.error("Gagal memuat catatan lokal", error);
             }
         }
-        // TODO: Fetch groups from API
         setGroupNotes([]); 
     } else {
-        // Guest user logic (always local)
         try {
             const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
             setPersonalNotes(storedNotes ? JSON.parse(storedNotes) : []);
         } catch (error) {
-            console.error("Failed to load guest notes", error);
+            console.error("Gagal memuat catatan tamu", error);
         }
         setGroupNotes([]);
     }
@@ -241,9 +269,9 @@ export default function NotebookListPage() {
 
   useEffect(() => {
     fetchNotes();
-  }, [fetchNotes]);
+  }, [fetchNotes, isSyncEnabled]); // Re-fetch when sync status changes
 
-  const handleCreateNewPersonalNote = () => {
+  const handleCreateNewPersonalNote = async () => {
     const newNote: Note = {
       id: `local_${Date.now()}`,
       uuid: uuidv4(),
@@ -254,27 +282,23 @@ export default function NotebookListPage() {
     };
     
     // Optimistic UI update
-    const updatedNotes = [newNote, ...personalNotes];
-    setPersonalNotes(updatedNotes);
+    setPersonalNotes(prev => [newNote, ...prev]);
 
     if (isSyncEnabled) {
-        // API call
-        fetchWithAuth('/api/notebook/personal', {
-            method: 'POST',
-            body: JSON.stringify(newNote),
-        }).then(res => res.json()).then(data => {
-            if (data.success) {
-                // Optionally update the note with server data (e.g., real ID)
-                fetchNotes(); // Re-fetch to get the server-generated ID
-            } else {
-                // Revert UI on failure
-                setPersonalNotes(personalNotes);
-                toast({ variant: 'destructive', title: 'Gagal Menyimpan ke Cloud' });
-            }
-        });
+        try {
+            const res = await fetchWithAuth('/api/notebook/personal', {
+                method: 'POST',
+                body: JSON.stringify(newNote),
+            });
+            if (!res.ok) throw new Error("Gagal menyimpan ke cloud");
+            await fetchNotes(); // Re-fetch to get server-generated ID
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan ke Cloud' });
+            setPersonalNotes(prev => prev.filter(n => n.uuid !== newNote.uuid)); // Revert
+        }
     } else {
-        // LocalStorage
-        localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(updatedNotes));
+        const currentNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+        localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify([newNote, ...currentNotes]));
     }
     router.push(`/notebook/${newNote.uuid}`);
   };
@@ -295,21 +319,19 @@ export default function NotebookListPage() {
   const handleDelete = async (note: Note, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Optimistic UI update
-    const updatedNotes = personalNotes.filter(n => n.id !== note.id);
-    setPersonalNotes(updatedNotes);
+    const originalNotes = [...personalNotes];
+    setPersonalNotes(prev => prev.filter(n => n.uuid !== note.uuid));
     
     try {
         if (isSyncEnabled) {
             const res = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error("Server deletion failed");
+            if (!res.ok) throw new Error("Gagal menghapus catatan di server");
         } else {
-            localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(updatedNotes));
+            localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(personalNotes.filter(n => n.uuid !== note.uuid)));
         }
         toast({title: "Catatan Dihapus"});
     } catch (error) {
-        // Revert on failure
-        setPersonalNotes(personalNotes);
+        setPersonalNotes(originalNotes); // Revert
         toast({variant: 'destructive', title: "Gagal Menghapus Catatan"});
     }
   };
@@ -336,7 +358,8 @@ export default function NotebookListPage() {
                 <Switch 
                     id="sync-switch"
                     checked={isSyncEnabled}
-                    onCheckedChange={toggleSync}
+                    onCheckedChange={handleSyncToggle}
+                    disabled={isMigrating}
                 />
                 <Label htmlFor="sync-switch" className="flex items-center gap-2 text-sm">
                     {isSyncEnabled ? <Cloud className="text-primary"/> : <CloudOff/>}
@@ -359,6 +382,7 @@ export default function NotebookListPage() {
                 <CardTitle className="flex justify-between items-center">
                     <span className="truncate">{note.title || 'Tanpa Judul'}</span>
                      <div className="flex items-center gap-1 shrink-0">
+                        {isSyncEnabled && <Cloud className="h-4 w-4 text-green-500" />}
                         {!isCompleted && (
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleEdit(note.uuid, e)}>
                                 <Edit className="h-4 w-4" />
@@ -467,6 +491,7 @@ export default function NotebookListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24">
+      <LoadingOverlay isLoading={isMigrating} message="Memindahkan catatan ke cloud..." />
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center">
             <h1 className="text-4xl font-bold font-headline tracking-tight">Catatan Cerdas</h1>

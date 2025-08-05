@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,7 +12,7 @@ import { type NotebookGroup, type GroupTask, type GroupMember } from '@/types/no
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
@@ -35,8 +34,8 @@ const AssigneeSelector = ({ members, selected, onSelectionChange }: { members: G
             <p className="text-xs text-muted-foreground">Jika tidak ada yang dipilih, tugas akan ditugaskan ke semua anggota.</p>
             <div className="flex flex-wrap gap-2 pt-2">
                 {members.map(member => (
-                    <div key={member.id} onClick={() => handleToggle(member.id)} className="cursor-pointer">
-                        <Badge variant={selected.includes(member.id) ? 'default' : 'secondary'} className="flex items-center gap-2 p-2">
+                    <div key={member.id} onClick={() => handleToggle(String(member.id))} className="cursor-pointer">
+                        <Badge variant={selected.includes(String(member.id)) ? 'default' : 'secondary'} className="flex items-center gap-2 p-2">
                             <Avatar className="h-5 w-5"><AvatarImage src={member.avatarUrl} /><AvatarFallback>{member.name.charAt(0)}</AvatarFallback></Avatar>
                             <span>{member.name}</span>
                         </Badge>
@@ -59,7 +58,7 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
             uuid: `task_${Date.now()}`,
             label: taskLabel,
             completed: false,
-            assignedTo: assignedTo,
+            assignedTo: assignedTo.map(id => parseInt(id, 10)),
             createdBy: user.id
         });
         setTaskLabel('');
@@ -106,14 +105,14 @@ export default function GroupNotebookPage() {
 
   const fetchGroupDetails = useCallback(async () => {
     if (!isAuthenticated || !id) {
-        router.push('/notebook');
         return;
     }
     setIsLoading(true);
     try {
         const res = await fetchWithAuth(`/api/notebook/group/${id}`);
         if (!res.ok) {
-            throw new Error("Gagal mengambil data grup atau Anda bukan anggota.");
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Gagal mengambil data grup.");
         }
         const data = await res.json();
         setGroup(data.group);
@@ -127,8 +126,13 @@ export default function GroupNotebookPage() {
   }, [id, router, isAuthenticated, fetchWithAuth, toast]);
 
   useEffect(() => {
-    fetchGroupDetails();
-  }, [fetchGroupDetails]);
+    // Only fetch if authenticated. If not, the user shouldn't be here.
+    if(isAuthenticated === true) {
+        fetchGroupDetails();
+    } else if (isAuthenticated === false) {
+        router.push('/account');
+    }
+  }, [isAuthenticated, fetchGroupDetails, router]);
 
   const toggleTaskCompletion = useCallback(async (task: GroupTask) => {
     if (!group) return;

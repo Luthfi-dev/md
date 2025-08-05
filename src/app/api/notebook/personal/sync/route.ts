@@ -6,27 +6,23 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-// Skema yang lebih spesifik untuk item
 const localNoteItemSchema = z.object({
   uuid: z.string().uuid("UUID item tidak valid"),
   label: z.string(),
   completed: z.boolean(),
 });
 
-// Skema untuk satu catatan yang akan disinkronkan
 const localNoteSyncSchema = z.object({
   uuid: z.string().uuid("UUID catatan tidak valid"),
   title: z.string(),
-  items: z.array(localNoteItemSchema),
-  createdAt: z.string().datetime().optional(), // Dibuat opsional karena mungkin tidak selalu ada
+  items: z.array(localNoteItemSchema).optional(),
+  createdAt: z.string().datetime().optional(), 
 });
 
-// Skema utama untuk payload sinkronisasi
 const syncSchema = z.object({
     notes: z.array(localNoteSyncSchema)
 });
 
-// Endpoint for bulk syncing local notes to the cloud
 export async function POST(request: NextRequest) {
     const user = await getAuthFromRequest(request);
     if (!user) {
@@ -55,18 +51,20 @@ export async function POST(request: NextRequest) {
 
             try {
                 // Upsert Note (Update or Insert)
-                const [noteResult]: [ResultSetHeader, any] = await connection.execute(
+                await connection.execute(
                     `INSERT INTO notes (user_id, uuid, title, content, created_at)
                      VALUES (?, ?, ?, ?, ?)
                      ON DUPLICATE KEY UPDATE title = VALUES(title), content = VALUES(content), updated_at = CURRENT_TIMESTAMP`,
                     [user.id, note.uuid, note.title, '', note.createdAt ? new Date(note.createdAt) : new Date()]
                 );
                 
-                const [noteRow]: [RowDataPacket[], any] = await connection.execute('SELECT id FROM notes WHERE uuid = ?', [note.uuid]);
+                const [noteRow]: [RowDataPacket[], any] = await connection.execute('SELECT id FROM notes WHERE uuid = ? AND user_id = ?', [note.uuid, user.id]);
                 const noteId = noteRow[0].id;
 
-                if (note.items && note.items.length > 0) {
-                     for (const item of note.items) {
+                const itemsToSync = note.items || [];
+                
+                if (itemsToSync.length > 0) {
+                     for (const item of itemsToSync) {
                         await connection.execute(
                             `INSERT INTO note_items (note_id, uuid, label, completed)
                              VALUES (?, ?, ?, ?)
@@ -76,15 +74,13 @@ export async function POST(request: NextRequest) {
                     }
                 }
                 
-                // Hapus item yang ada di DB tapi tidak ada di data lokal (opsional, tergantung kebutuhan)
-                const incomingItemUuids = note.items.map(i => i.uuid);
+                const incomingItemUuids = itemsToSync.map(i => i.uuid);
                 if (incomingItemUuids.length > 0) {
                     await connection.execute(
                         'DELETE FROM note_items WHERE note_id = ? AND uuid NOT IN (?)',
                         [noteId, incomingItemUuids]
                     );
                 } else {
-                    // Jika tidak ada item masuk, hapus semua item yang ada
                     await connection.execute('DELETE FROM note_items WHERE note_id = ?', [noteId]);
                 }
 
@@ -93,7 +89,7 @@ export async function POST(request: NextRequest) {
             } catch (innerError) {
                 if (connection) await connection.rollback();
                 console.error(`Gagal menyinkronkan catatan ${note.uuid}:`, innerError);
-                throw innerError; // Re-throw untuk ditangkap oleh blok catch luar
+                throw innerError;
             }
         }
         
@@ -106,5 +102,3 @@ export async function POST(request: NextRequest) {
         if (connection) connection.release();
     }
 }
-
-    

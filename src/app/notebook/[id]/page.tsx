@@ -1,78 +1,86 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Save, HelpCircle, ListPlus, Edit, ArrowLeft, Loader2 } from 'lucide-react';
+import { Plus, Trash2, HelpCircle, ListPlus, Edit, ArrowLeft, Loader2, Save } from 'lucide-react';
 import { type Note, type ChecklistItem } from '@/types/notebook';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/use-auth';
 import { v4 as uuidv4 } from 'uuid';
+import { useDebouncedCallback } from 'use-debounce';
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
-const LOCAL_STORAGE_KEY_SYNC = 'notebook_sync_enabled';
-
 
 export default function NotebookEditPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
 
-  const id = params.id as string; // This is now UUID
+  const id = params.id as string; // This is UUID
   const { toast } = useToast();
-  const { user, fetchWithAuth } = useAuth();
-  
+  const { user, fetchWithAuth, isAuthenticated } = useAuth();
+
   const [note, setNote] = useState<Note | null>(null);
   const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
   const [bulkAddCount, setBulkAddCount] = useState(10);
   const [isNumbered, setIsNumbered] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const isSyncEnabled = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem(LOCAL_STORAGE_KEY_SYNC) === 'true';
-  }, []);
-  
+  const saveNote = useCallback(async (noteToSave: Note) => {
+    // Always save to localStorage as a backup
+    const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+    const existingIndex = storedNotes.findIndex(n => n.uuid === noteToSave.uuid);
+    if (existingIndex > -1) {
+        storedNotes[existingIndex] = noteToSave;
+    } else {
+        storedNotes.unshift(noteToSave);
+    }
+    localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
+
+    // If authenticated, also save to cloud
+    if (isAuthenticated) {
+        setIsSaving(true);
+        try {
+            await fetchWithAuth(`/api/notebook/personal/sync`, {
+                method: 'POST',
+                body: JSON.stringify({ notes: [noteToSave] })
+            });
+            // Update sync status on successful save
+            setNote(n => n ? ({ ...n, isSynced: true }) : null);
+        } catch (error) {
+            console.error("Auto-save to cloud failed:", error);
+            toast({ variant: 'destructive', title: "Gagal Simpan ke Cloud", description: "Perubahan disimpan lokal."});
+        } finally {
+            setIsSaving(false);
+        }
+    }
+  }, [fetchWithAuth, isAuthenticated, toast]);
+
+  const debouncedSave = useDebouncedCallback(saveNote, 1500);
+
   useEffect(() => {
     const editModeParam = searchParams.get('edit') === 'true';
     setIsEditMode(editModeParam);
     setIsLoading(true);
 
-    const fetchNote = async () => {
+    const loadNote = () => {
         if (!id) return;
         try {
-             if (isSyncEnabled && user) {
-                const res = await fetchWithAuth(`/api/notebook/personal/${id}`);
-                if (!res.ok) throw new Error("Gagal mengambil catatan dari cloud.");
-                const data = await res.json();
-                setNote(data.note);
+            const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+            const currentNote = storedNotes.find(n => n.uuid === id);
+            if (currentNote) {
+                setNote(currentNote);
             } else {
-                const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
-                const currentNote = storedNotes.find(n => n.uuid === id);
-                if (currentNote) {
-                    setNote(currentNote);
-                } else {
-                    router.push('/notebook');
-                }
+                router.push('/notebook');
             }
         } catch (error) {
              console.error("Gagal memuat catatan:", error);
@@ -82,117 +90,69 @@ export default function NotebookEditPage() {
             setIsLoading(false);
         }
     }
-    fetchNote();
-  }, [id, router, searchParams, toast, isSyncEnabled, fetchWithAuth, user]);
+    loadNote();
+  }, [id, router, searchParams, toast]);
 
-  const updateNote = useCallback((field: keyof Note, value: any) => {
-    setNote(currentNote => currentNote ? { ...currentNote, [field]: value } : null);
-  }, []);
+  const updateNote = useCallback((updatedNote: Note) => {
+    setNote(updatedNote);
+    debouncedSave(updatedNote);
+  }, [debouncedSave]);
 
-  const addItem = useCallback(() => {
+  const updateNoteField = (field: keyof Note, value: any) => {
+    setNote(currentNote => {
+      if (!currentNote) return null;
+      const newNote = { ...currentNote, [field]: value };
+      debouncedSave(newNote);
+      return newNote;
+    });
+  };
+
+  const addItem = () => {
     if (!note) return;
     const newItem: ChecklistItem = {
-      id: `local_${Date.now()}`,
       uuid: uuidv4(),
       label: '',
       completed: false,
     };
-    updateNote('items', [...note.items, newItem]);
-  }, [note, updateNote]);
+    updateNote({ ...note, items: [...note.items, newItem] });
+  };
 
-  const updateItem = useCallback((itemUuid: string, newLabel: string) => {
+  const updateItem = (itemUuid: string, newLabel: string) => {
     if (!note) return;
-    const updatedItems = note.items.map(item => 
+    const updatedItems = note.items.map(item =>
       item.uuid === itemUuid ? { ...item, label: newLabel } : item
     );
-    updateNote('items', updatedItems);
-  }, [note, updateNote]);
+    updateNote({ ...note, items: updatedItems });
+  };
 
-  const toggleItemCompletion = useCallback(async (itemUuid: string) => {
+  const toggleItemCompletion = (itemUuid: string) => {
     if (!note) return;
     const updatedItems = note.items.map(item =>
       item.uuid === itemUuid ? { ...item, completed: !item.completed } : item
     );
-    const updatedNote = { ...note, items: updatedItems };
-    setNote(updatedNote);
+    updateNote({ ...note, items: updatedItems });
+  };
 
-    // Auto-save completion status
-    if (isSyncEnabled && user) {
-        try {
-            // Debounced API call could be implemented here for performance
-            await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, {
-                method: 'PUT',
-                body: JSON.stringify(updatedNote)
-            });
-        } catch (e) {
-             console.error("Auto-save failed:", e) // fail silently on auto-save
-        }
-    } else {
-        const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
-        const existingIndex = storedNotes.findIndex(n => n.uuid === updatedNote.uuid);
-        if (existingIndex > -1) {
-            storedNotes[existingIndex] = updatedNote;
-            localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
-        }
-    }
-  }, [note, isSyncEnabled, user, fetchWithAuth]);
-
-  const removeItem = useCallback((itemUuid: string) => {
+  const removeItem = (itemUuid: string) => {
     if (!note) return;
-    updateNote('items', note.items.filter(item => item.uuid !== itemUuid));
-  }, [note, updateNote]);
-  
-  const handleBulkAdd = useCallback(() => {
+    updateNote({ ...note, items: note.items.filter(item => item.uuid !== itemUuid) });
+  };
+
+  const handleBulkAdd = () => {
      if (!note || bulkAddCount <= 0) return;
      const newItems: ChecklistItem[] = Array.from({ length: bulkAddCount }, (_, i) => ({
-      id: `local_bulk_${Date.now()}_${i}`,
       uuid: uuidv4(),
       label: isNumbered ? `${note.items.length + i + 1}. ` : '',
       completed: false,
     }));
-    updateNote('items', [...note.items, ...newItems]);
+    updateNote({ ...note, items: [...note.items, ...newItems] });
     setIsBulkAddOpen(false);
     setBulkAddCount(10);
     setIsNumbered(false);
-  }, [note, updateNote, bulkAddCount, isNumbered]);
-  
-  const handleSave = async () => {
-    if (!note) return;
-    if (!note.title.trim()) {
-        toast({ variant: 'destructive', title: 'Judul tidak boleh kosong!' });
-        return;
-    }
-    
-    setIsSyncing(true);
-    try {
-        if (isSyncEnabled && user) {
-            const res = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, {
-                method: 'PUT',
-                body: JSON.stringify(note)
-            });
-            if (!res.ok) throw new Error("Gagal menyimpan ke cloud");
-        } else {
-            const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
-            const existingIndex = storedNotes.findIndex(n => n.uuid === note.uuid);
-            if (existingIndex > -1) {
-                storedNotes[existingIndex] = note;
-            } else {
-                storedNotes.push(note);
-            }
-            localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
-        }
-        toast({ title: 'Catatan Disimpan!', description: `"${note.title}" telah berhasil disimpan.` });
-        setIsEditMode(false);
-    } catch (error) {
-        console.error("Failed to save note", error);
-        toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Terjadi kesalahan saat menyimpan catatan.' });
-    } finally {
-        setIsSyncing(false);
-    }
   };
 
   const progress = useMemo(() => {
-    if (!note || note.items.length === 0) return 0;
+    if (!note || !note.items || note.items.length === 0) return 0;
     const completedCount = note.items.filter(item => item.completed).length;
     return (completedCount / note.items.length) * 100;
   }, [note]);
@@ -200,7 +160,7 @@ export default function NotebookEditPage() {
   if (isLoading || !note) {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   }
-  
+
   const isNoteCompleted = progress === 100 && note.items.length > 0;
 
   return (
@@ -227,15 +187,15 @@ export default function NotebookEditPage() {
               </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        
+
         <Card className="max-w-2xl mx-auto">
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                     {isEditMode ? (
-                        <Input 
-                            placeholder="Judul Catatan Anda..." 
+                        <Input
+                            placeholder="Judul Catatan Anda..."
                             value={note.title}
-                            onChange={(e) => updateNote('title', e.target.value)}
+                            onChange={(e) => updateNoteField('title', e.target.value)}
                             className="text-2xl font-bold border-0 shadow-none focus-visible:ring-0 p-0 h-auto"
                         />
                     ) : (
@@ -257,9 +217,7 @@ export default function NotebookEditPage() {
                                <div className="space-y-3 text-sm text-muted-foreground">
                                 <p>1. Klik ikon <Edit size={16} className="inline-block"/> untuk masuk mode edit.</p>
                                 <p>2. Saat mode edit, Anda bisa mengubah judul, menambah/mengedit/menghapus item.</p>
-                                <p>3. Tambah item satu per satu dengan tombol <b className="text-foreground">Tambah Item</b>.</p>
-                                <p>4. Buat banyak item sekaligus dengan tombol <b className="text-foreground">Buat Banyak Item</b>.</p>
-                                <p>5. Klik <b className="text-foreground">Simpan Catatan</b> untuk menyimpan semua perubahan Anda.</p>
+                                <p>3. Perubahan akan disimpan secara otomatis.</p>
                               </div>
                               <AlertDialogFooter>
                                 <AlertDialogAction>Mengerti!</AlertDialogAction>
@@ -268,28 +226,29 @@ export default function NotebookEditPage() {
                         </AlertDialog>
                     </div>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="flex items-center gap-2">
                     <Progress value={progress} className="w-full mt-2" />
+                    {isSaving && <Loader2 className="w-4 h-4 animate-spin"/>}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
                   {note.items.map((item) => (
                     <div key={item.uuid} className="flex items-center gap-2 group">
-                      <Checkbox 
+                      <Checkbox
                         checked={item.completed}
                         onCheckedChange={() => toggleItemCompletion(item.uuid)}
                         className="w-5 h-5"
                       />
                       {isEditMode ? (
-                        <Input 
+                        <Input
                             value={item.label}
                             onChange={(e) => updateItem(item.uuid, e.target.value)}
                             className={`border-0 shadow-none focus-visible:ring-0 p-1 h-auto ${item.completed ? 'line-through text-muted-foreground' : ''}`}
                             placeholder='Isi tugas disini...'
                         />
                       ) : (
-                        <span className={`p-1 ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className={`p-1 flex-1 ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
                             {item.label || <span className="text-muted-foreground italic">Item kosong</span>}
                         </span>
                       )}
@@ -312,9 +271,8 @@ export default function NotebookEditPage() {
                                 <ListPlus className="mr-2"/> Buat Banyak Item
                             </Button>
                         </div>
-                        <Button onClick={handleSave} className="w-full" disabled={isSyncing}>
-                            {isSyncing ? <Loader2 className="mr-2 animate-spin"/> : <Save className="mr-2"/>}
-                            Simpan Perubahan
+                        <Button onClick={() => setIsEditMode(false)} className="w-full">
+                            <Save className="mr-2"/> Selesai Mengedit
                         </Button>
                     </>
                 ) : (
@@ -327,5 +285,3 @@ export default function NotebookEditPage() {
     </div>
   );
 }
-
-    

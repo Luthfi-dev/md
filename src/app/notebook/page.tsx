@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
@@ -72,11 +73,12 @@ const TagInput = ({ onTagsChange }: { onTagsChange: (tags: string[]) => void }) 
 const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: NotebookGroup) => void }) => {
     const [groupName, setGroupName] = useState('');
     const [invitees, setInvitees] = useState<string[]>([]);
+    const [isCreating, setIsCreating] = useState(false);
     const { toast } = useToast();
     const { user, fetchWithAuth } = useAuth();
-    const [isCreating, setIsCreating] = useState(false);
+    const router = useRouter();
 
-    const handleSelectContacts = async () => {
+    const handleSelectContacts = useCallback(async () => {
         if (!('contacts' in navigator && 'select' in (navigator as any).contacts)) {
             toast({ variant: 'destructive', title: 'API Kontak Tidak Didukung', description: 'Browser Anda tidak mendukung fitur ini.' });
             return;
@@ -84,9 +86,8 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
         try {
             const contacts = await (navigator as any).contacts.select(['name', 'email', 'tel'], { multiple: true });
             if (contacts.length > 0) {
-                const newInvitees = contacts.map((c: any) => c.tel?.[0] || c.email?.[0] || c.name?.[0]).filter(Boolean);
-                const updatedInvitees = [...new Set([...invitees, ...newInvitees])];
-                setInvitees(updatedInvitees);
+                const newInvitees = contacts.map((c: any) => c.email?.[0] || c.tel?.[0] || c.name?.[0]).filter(Boolean);
+                setInvitees(prev => [...new Set([...prev, ...newInvitees])]);
             }
         } catch (error) {
             console.error("Error selecting contacts:", error);
@@ -94,30 +95,29 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
               toast({ variant: 'destructive', title: 'Gagal Membaca Kontak' });
             }
         }
-    };
-    
-    const handleAndClose = async () => {
+    }, [toast]);
+
+    const handleCreateAndClose = async () => {
         if (!groupName.trim()) {
             toast({ variant: 'destructive', title: 'Nama Grup Wajib Diisi' });
             return false;
         }
         if (!user) return false;
-        
-        setIsCreating(true);
 
+        setIsCreating(true);
         try {
             const res = await fetchWithAuth('/api/notebook/group', {
                 method: 'POST',
                 body: JSON.stringify({ title: groupName, invitees })
             });
-
             const data = await res.json();
-            if (!data.success) throw new Error(data.message);
-            
+            if (!data.success) throw new Error(data.message || "Gagal membuat grup");
+
             onGroupCreated(data.group);
-            toast({ title: "Grup Dibuat!", description: `Grup "${groupName}" berhasil dibuat.`});
+            toast({ title: "Grup Dibuat!", description: `Grup "${groupName}" berhasil dibuat.` });
             setGroupName('');
             setInvitees([]);
+            router.push(`/notebook/group/${data.group.uuid}`);
             return true;
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Membuat Grup', description: (error as Error).message });
@@ -125,7 +125,7 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
         } finally {
             setIsCreating(false);
         }
-    }
+    };
 
     return (
         <Dialog>
@@ -150,32 +150,30 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
                         <Label>Undang Anggota</Label>
                         <TagInput onTagsChange={setInvitees} />
                         <p className="text-xs text-muted-foreground">Tekan Enter setelah mengetik untuk menambahkan.</p>
-                         <div className='flex flex-col sm:flex-row gap-2 justify-center'>
-                            <Button variant="outline" size="sm" className="w-full" onClick={handleSelectContacts}><Phone className="mr-2"/> Undang dari Kontak</Button>
-                            <Button variant="outline" size="sm" className="w-full"><MessageSquare className="mr-2"/> Undang via WhatsApp</Button>
-                         </div>
+                        <div className='flex flex-col sm:flex-row gap-2 justify-center'>
+                            <Button variant="outline" size="sm" className="w-full" onClick={handleSelectContacts}><Phone className="mr-2" /> Undang dari Kontak</Button>
+                            <Button variant="outline" size="sm" className="w-full"><MessageSquare className="mr-2" /> Undang via WhatsApp</Button>
+                        </div>
                     </div>
                 </div>
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">Batal</Button></DialogClose>
-                     <DialogClose asChild={!isCreating}>
-                        <Button onClick={handleAndClose} disabled={isCreating}>
-                            {isCreating ? <Loader2 className="animate-spin" /> : "Buat Grup"}
-                        </Button>
-                    </DialogClose>
+                    <DialogClose asChild><Button variant="outline" disabled={isCreating}>Batal</Button></DialogClose>
+                    <Button onClick={handleCreateAndClose} disabled={isCreating}>
+                        {isCreating ? <Loader2 className="animate-spin mr-2" /> : <Plus className="mr-2"/>}
+                        Buat & Masuk Grup
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 };
 
-
 export default function NotebookListPage() {
   const [personalNotes, setPersonalNotes] = useState<Note[]>([]);
   const [groupNotes, setGroupNotes] = useState<NotebookGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
-  const [syncingNoteId, setSyncingNoteId] = useState<string | number | null>(null);
+  const [syncingNoteId, setSyncingNoteId] = useState<string | null>(null);
   const [showSyncInfo, setShowSyncInfo] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
@@ -191,15 +189,15 @@ export default function NotebookListPage() {
             const res = await fetchWithAuth('/api/notebook/personal');
             if (res.ok) {
                 const data = await res.json();
-                notes = data.notes.map((n: Note) => ({ ...n, isSynced: true })) || [];
+                notes = data.notes?.map((n: Note) => ({ ...n, isSynced: true })) || [];
             }
         }
         const localNotesRaw = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
         const localNotes: Note[] = localNotesRaw ? JSON.parse(localNotesRaw) : [];
-        
+
         const cloudNoteUuids = new Set(notes.map(n => n.uuid));
         const uniqueLocalNotes = localNotes.filter(ln => !cloudNoteUuids.has(ln.uuid)).map(ln => ({...ln, isSynced: false}));
-        
+
         setPersonalNotes([...notes, ...uniqueLocalNotes].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (e) {
         console.error("Failed to fetch personal notes", e);
@@ -207,7 +205,7 @@ export default function NotebookListPage() {
         setIsLoading(false);
     }
   }, [isAuthenticated, fetchWithAuth]);
-  
+
   const fetchGroupNotes = useCallback(async () => {
     if(!isAuthenticated) return;
     setIsLoadingGroups(true);
@@ -245,27 +243,25 @@ export default function NotebookListPage() {
 
   const handleCreateNewPersonalNote = async () => {
     const newNote: Note = {
-      id: `local_${Date.now()}`,
       uuid: uuidv4(),
       title: 'Catatan Baru Tanpa Judul',
       items: [],
       createdAt: new Date().toISOString(),
-      userId: user?.id,
       isSynced: false,
     };
-    
+
     setPersonalNotes(prev => [newNote, ...prev]);
-    
+
     const currentNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify([newNote, ...currentNotes]));
-    
+
     router.push(`/notebook/${newNote.uuid}?edit=true`);
   };
 
   const handleCardClick = (uuid: string) => {
     router.push(`/notebook/${uuid}`);
   }
-  
+
   const handleGroupCardClick = (uuid: string) => {
     router.push(`/notebook/group/${uuid}`);
   }
@@ -279,7 +275,7 @@ export default function NotebookListPage() {
     const originalNotes = [...personalNotes];
     setPersonalNotes(prev => prev.filter(n => n.uuid !== note.uuid));
     setDeletingNoteId(null);
-    
+
     try {
         if (note.isSynced && isAuthenticated) {
             const res = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, { method: 'DELETE' });
@@ -287,25 +283,25 @@ export default function NotebookListPage() {
         }
         const localNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
         localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(localNotes.filter((n: Note) => n.uuid !== note.uuid)));
-        
+
         toast({title: "Catatan Dihapus"});
     } catch (error) {
         setPersonalNotes(originalNotes);
         toast({variant: 'destructive', title: "Gagal Menghapus Catatan"});
     }
   };
-  
+
   const handleCreateGroup = (newGroup: NotebookGroup) => {
       setGroupNotes(prev => [newGroup, ...prev]);
   };
-  
+
   const handleSyncNote = async (note: Note, e: React.MouseEvent) => {
       e.stopPropagation();
       if (!isAuthenticated) {
           toast({ variant: 'destructive', title: 'Login Diperlukan', description: 'Silakan login untuk menyimpan catatan ke cloud.' });
           return;
       }
-      setSyncingNoteId(note.id);
+      setSyncingNoteId(note.uuid);
       try {
           const res = await fetchWithAuth('/api/notebook/personal/sync', {
               method: 'POST',
@@ -315,7 +311,7 @@ export default function NotebookListPage() {
             const errorData = await res.json();
             throw new Error(errorData.message || 'Gagal sinkronisasi');
           }
-          
+
           setPersonalNotes(prev => prev.map(n => n.uuid === note.uuid ? {...n, isSynced: true} : n));
           toast({ title: 'Berhasil!', description: `Catatan "${note.title}" berhasil disimpan ke cloud.`});
       } catch (error) {
@@ -326,11 +322,11 @@ export default function NotebookListPage() {
   }
 
   const getProgress = (note: Note) => {
-    if (note.items.length === 0) return 0;
+    if (!note.items || note.items.length === 0) return 0;
     const completedCount = note.items.filter(item => item.completed).length;
     return (completedCount / note.items.length) * 100;
   }
-  
+
   const renderPersonalNotes = () => (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -359,7 +355,7 @@ export default function NotebookListPage() {
            </div>
         </Alert>
       )}
-      
+
       {isLoading ? (
         <div className="text-center py-16"><Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" /></div>
       ) : personalNotes.length > 0 ? (
@@ -374,8 +370,8 @@ export default function NotebookListPage() {
                       <span className="truncate">{note.title || 'Tanpa Judul'}</span>
                       <div className="flex items-center gap-1 shrink-0">
                           {isAuthenticated && (
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleSyncNote(note, e)} disabled={note.isSynced || syncingNoteId === note.id}>
-                                  {syncingNoteId === note.id ? <Loader2 className="h-4 w-4 animate-spin"/> :
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleSyncNote(note, e)} disabled={note.isSynced || syncingNoteId === note.uuid}>
+                                  {syncingNoteId === note.uuid ? <Loader2 className="h-4 w-4 animate-spin"/> :
                                   note.isSynced ? <Cloud className="h-4 w-4 text-green-500" /> : <CloudOff className="h-4 w-4 text-destructive" />
                                   }
                               </Button>
@@ -385,26 +381,24 @@ export default function NotebookListPage() {
                                   <Edit className="h-4 w-4" />
                               </Button>
                           )}
-                           <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingNoteId(note.uuid); }}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              {deletingNoteId === note.uuid && (
-                                <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={(e) => { e.stopPropagation(); setDeletingNoteId(null); }}>Batal</AlertDialogCancel>
-                                  <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleDelete(note); }}>Hapus</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                              )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingNoteId(note.uuid); }}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={(e) => { e.stopPropagation(); setDeletingNoteId(null); }}>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleDelete(note); }}>Hapus</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
                           </AlertDialog>
                       </div>
                   </CardTitle>
@@ -413,7 +407,7 @@ export default function NotebookListPage() {
                 <div className="flex items-center gap-4">
                   <Progress value={progress} className="w-full" />
                   <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
-                    {note.items.filter(i => i.completed).length} / {note.items.length}
+                    {note.items?.filter(i => i.completed).length || 0} / {note.items?.length || 0}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -442,7 +436,7 @@ export default function NotebookListPage() {
               <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">Fitur Grup</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Silakan masuk untuk membuat atau melihat catatan grup.
+                Silakan <a href="/account" className='text-primary font-bold hover:underline'>masuk</a> untuk membuat atau melihat catatan grup.
               </p>
             </div>
         )
@@ -458,14 +452,14 @@ export default function NotebookListPage() {
               <Card key={group.uuid} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleGroupCardClick(group.uuid)}>
                 <CardHeader>
                   <CardTitle>{group.title}</CardTitle>
-                  <CardDescription>{group.tasks.length} Tugas Aktif</CardDescription>
+                  <CardDescription>{group.tasks?.length || 0} Tugas Aktif</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="flex -space-x-2 overflow-hidden">
                       {group.members.slice(0, 5).map(member => (
                         <Avatar key={member.id} className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
-                          <AvatarImage src={member.avatarUrl} />
+                          <AvatarImage src={member.avatarUrl ?? undefined} />
                           <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                       ))}
@@ -491,7 +485,10 @@ export default function NotebookListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24">
-      <AlertDialog open={!!deletingNoteId} onOpenChange={(open) => !open && setDeletingNoteId(null)} />
+       <AlertDialog open={!!deletingNoteId} onOpenChange={(open) => !open && setDeletingNoteId(null)}>
+        {/* The content of this dialog is now managed per-card to avoid key errors */}
+      </AlertDialog>
+      
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center">
             <h1 className="text-4xl font-bold font-headline tracking-tight">Catatan Cerdas</h1>

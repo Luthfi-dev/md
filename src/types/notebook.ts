@@ -1,5 +1,4 @@
 
-
 export interface ChecklistItem {
     id: string | number; // Local can be string, server is number
     uuid: string;
@@ -15,12 +14,13 @@ export interface Note {
     items: ChecklistItem[];
     createdAt: string; // ISO string
     userId?: number;
+    isSynced?: boolean; // NEW: To track cloud sync status on the client
 }
 
 export interface GroupMember {
-    id: string; // user id
+    id: number;
     name: string;
-    avatarUrl: string;
+    avatarUrl: string | null;
 }
 
 export interface GroupTask {
@@ -28,7 +28,7 @@ export interface GroupTask {
     uuid: string;
     label: string;
     completed: boolean;
-    assignedTo: string[]; // Array of member IDs. Empty array means assigned to all.
+    assignedTo: number[]; // Array of member IDs. Empty array means assigned to all.
     createdBy: number;
 }
 
@@ -37,7 +37,7 @@ export interface NotebookGroup {
     uuid: string;
     title: string;
     description: string;
-    avatarUrl?: string; // Optional avatar for the group itself
+    avatarUrl?: string | null; // Optional avatar for the group itself
     members: GroupMember[];
     tasks: GroupTask[];
     createdBy: number;

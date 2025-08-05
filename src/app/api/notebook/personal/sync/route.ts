@@ -1,3 +1,4 @@
+
 'use server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth-utils';
@@ -27,7 +28,7 @@ const syncSchema = z.object({
 
 // Endpoint for bulk syncing local notes to the cloud
 export async function POST(request: NextRequest) {
-    const user = getAuthFromRequest(request);
+    const user = await getAuthFromRequest(request);
     if (!user) {
         return NextResponse.json({ success: false, message: 'Tidak terotentikasi' }, { status: 401 });
     }
@@ -48,14 +49,14 @@ export async function POST(request: NextRequest) {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        const [existingNoteUuidsRows]: [RowDataPacket[], any] = await connection.execute(
-            'SELECT uuid FROM notes WHERE user_id = ? AND uuid IN (?)',
+        const [existingNoteRows]: [RowDataPacket[], any] = await connection.execute(
+            'SELECT uuid, id FROM notes WHERE user_id = ? AND uuid IN (?)',
             [user.id, localNotes.map(note => note.uuid)]
         );
-        const existingNoteUuids = new Set(existingNoteUuidsRows.map(row => row.uuid));
+        const existingNotesMap = new Map(existingNoteRows.map(row => [row.uuid, row.id]));
 
         for (const note of localNotes) {
-            if (!existingNoteUuids.has(note.uuid)) {
+            if (!existingNotesMap.has(note.uuid)) {
                 // Insert new note
                 const [noteResult]: [ResultSetHeader, any] = await connection.execute(
                     'INSERT INTO notes (user_id, uuid, title, content, created_at) VALUES (?, ?, ?, ?, ?)',
@@ -71,6 +72,8 @@ export async function POST(request: NextRequest) {
                         [itemValues]
                     );
                 }
+            } else {
+                // Note exists, could implement update logic here if needed, but for now we just insert new ones.
             }
         }
         

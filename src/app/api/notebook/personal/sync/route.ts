@@ -6,25 +6,23 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-const noteItemSchema = z.object({
-  id: z.any(),
+// Skema yang lebih longgar untuk menerima data dari localStorage
+const localNoteItemSchema = z.object({
+  id: z.any().optional(),
   uuid: z.string().uuid(),
   label: z.string(),
   completed: z.boolean(),
 });
 
-const noteSchema = z.object({
-  id: z.any(),
+const localNoteSyncSchema = z.object({
   uuid: z.string().uuid(),
-  title: z.string().min(1, "Judul tidak boleh kosong"),
-  items: z.array(noteItemSchema),
+  title: z.string(),
+  items: z.array(localNoteItemSchema),
   createdAt: z.string().datetime(),
-  userId: z.number().optional(),
-  isSynced: z.boolean().optional(),
 });
 
 const syncSchema = z.object({
-    notes: z.array(noteSchema)
+    notes: z.array(localNoteSyncSchema)
 });
 
 // Endpoint for bulk syncing local notes to the cloud
@@ -39,7 +37,8 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const validation = syncSchema.safeParse(body);
         if (!validation.success) {
-            return NextResponse.json({ success: false, message: validation.error.errors.map(e => e.message).join(', ') }, { status: 400 });
+            const errorMessages = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+            return NextResponse.json({ success: false, message: errorMessages || "Data tidak valid" }, { status: 400 });
         }
         
         const { notes: localNotes } = validation.data;
@@ -57,7 +56,6 @@ export async function POST(request: NextRequest) {
         const existingNotesMap = new Map(existingNoteRows.map(row => [row.uuid, row.id]));
 
         for (const note of localNotes) {
-            // Only sync if it doesn't already exist in the cloud for this user
             if (!existingNotesMap.has(note.uuid)) {
                 // Insert new note
                 const [noteResult]: [ResultSetHeader, any] = await connection.execute(
@@ -67,7 +65,7 @@ export async function POST(request: NextRequest) {
                 const newNoteId = noteResult.insertId;
 
                 // Insert items for the new note
-                if (note.items.length > 0) {
+                if (note.items && note.items.length > 0) {
                     const itemValues = note.items.map(item => [newNoteId, item.uuid, item.label, item.completed]);
                     if (itemValues.length > 0) {
                        await connection.query(

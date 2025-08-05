@@ -3,10 +3,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Notebook, Trash2, Edit, Users, MessageSquare, Phone, UserPlus, Lock, Cloud, CloudOff, Loader2, X, Check } from 'lucide-react';
+import { Plus, Notebook, Trash2, Edit, Users, MessageSquare, Phone, UserPlus, Lock, Cloud, CloudOff, Loader2, X, Info } from 'lucide-react';
 import { type Note, type NotebookGroup } from '@/types/notebook';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -16,12 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
-import { LoadingOverlay } from '@/components/ui/loading-overlay';
-import { cn } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
@@ -104,9 +99,9 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
     const handleAndClose = async () => {
         if (!groupName.trim()) {
             toast({ variant: 'destructive', title: 'Nama Grup Wajib Diisi' });
-            return;
+            return false;
         }
-        if (!user) return;
+        if (!user) return false;
         
         setIsCreating(true);
 
@@ -163,13 +158,11 @@ const CreateGroupDialog = ({ onGroupCreated }: { onGroupCreated: (newGroup: Note
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Batal</Button></DialogClose>
-                    <Button onClick={async () => {
-                        const success = await handleAndClose();
-                        // This logic should be handled by the Dialog component itself if it supports async close.
-                        // For now, we assume the dialog closes on button click, but won't re-open.
-                    }} disabled={isCreating}>
-                        {isCreating ? <Loader2 className="animate-spin" /> : "Buat Grup"}
-                    </Button>
+                     <DialogClose asChild={!isCreating}>
+                        <Button onClick={handleAndClose} disabled={isCreating}>
+                            {isCreating ? <Loader2 className="animate-spin" /> : "Buat Grup"}
+                        </Button>
+                    </DialogClose>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -184,6 +177,8 @@ export default function NotebookListPage() {
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [syncingNoteId, setSyncingNoteId] = useState<string | number | null>(null);
   const [showSyncInfo, setShowSyncInfo] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+
   const router = useRouter();
   const { toast } = useToast();
   const { isAuthenticated, user, fetchWithAuth } = useAuth();
@@ -212,16 +207,35 @@ export default function NotebookListPage() {
         setIsLoading(false);
     }
   }, [isAuthenticated, fetchWithAuth]);
+  
+  const fetchGroupNotes = useCallback(async () => {
+    if(!isAuthenticated) return;
+    setIsLoadingGroups(true);
+    try {
+        const res = await fetchWithAuth('/api/notebook/group');
+        if (res.ok) {
+            const data = await res.json();
+            setGroupNotes(data.groups);
+        }
+    } catch(e) {
+        console.error("Failed to fetch group notes", e);
+    } finally {
+        setIsLoadingGroups(false);
+    }
+  }, [isAuthenticated, fetchWithAuth]);
 
   useEffect(() => {
     fetchPersonalNotes();
+    if(isAuthenticated) {
+        fetchGroupNotes();
+    }
     if(typeof window !== 'undefined'){
        const dismissCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10);
        if(dismissCount < MAX_DISMISS_COUNT) {
          setShowSyncInfo(true);
        }
     }
-  }, [fetchPersonalNotes]);
+  }, [fetchPersonalNotes, fetchGroupNotes, isAuthenticated]);
 
   const handleDismissSyncInfo = () => {
      const newCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10) + 1;
@@ -245,7 +259,7 @@ export default function NotebookListPage() {
     const currentNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify([newNote, ...currentNotes]));
     
-    router.push(`/notebook/${newNote.uuid}`);
+    router.push(`/notebook/${newNote.uuid}?edit=true`);
   };
 
   const handleCardClick = (uuid: string) => {
@@ -261,14 +275,13 @@ export default function NotebookListPage() {
     router.push(`/notebook/${uuid}?edit=true`);
   };
 
-  const handleDelete = async (note: Note, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
+  const handleDelete = async (note: Note) => {
     const originalNotes = [...personalNotes];
     setPersonalNotes(prev => prev.filter(n => n.uuid !== note.uuid));
+    setDeletingNoteId(null);
     
     try {
-        if (note.isSynced) {
+        if (note.isSynced && isAuthenticated) {
             const res = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, { method: 'DELETE' });
             if (!res.ok) throw new Error("Gagal menghapus catatan di server");
         }
@@ -329,17 +342,18 @@ export default function NotebookListPage() {
       {isAuthenticated && showSyncInfo && (
         <Alert>
            <div className='flex items-start gap-3'>
+                <Info className="h-5 w-5 mt-0.5 text-primary" />
               <div>
-                <AlertTitle className="font-bold flex items-center gap-2">Status Sinkronisasi</AlertTitle>
+                <AlertTitle className="font-bold">Informasi Sinkronisasi</AlertTitle>
                 <AlertDescription className="text-xs">
                     <CloudOff className="inline-block w-4 h-4 text-destructive mr-1"/>
-                    Berarti catatan hanya ada di perangkat ini. Klik ikon tersebut untuk menyimpan ke cloud.
+                    Berarti catatan hanya ada di perangkat ini. Klik ikon untuk menyimpan ke cloud.
                     <br/>
                     <Cloud className="inline-block w-4 h-4 text-green-500 mr-1"/>
-                    Berarti catatan sudah aman di cloud.
+                    Berarti catatan sudah aman di cloud dan dapat diakses dari perangkat lain.
                 </AlertDescription>
               </div>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleDismissSyncInfo}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mr-2 -mt-2" onClick={handleDismissSyncInfo}>
                 <X className="w-4 h-4" />
               </Button>
            </div>
@@ -354,58 +368,61 @@ export default function NotebookListPage() {
           const isCompleted = progress === 100 && note.items.length > 0;
 
           return (
-          <Card key={note.uuid} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleCardClick(note.uuid)}>
-            <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                    <span className="truncate">{note.title || 'Tanpa Judul'}</span>
-                     <div className="flex items-center gap-1 shrink-0">
-                        {isAuthenticated && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleSyncNote(note, e)} disabled={note.isSynced || syncingNoteId === note.id}>
-                                {syncingNoteId === note.id ? <Loader2 className="h-4 w-4 animate-spin"/> :
-                                 note.isSynced ? <Cloud className="h-4 w-4 text-green-500" /> : <CloudOff className="h-4 w-4 text-destructive" />
-                                }
-                            </Button>
-                        )}
-                        {!isCompleted && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleEdit(note.uuid, e)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        )}
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); }}>
-                                 <Trash2 className="h-4 w-4" />
-                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={(e) => handleDelete(note, e)}>Hapus</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <Progress value={progress} className="w-full" />
-                <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
-                  {note.items.filter(i => i.completed).length} / {note.items.length}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Dibuat: {new Date(note.createdAt).toLocaleDateString('id-ID')}
-              </p>
-            </CardContent>
-          </Card>
-        )})
+            <Card key={note.uuid} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleCardClick(note.uuid)}>
+              <CardHeader>
+                  <CardTitle className="flex justify-between items-center">
+                      <span className="truncate">{note.title || 'Tanpa Judul'}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                          {isAuthenticated && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleSyncNote(note, e)} disabled={note.isSynced || syncingNoteId === note.id}>
+                                  {syncingNoteId === note.id ? <Loader2 className="h-4 w-4 animate-spin"/> :
+                                  note.isSynced ? <Cloud className="h-4 w-4 text-green-500" /> : <CloudOff className="h-4 w-4 text-destructive" />
+                                  }
+                              </Button>
+                          )}
+                          {!isCompleted && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleEdit(note.uuid, e)}>
+                                  <Edit className="h-4 w-4" />
+                              </Button>
+                          )}
+                           <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingNoteId(note.uuid); }}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              {deletingNoteId === note.uuid && (
+                                <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={(e) => { e.stopPropagation(); setDeletingNoteId(null); }}>Batal</AlertDialogCancel>
+                                  <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleDelete(note); }}>Hapus</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                              )}
+                          </AlertDialog>
+                      </div>
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <Progress value={progress} className="w-full" />
+                  <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
+                    {note.items.filter(i => i.completed).length} / {note.items.length}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Dibuat: {new Date(note.createdAt).toLocaleDateString('id-ID')}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })
       ) : (
          <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <Notebook className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -425,7 +442,7 @@ export default function NotebookListPage() {
               <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">Fitur Grup</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Silakan <Link href="/account" className='text-primary font-bold hover:underline'>masuk</Link> untuk membuat atau melihat catatan grup.
+                Silakan masuk untuk membuat atau melihat catatan grup.
               </p>
             </div>
         )
@@ -452,7 +469,7 @@ export default function NotebookListPage() {
                           <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                       ))}
-                       {group.members.length > 5 && <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{group.members.length - 5}</AvatarFallback></Avatar>}
+                       {group.members.length > 5 && <Avatar key="more-members" className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{group.members.length - 5}</AvatarFallback></Avatar>}
                     </div>
                     <Users className="text-muted-foreground"/>
                   </div>
@@ -474,6 +491,7 @@ export default function NotebookListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24">
+      <AlertDialog open={!!deletingNoteId} onOpenChange={(open) => !open && setDeletingNoteId(null)} />
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center">
             <h1 className="text-4xl font-bold font-headline tracking-tight">Catatan Cerdas</h1>

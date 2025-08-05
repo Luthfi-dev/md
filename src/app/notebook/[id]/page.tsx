@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/use-auth';
+import { v4 as uuidv4 } from 'uuid';
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
 const LOCAL_STORAGE_KEY_SYNC = 'notebook_sync_enabled';
@@ -59,7 +60,7 @@ export default function NotebookEditPage() {
     const fetchNote = async () => {
         if (!id) return;
         try {
-             if (isSyncEnabled) {
+             if (isSyncEnabled && user) {
                 const res = await fetchWithAuth(`/api/notebook/personal/${id}`);
                 if (!res.ok) throw new Error("Gagal mengambil catatan dari cloud.");
                 const data = await res.json();
@@ -82,7 +83,7 @@ export default function NotebookEditPage() {
         }
     }
     fetchNote();
-  }, [id, router, searchParams, toast, isSyncEnabled, fetchWithAuth]);
+  }, [id, router, searchParams, toast, isSyncEnabled, fetchWithAuth, user]);
 
   const updateNote = useCallback((field: keyof Note, value: any) => {
     setNote(currentNote => currentNote ? { ...currentNote, [field]: value } : null);
@@ -92,36 +93,40 @@ export default function NotebookEditPage() {
     if (!note) return;
     const newItem: ChecklistItem = {
       id: `local_${Date.now()}`,
-      uuid: `item_${Date.now()}`,
+      uuid: uuidv4(),
       label: '',
       completed: false,
     };
     updateNote('items', [...note.items, newItem]);
   }, [note, updateNote]);
 
-  const updateItem = useCallback((itemId: string, newLabel: string) => {
+  const updateItem = useCallback((itemUuid: string, newLabel: string) => {
     if (!note) return;
     const updatedItems = note.items.map(item => 
-      item.id === itemId ? { ...item, label: newLabel } : item
+      item.uuid === itemUuid ? { ...item, label: newLabel } : item
     );
     updateNote('items', updatedItems);
   }, [note, updateNote]);
 
-  const toggleItemCompletion = useCallback((itemId: string) => {
+  const toggleItemCompletion = useCallback(async (itemUuid: string) => {
     if (!note) return;
     const updatedItems = note.items.map(item =>
-      item.id === itemId ? { ...item, completed: !item.completed } : item
+      item.uuid === itemUuid ? { ...item, completed: !item.completed } : item
     );
     const updatedNote = { ...note, items: updatedItems };
     setNote(updatedNote);
 
     // Auto-save completion status
-    if (isSyncEnabled) {
-        // Debounced API call could be implemented here for performance
-        fetchWithAuth(`/api/notebook/personal/${note.uuid}`, {
-            method: 'PUT',
-            body: JSON.stringify(updatedNote)
-        });
+    if (isSyncEnabled && user) {
+        try {
+            // Debounced API call could be implemented here for performance
+            await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedNote)
+            });
+        } catch (e) {
+             console.error("Auto-save failed:", e) // fail silently on auto-save
+        }
     } else {
         const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
         const existingIndex = storedNotes.findIndex(n => n.uuid === updatedNote.uuid);
@@ -130,18 +135,18 @@ export default function NotebookEditPage() {
             localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
         }
     }
-  }, [note, isSyncEnabled, fetchWithAuth]);
+  }, [note, isSyncEnabled, user, fetchWithAuth]);
 
-  const removeItem = useCallback((itemId: string) => {
+  const removeItem = useCallback((itemUuid: string) => {
     if (!note) return;
-    updateNote('items', note.items.filter(item => item.id !== itemId));
+    updateNote('items', note.items.filter(item => item.uuid !== itemUuid));
   }, [note, updateNote]);
   
   const handleBulkAdd = useCallback(() => {
      if (!note || bulkAddCount <= 0) return;
      const newItems: ChecklistItem[] = Array.from({ length: bulkAddCount }, (_, i) => ({
       id: `local_bulk_${Date.now()}_${i}`,
-      uuid: `item_bulk_${Date.now()}_${i}`,
+      uuid: uuidv4(),
       label: isNumbered ? `${note.items.length + i + 1}. ` : '',
       completed: false,
     }));
@@ -160,7 +165,7 @@ export default function NotebookEditPage() {
     
     setIsSyncing(true);
     try {
-        if (isSyncEnabled) {
+        if (isSyncEnabled && user) {
             const res = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, {
                 method: 'PUT',
                 body: JSON.stringify(note)
@@ -322,3 +327,5 @@ export default function NotebookEditPage() {
     </div>
   );
 }
+
+    

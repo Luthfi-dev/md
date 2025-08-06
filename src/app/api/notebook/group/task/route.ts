@@ -12,6 +12,7 @@ const taskCreateSchema = z.object({
   label: z.string().min(1, "Nama tugas tidak boleh kosong"),
   assignedTo: z.array(z.number()).optional(),
   items: z.array(z.object({
+    uuid: z.string().uuid(),
     label: z.string(),
     completed: z.boolean()
   })).optional()
@@ -66,16 +67,16 @@ export async function POST(request: NextRequest) {
         }
 
         if (items && items.length > 0) {
-            const itemValues = items.map(item => [newTaskId, item.label, item.completed]);
+            const itemValues = items.map(item => [newTaskId, item.uuid, item.label, item.completed]);
             await connection.query(
-                'INSERT INTO group_task_items (task_id, label, completed) VALUES ?',
+                'INSERT INTO group_task_items (task_id, uuid, label, completed) VALUES ?',
                 [itemValues]
             );
         }
 
         await connection.commit();
         
-        return NextResponse.json({ success: true, message: 'Tugas berhasil dibuat', taskId: newTaskId }, { status: 201 });
+        return NextResponse.json({ success: true, message: 'Tugas berhasil dibuat', taskId: newTaskId, taskUuid: taskUuid }, { status: 201 });
 
     } catch (error: any) {
         if (connection) await connection.rollback();

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -7,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook } from 'lucide-react';
-import { type NotebookGroup, type GroupTask, type GroupMember } from '@/types/notebook';
+import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook, ListPlus } from 'lucide-react';
+import { type NotebookGroup, type GroupTask, type GroupMember, type GroupChecklistItem } from '@/types/notebook';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Progress } from '@/components/ui/progress';
@@ -16,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
+import { v4 as uuidv4 } from 'uuid';
 
 // --- Child Components for Readability ---
 
@@ -36,7 +38,7 @@ const AssigneeSelector = ({ members, selected, onSelectionChange }: { members: G
                 {members.map(member => (
                     <div key={member.id} onClick={() => handleToggle(String(member.id))} className="cursor-pointer">
                         <Badge variant={selected.includes(String(member.id)) ? 'default' : 'secondary'} className="flex items-center gap-2 p-2">
-                            <Avatar className="h-5 w-5"><AvatarImage src={member.avatarUrl} /><AvatarFallback>{member.name.charAt(0)}</AvatarFallback></Avatar>
+                            <Avatar className="h-5 w-5"><AvatarImage src={member.avatarUrl || undefined} /><AvatarFallback>{member.name.charAt(0)}</AvatarFallback></Avatar>
                             <span>{member.name}</span>
                         </Badge>
                     </div>
@@ -49,24 +51,41 @@ const AssigneeSelector = ({ members, selected, onSelectionChange }: { members: G
 const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTaskAdded: (task: GroupTask) => void }) => {
     const [taskLabel, setTaskLabel] = useState('');
     const [assignedTo, setAssignedTo] = useState<string[]>([]);
+    const [items, setItems] = useState<Omit<GroupChecklistItem, 'id'>[]>([]);
+    const [newItemLabel, setNewItemLabel] = useState('');
     const { user } = useAuth();
+
+    const handleAddNewItem = () => {
+        if (!newItemLabel.trim()) return;
+        setItems([...items, { uuid: uuidv4(), label: newItemLabel, completed: false }]);
+        setNewItemLabel('');
+    };
+
+    const handleRemoveItem = (indexToRemove: number) => {
+        setItems(items.filter((_, index) => index !== indexToRemove));
+    };
 
     const handleAddTask = () => {
         if (!taskLabel.trim() || !user) return;
+        const finalItems: GroupChecklistItem[] = items.map(item => ({ ...item, id: 0 })); // Add dummy id
         onTaskAdded({
-            id: `local_task_${Date.now()}`,
-            uuid: `task_${Date.now()}`,
+            id: 0, // Placeholder ID for local state
+            uuid: uuidv4(),
             label: taskLabel,
             completed: false,
             assignedTo: assignedTo.map(id => parseInt(id, 10)),
-            createdBy: user.id
+            createdBy: user.id,
+            items: finalItems
         });
+        // Reset state
         setTaskLabel('');
         setAssignedTo([]);
+        setItems([]);
+        setNewItemLabel('');
     };
 
     return (
-         <Dialog>
+        <Dialog onOpenChange={(open) => !open && (setTaskLabel(''), setAssignedTo([]), setItems([]), setNewItemLabel(''))}>
             <DialogTrigger asChild>
                 <Button className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20">
                     <Plus className="h-8 w-8" />
@@ -74,11 +93,29 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader><DialogTitle>Buat Tugas Baru</DialogTitle></DialogHeader>
-                <div className="py-4 space-y-4">
+                <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                     <div className="space-y-2">
                         <Label htmlFor="task-label">Nama Tugas</Label>
                         <Input id="task-label" value={taskLabel} onChange={(e) => setTaskLabel(e.target.value)} placeholder="Contoh: Desain landing page" />
                     </div>
+                    
+                    <div className="space-y-2">
+                        <Label>Checklist Item (Opsional)</Label>
+                        <div className="flex gap-2">
+                            <Input value={newItemLabel} onChange={(e) => setNewItemLabel(e.target.value)} placeholder="Tambah sub-tugas..." onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddNewItem(); }}} />
+                            <Button type="button" onClick={handleAddNewItem}><Plus /></Button>
+                        </div>
+                        <div className="space-y-1 pt-2">
+                            {items.map((item, index) => (
+                                <div key={index} className="flex items-center gap-2 text-sm bg-secondary p-1 rounded-md">
+                                    <ListPlus className="h-4 w-4 text-muted-foreground"/>
+                                    <span className="flex-1">{item.label}</span>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveItem(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     <AssigneeSelector members={members} selected={assignedTo} onSelectionChange={setAssignedTo} />
                 </div>
                 <DialogFooter>
@@ -89,7 +126,6 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
         </Dialog>
     );
 };
-
 
 // --- Main Page Component ---
 
@@ -159,12 +195,12 @@ export default function GroupNotebookPage() {
     if (!group) return;
     
     // Optimistic UI update
-    setGroup(g => g ? { ...g, tasks: [...g.tasks, newTask] } : null);
+    setGroup(g => g ? { ...g, tasks: [newTask, ...g.tasks] } : null);
 
     try {
-        const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task`, {
+        const res = await fetchWithAuth(`/api/notebook/group/task`, {
             method: 'POST',
-            body: JSON.stringify(newTask)
+            body: JSON.stringify({...newTask, groupUuid: group.uuid})
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
@@ -172,7 +208,7 @@ export default function GroupNotebookPage() {
         toast({title: "Tugas Ditambahkan!"});
         fetchGroupDetails(); // Re-fetch to get server-generated ID and confirm state
     } catch (error) {
-        setGroup(g => g ? { ...g, tasks: g.tasks.filter(t => t.id !== newTask.id)} : null);
+        setGroup(g => g ? { ...g, tasks: g.tasks.filter(t => t.uuid !== newTask.uuid)} : null);
         toast({ variant: 'destructive', title: "Gagal Menambah Tugas", description: (error as Error).message });
     }
   }, [group, fetchWithAuth, toast, fetchGroupDetails]);
@@ -202,9 +238,10 @@ export default function GroupNotebookPage() {
   
   const getAssigneeAvatars = (task: GroupTask) => {
     if (!group) return [];
+    const assignedIds = new Set(task.assignedTo);
     return task.assignedTo.length === 0
-        ? [{ id: 'all', name: 'Semua', avatarUrl: '' }]
-        : group.members.filter(member => task.assignedTo.includes(member.id));
+        ? [{ id: 0, name: 'Semua', avatarUrl: '' }] // Use a placeholder ID
+        : group.members.filter(member => assignedIds.has(member.id));
   };
   
   if (isLoading || !group) {
@@ -255,7 +292,7 @@ export default function GroupNotebookPage() {
 
             <div className="space-y-3">
               {group.tasks.map((task) => (
-                <div key={task.id} className="flex items-start gap-3 p-3 bg-background rounded-lg">
+                <div key={task.id || task.uuid} className="flex items-start gap-3 p-3 bg-background rounded-lg">
                   <Checkbox 
                     id={`task-${task.id}`}
                     checked={task.completed}
@@ -266,13 +303,23 @@ export default function GroupNotebookPage() {
                       <Label htmlFor={`task-${task.id}`} className={task.completed ? 'line-through text-muted-foreground' : ''}>
                         {task.label || <span className="text-muted-foreground italic">Tugas kosong</span>}
                       </Label>
-                      <div className="flex items-center gap-2 mt-1.5">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                          {getAssigneeAvatars(task).map(assignee => (
-                             assignee.id === 'all' 
+                             assignee.name === 'Semua' 
                              ? <Badge key="all" variant="secondary" className="flex items-center gap-1"><Users className="w-3 h-3"/>Semua</Badge>
-                             : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
+                             : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl || undefined} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
                          ))}
                       </div>
+                       {task.items && task.items.length > 0 && (
+                          <div className="mt-2 space-y-1 pl-4 border-l-2 ml-2">
+                              {task.items.map((item) => (
+                                  <div key={item.id} className="flex items-center gap-2 text-sm">
+                                      <Checkbox id={`item-${item.id}`} checked={item.completed} className="w-4 h-4" />
+                                      <Label htmlFor={`item-${item.id}`} className={item.completed ? 'line-through text-muted-foreground' : ''}>{item.label}</Label>
+                                  </div>
+                              ))}
+                          </div>
+                      )}
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

@@ -36,35 +36,31 @@ export default function NotebookEditPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const saveNote = useDebouncedCallback(async (noteToSave: Note) => {
-    // Always save to localStorage as a backup
+  // Debounced save to avoid excessive saving on every keystroke
+  const debouncedSave = useDebouncedCallback((noteToSave: Note) => {
     try {
-        const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
-        const existingIndex = storedNotes.findIndex(n => n.uuid === noteToSave.uuid);
-        if (existingIndex > -1) {
-            storedNotes[existingIndex] = noteToSave;
-        } else {
-            storedNotes.unshift(noteToSave);
-        }
-        localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
+      const storedNotes: Note[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+      const existingIndex = storedNotes.findIndex(n => n.uuid === noteToSave.uuid);
+      if (existingIndex > -1) {
+        storedNotes[existingIndex] = noteToSave;
+      } else {
+        storedNotes.unshift(noteToSave);
+      }
+      localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(storedNotes));
     } catch (error) {
-        console.error("Gagal menyimpan catatan ke lokal:", error);
+      console.error("Gagal menyimpan catatan ke lokal:", error);
     }
-    
-    if (isAuthenticated && noteToSave.isSynced) {
-        setIsSaving(true);
-        try {
-            await fetchWithAuth(`/api/notebook/personal/sync`, {
-                method: 'POST',
-                body: JSON.stringify({ notes: [noteToSave] })
-            });
-        } catch (error) {
-            console.error("Auto-save to cloud failed:", error);
-        } finally {
-            setIsSaving(false);
-        }
-    }
-  }, 1500);
+  }, 1000);
+
+  const updateNoteAndMarkUnsynced = useCallback((updatedNote: Note) => {
+    const newNoteState = { 
+      ...updatedNote, 
+      isSynced: false,
+      lastModified: new Date().toISOString()
+    };
+    setNote(newNoteState);
+    debouncedSave(newNoteState);
+  }, [debouncedSave]);
 
   useEffect(() => {
     const editModeParam = searchParams.get('edit') === 'true';
@@ -77,7 +73,6 @@ export default function NotebookEditPage() {
             const currentNote = storedNotes.find(n => n.uuid === id);
             if (currentNote) {
                 setNote(currentNote);
-                // If it's a new note (determined by title) or edit param is present, force edit mode
                 if (editModeParam || currentNote.title === 'Catatan Baru Tanpa Judul') {
                     setIsEditMode(true);
                 }
@@ -95,19 +90,9 @@ export default function NotebookEditPage() {
     loadNote();
   }, [id, router, searchParams, toast]);
 
-  const updateNote = useCallback((updatedNote: Note | null) => {
-    if (!updatedNote) return;
-    setNote(updatedNote);
-    saveNote(updatedNote);
-  }, [saveNote]);
-
   const updateNoteField = (field: keyof Note, value: any) => {
-    setNote(currentNote => {
-      if (!currentNote) return null;
-      const newNote = { ...currentNote, [field]: value };
-      saveNote(newNote);
-      return newNote;
-    });
+    if (!note) return;
+    updateNoteAndMarkUnsynced({ ...note, [field]: value });
   };
 
   const addItem = () => {
@@ -117,8 +102,7 @@ export default function NotebookEditPage() {
       label: '',
       completed: false,
     };
-    const newNote = { ...note, items: [...note.items, newItem] };
-    updateNote(newNote);
+    updateNoteAndMarkUnsynced({ ...note, items: [...note.items, newItem] });
   };
 
   const updateItem = (itemUuid: string, newLabel: string) => {
@@ -126,7 +110,7 @@ export default function NotebookEditPage() {
     const updatedItems = note.items.map(item =>
       item.uuid === itemUuid ? { ...item, label: newLabel } : item
     );
-    updateNote({ ...note, items: updatedItems });
+    updateNoteAndMarkUnsynced({ ...note, items: updatedItems });
   };
 
   const toggleItemCompletion = (itemUuid: string) => {
@@ -134,12 +118,12 @@ export default function NotebookEditPage() {
     const updatedItems = note.items.map(item =>
       item.uuid === itemUuid ? { ...item, completed: !item.completed } : item
     );
-    updateNote({ ...note, items: updatedItems });
+    updateNoteAndMarkUnsynced({ ...note, items: updatedItems });
   };
 
   const removeItem = (itemUuid: string) => {
     if (!note) return;
-    updateNote({ ...note, items: note.items.filter(item => item.uuid !== itemUuid) });
+    updateNoteAndMarkUnsynced({ ...note, items: note.items.filter(item => item.uuid !== itemUuid) });
   };
 
   const handleBulkAdd = () => {
@@ -149,7 +133,7 @@ export default function NotebookEditPage() {
       label: isNumbered ? `${note.items.length + i + 1}. ` : '',
       completed: false,
     }));
-    updateNote({ ...note, items: [...note.items, ...newItems] });
+    updateNoteAndMarkUnsynced({ ...note, items: [...note.items, ...newItems] });
     setIsBulkAddOpen(false);
     setBulkAddCount(10);
     setIsNumbered(false);
@@ -221,7 +205,8 @@ export default function NotebookEditPage() {
                                <div className="space-y-3 text-sm text-muted-foreground">
                                 <p>1. Klik ikon <Edit size={16} className="inline-block"/> untuk masuk mode edit.</p>
                                 <p>2. Saat mode edit, Anda bisa mengubah judul, menambah/mengedit/menghapus item.</p>
-                                <p>3. Perubahan akan disimpan secara otomatis.</p>
+                                <p>3. Perubahan akan disimpan secara otomatis ke perangkat Anda.</p>
+                                <p>4. Gunakan tombol awan di halaman daftar untuk menyimpan ke cloud.</p>
                               </div>
                               <AlertDialogFooter>
                                 <AlertDialogAction>Mengerti!</AlertDialogAction>
@@ -232,7 +217,6 @@ export default function NotebookEditPage() {
                 </CardTitle>
                 <CardDescription className="flex items-center gap-2">
                     <Progress value={progress} className="w-full mt-2" />
-                    {isSaving && <Loader2 className="w-4 h-4 animate-spin"/>}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

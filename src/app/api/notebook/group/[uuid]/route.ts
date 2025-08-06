@@ -65,11 +65,12 @@ export async function GET(request: NextRequest, { params }: { params: { uuid: st
         let itemsByTaskId: { [taskId: number]: GroupChecklistItem[] } = {};
 
         if (taskIds.length > 0) {
+            const placeholders = taskIds.map(() => '?').join(',');
             const [itemRows]: [RowDataPacket[], any] = await connection.execute(
-                `SELECT ti.id, ti.label, ti.completed, ti.task_id
+                `SELECT ti.id, ti.uuid, ti.label, ti.completed, ti.task_id
                  FROM group_task_items ti
-                 WHERE ti.task_id IN (?)`,
-                [taskIds]
+                 WHERE ti.task_id IN (${placeholders})`,
+                taskIds
             );
 
             // 5. Aggregate the checklist items in JavaScript
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest, { params }: { params: { uuid: st
                 }
                 itemsByTaskId[item.task_id].push({
                     id: item.id,
+                    uuid: item.uuid,
                     label: item.label,
                     completed: !!item.completed,
                 });

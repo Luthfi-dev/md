@@ -20,7 +20,7 @@ const LOCAL_STORAGE_KEY_SYNC_INFO = 'notebook_sync_info_dismiss_count';
 const MAX_DISMISS_COUNT = 3;
 
 export default function NotebookListPage() {
-  const [allNotes, setAllNotes] = useState<Note[]>([]);
+  const [personalNotes, setPersonalNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncingNoteId, setSyncingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export default function NotebookListPage() {
       const finalNotes = [...syncedNotes, ...uniqueLocalNotes];
       finalNotes.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
       
-      setAllNotes(finalNotes);
+      setPersonalNotes(finalNotes);
 
     } catch (e) {
       console.error("Failed to fetch personal notes", e);
@@ -76,14 +76,14 @@ export default function NotebookListPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const dismissCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10);
-      const hasUnsynced = allNotes.some(n => !n.isSynced);
+      const hasUnsynced = personalNotes.some(n => !n.isSynced);
       if (isAuthenticated && hasUnsynced && dismissCount < MAX_DISMISS_COUNT) {
         setShowSyncInfo(true);
       } else {
         setShowSyncInfo(false);
       }
     }
-  }, [allNotes, isAuthenticated]);
+  }, [personalNotes, isAuthenticated]);
 
 
   const handleDismissSyncInfo = () => {
@@ -104,7 +104,7 @@ export default function NotebookListPage() {
     
     const currentNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify([newNote, ...currentNotes]));
-    setAllNotes(prev => [newNote, ...prev]);
+    setPersonalNotes(prev => [newNote, ...prev]);
 
     router.push(`/notebook/${newNote.uuid}?edit=true`);
   };
@@ -118,22 +118,26 @@ export default function NotebookListPage() {
     router.push(`/notebook/${uuid}?edit=true`);
   };
 
-  const handleDelete = async (note: Note) => {
-    const originalNotes = [...allNotes];
-    setAllNotes(prev => prev.filter(n => n.uuid !== note.uuid));
+  const handleDelete = async (note: Note, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const originalNotes = [...personalNotes];
+    setPersonalNotes(prev => prev.filter(n => n.uuid !== note.uuid));
     setDeletingNoteId(null);
 
     try {
+      // Always remove from local storage first
+      const localNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+      localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(localNotes.filter((n: Note) => n.uuid !== note.uuid)));
+
+      // If it was a synced note, also delete from server
       if (note.isSynced && isAuthenticated) {
         const res = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, { method: 'DELETE' });
         if (!res.ok) throw new Error("Gagal menghapus catatan di server");
       }
-      const localNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
-      localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(localNotes.filter((n: Note) => n.uuid !== note.uuid)));
-
+      
       toast({title: "Catatan Dihapus"});
     } catch (error) {
-      setAllNotes(originalNotes);
+      setPersonalNotes(originalNotes); // Revert UI on failure
       toast({variant: 'destructive', title: "Gagal Menghapus Catatan"});
     }
   };
@@ -157,14 +161,14 @@ export default function NotebookListPage() {
       
       const updatedNote = { ...note, isSynced: true };
       
-      // Update local storage
-      const localNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+      // Update local storage to persist the synced state
+      const localNotesRaw = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]';
+      const localNotes: Note[] = JSON.parse(localNotesRaw);
       const updatedLocalNotes = localNotes.map((n: Note) => n.uuid === note.uuid ? updatedNote : n);
       localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(updatedLocalNotes));
       
-      // Update state
-      setAllNotes(prev => prev.map(n => n.uuid === note.uuid ? updatedNote : n));
-
+      // Update component state to reflect the change immediately
+      setPersonalNotes(prev => prev.map(n => n.uuid === note.uuid ? updatedNote : n));
 
       toast({ title: 'Berhasil!', description: `Catatan "${note.title || 'Tanpa Judul'}" berhasil disimpan ke cloud.`});
     } catch (error) {
@@ -175,9 +179,9 @@ export default function NotebookListPage() {
   }
   
   const filteredNotes = useMemo(() => {
-    if (!searchTerm) return allNotes;
-    return allNotes.filter(note => note.title.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [allNotes, searchTerm]);
+    if (!searchTerm) return personalNotes;
+    return personalNotes.filter(note => note.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [personalNotes, searchTerm]);
 
   const getProgress = (note: Note) => {
     if (!note.items || note.items.length === 0) return 0;
@@ -190,7 +194,7 @@ export default function NotebookListPage() {
       <header className="mb-8 text-center">
         <h1 className="text-4xl font-bold font-headline tracking-tight">Catatan Cerdas</h1>
         <p className="text-muted-foreground mt-2 text-lg">
-          Organisir ide dan tugas Anda.
+          Organisir ide dan tugas pribadi Anda.
         </p>
       </header>
 
@@ -207,7 +211,7 @@ export default function NotebookListPage() {
             </div>
             <div className="flex gap-2 w-full md:w-auto">
                 <Button onClick={() => router.push('/notebook/groups')} variant="outline" className="w-full">
-                    <Users className="mr-2" /> Grup
+                    <Users className="mr-2" /> Grup Kolaborasi
                 </Button>
                 <Button onClick={handleCreateNewPersonalNote} className="w-full">
                     <Plus className="mr-2" /> Buat Baru
@@ -242,57 +246,57 @@ export default function NotebookListPage() {
 
             return (
                 <Card key={note.uuid} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleCardClick(note.uuid)}>
-                <CardHeader>
-                    <CardTitle className="flex justify-between items-center">
-                        <span className="truncate">{note.title || 'Tanpa Judul'}</span>
-                        <div className="flex items-center gap-1 shrink-0">
-                            {isAuthenticated && (
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleSyncNote(note, e)} disabled={note.isSynced || syncingNoteId === note.uuid}>
-                                    {syncingNoteId === note.uuid ? <Loader2 className="h-4 w-4 animate-spin"/> :
-                                    note.isSynced ? <Cloud className="h-4 w-4 text-green-500" /> : <CloudOff className="h-4 w-4 text-destructive" />
-                                    }
-                                </Button>
-                            )}
-                            {!isCompleted && (
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleEdit(note.uuid, e)}>
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                            )}
-                            <AlertDialog onOpenChange={(open) => !open && setDeletingNoteId(null)}>
-                                <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingNoteId(note.uuid); }}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                                </AlertDialogTrigger>
-                                {deletingNoteId === note.uuid && (
-                                    <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                        Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleDelete(note); }}>Hapus</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                    </AlertDialogContent>
+                    <CardHeader>
+                        <CardTitle className="flex justify-between items-center">
+                            <span className="truncate">{note.title || 'Tanpa Judul'}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                                {isAuthenticated && (
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleSyncNote(note, e)} disabled={note.isSynced || syncingNoteId === note.uuid}>
+                                        {syncingNoteId === note.uuid ? <Loader2 className="h-4 w-4 animate-spin"/> :
+                                        note.isSynced ? <Cloud className="h-4 w-4 text-green-500" /> : <CloudOff className="h-4 w-4 text-destructive" />
+                                        }
+                                    </Button>
                                 )}
-                            </AlertDialog>
+                                {!isCompleted && (
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleEdit(note.uuid, e)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                )}
+                                <AlertDialog onOpenChange={(open) => !open && setDeletingNoteId(null)}>
+                                    <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingNoteId(note.uuid); }}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                    </AlertDialogTrigger>
+                                    {deletingNoteId === note.uuid && (
+                                        <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                            Tindakan ini tidak bisa dibatalkan. Ini akan menghapus catatan secara permanen dari perangkat dan cloud.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={(e) => handleDelete(note, e)}>Hapus</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    )}
+                                </AlertDialog>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-4">
+                        <Progress value={progress} className="w-full" />
+                        <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
+                            {note.items?.filter(i => i.completed).length || 0} / {note.items?.length || 0}
+                        </span>
                         </div>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-4">
-                    <Progress value={progress} className="w-full" />
-                    <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
-                        {note.items?.filter(i => i.completed).length || 0} / {note.items?.length || 0}
-                    </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                    Diubah: {new Date(note.lastModified || note.createdAt).toLocaleString('id-ID')}
-                    </p>
-                </CardContent>
+                        <p className="text-xs text-muted-foreground mt-2">
+                        Diubah: {new Date(note.lastModified || note.createdAt).toLocaleString('id-ID')}
+                        </p>
+                    </CardContent>
                 </Card>
             );
             })

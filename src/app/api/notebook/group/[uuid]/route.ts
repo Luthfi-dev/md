@@ -1,4 +1,5 @@
 
+'use server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth-utils';
 import { db } from '@/lib/db';
@@ -46,38 +47,43 @@ export async function GET(request: NextRequest, { params }: { params: { uuid: st
             avatarUrl: row.avatar_url,
         }));
         
-        // 3. Get all tasks for the group
+        // 3. Get all tasks for the group and their assignees
         const [taskRows]: [RowDataPacket[], any] = await connection.execute(
-            `SELECT t.id, t.uuid, t.label, t.completed, t.created_by,
-                    GROUP_CONCAT(ta.user_id) as assigned_to_ids
+            `SELECT 
+                t.id, t.uuid, t.label, t.completed, t.created_by,
+                GROUP_CONCAT(ta.user_id) as assigned_to_ids
              FROM group_tasks t
              LEFT JOIN group_task_assignees ta ON t.id = ta.task_id
              WHERE t.group_id = ?
-             GROUP BY t.id`,
+             GROUP BY t.id
+             ORDER BY t.created_at DESC`,
             [groupData.id]
         );
         
         // 4. Get all checklist items for all tasks in the group
-        const [itemRows]: [RowDataPacket[], any] = await connection.execute(
-            `SELECT ti.id, ti.label, ti.completed, ti.task_id
-             FROM group_task_items ti
-             JOIN group_tasks t ON ti.task_id = t.id
-             WHERE t.group_id = ?`,
-            [groupData.id]
-        );
+        const taskIds = taskRows.map(t => t.id);
+        let itemsByTaskId: { [taskId: number]: GroupChecklistItem[] } = {};
 
-        // 5. Aggregate the data in JavaScript
-        const itemsByTaskId: { [taskId: number]: GroupChecklistItem[] } = {};
-        itemRows.forEach(item => {
-            if (!itemsByTaskId[item.task_id]) {
-                itemsByTaskId[item.task_id] = [];
-            }
-            itemsByTaskId[item.task_id].push({
-                id: item.id,
-                label: item.label,
-                completed: !!item.completed,
+        if (taskIds.length > 0) {
+            const [itemRows]: [RowDataPacket[], any] = await connection.execute(
+                `SELECT ti.id, ti.label, ti.completed, ti.task_id
+                 FROM group_task_items ti
+                 WHERE ti.task_id IN (?)`,
+                [taskIds]
+            );
+
+            // 5. Aggregate the checklist items in JavaScript
+            itemRows.forEach(item => {
+                if (!itemsByTaskId[item.task_id]) {
+                    itemsByTaskId[item.task_id] = [];
+                }
+                itemsByTaskId[item.task_id].push({
+                    id: item.id,
+                    label: item.label,
+                    completed: !!item.completed,
+                });
             });
-        });
+        }
         
         const tasks: GroupTask[] = taskRows.map(task => ({
             id: task.id,
@@ -99,6 +105,7 @@ export async function GET(request: NextRequest, { params }: { params: { uuid: st
             createdAt: groupData.created_at,
             members: members,
             tasks: tasks,
+            activeTaskCount: tasks.filter(t => !t.completed).length,
         };
 
         return NextResponse.json({ success: true, group });

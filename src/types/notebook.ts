@@ -9,8 +9,8 @@ export interface ChecklistItem {
 }
 
 export interface Note {
-    id: number; // Server ID
-    uuid: string; // Client ID
+    id?: number; // Server ID can be optional for new local notes
+    uuid: string; // Client ID is mandatory
     title: string;
     items: ChecklistItem[];
     createdAt: string; // ISO string

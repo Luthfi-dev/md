@@ -11,7 +11,7 @@ const taskUpdateSchema = z.object({
   completed: z.boolean().optional(),
   assignedTo: z.array(z.number()).optional(),
   items: z.array(z.object({
-    uuid: z.string().uuid(),
+    id: z.number().optional(), // ID can be missing for new items
     label: z.string(),
     completed: z.boolean()
   })).optional()
@@ -76,6 +76,15 @@ export async function PUT(request: NextRequest, { params }: { params: { uuid: st
             if (assignedTo.length > 0) {
                 const assigneeValues = assignedTo.map(userId => [taskId, userId]);
                 await connection.query('INSERT INTO group_task_assignees (task_id, user_id) VALUES ?', [assigneeValues]);
+            }
+        }
+        
+        // Sync checklist items
+        if (items !== undefined) {
+            await connection.execute('DELETE FROM group_task_items WHERE task_id = ?', [taskId]);
+            if (items.length > 0) {
+                const itemValues = items.map(item => [taskId, item.label, item.completed]);
+                await connection.query('INSERT INTO group_task_items (task_id, label, completed) VALUES ?', [itemValues]);
             }
         }
 

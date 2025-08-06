@@ -7,26 +7,24 @@ import { z } from 'zod';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 const taskCreateSchema = z.object({
+  groupUuid: z.string().uuid(),
   uuid: z.string().uuid("UUID Tugas tidak valid"),
   label: z.string().min(1, "Nama tugas tidak boleh kosong"),
   assignedTo: z.array(z.number()).optional(),
   items: z.array(z.object({
-    uuid: z.string().uuid(),
     label: z.string(),
     completed: z.boolean()
   })).optional()
 });
 
 // CREATE a new task in a group
-export async function POST(request: NextRequest, { params }: { params: { uuid: string } }) {
+export async function POST(request: NextRequest) {
     const user = await getAuthFromRequest(request);
     if (!user) {
         return NextResponse.json({ success: false, message: 'Tidak terotentikasi' }, { status: 401 });
     }
 
-    const { uuid: groupUuid } = params;
     let connection;
-
     try {
         const body = await request.json();
         const validation = taskCreateSchema.safeParse(body);
@@ -34,17 +32,20 @@ export async function POST(request: NextRequest, { params }: { params: { uuid: s
             return NextResponse.json({ success: false, message: validation.error.errors.map(e => e.message).join(', ') }, { status: 400 });
         }
         
-        const { uuid: taskUuid, label, assignedTo, items } = validation.data;
+        const { groupUuid, uuid: taskUuid, label, assignedTo, items } = validation.data;
 
         connection = await db.getConnection();
         
+        // Verify user is a member of the group they're adding a task to
         const [groupRows]: [RowDataPacket[], any] = await connection.execute(
-            'SELECT id FROM note_groups WHERE uuid = ?',
-            [groupUuid]
+            `SELECT g.id FROM note_groups g
+             JOIN group_members gm ON g.id = gm.group_id
+             WHERE g.uuid = ? AND gm.user_id = ?`,
+            [groupUuid, user.id]
         );
 
         if (groupRows.length === 0) {
-            return NextResponse.json({ success: false, message: 'Grup tidak ditemukan.' }, { status: 404 });
+            return NextResponse.json({ success: false, message: 'Grup tidak ditemukan atau Anda bukan anggota.' }, { status: 404 });
         }
         const groupId = groupRows[0].id;
 
@@ -65,9 +66,9 @@ export async function POST(request: NextRequest, { params }: { params: { uuid: s
         }
 
         if (items && items.length > 0) {
-            const itemValues = items.map(item => [newTaskId, item.uuid, item.label, item.completed]);
+            const itemValues = items.map(item => [newTaskId, item.label, item.completed]);
             await connection.query(
-                'INSERT INTO group_task_items (task_id, uuid, label, completed) VALUES ?',
+                'INSERT INTO group_task_items (task_id, label, completed) VALUES ?',
                 [itemValues]
             );
         }

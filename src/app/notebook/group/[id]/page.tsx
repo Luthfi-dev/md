@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook, ListPlus } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook, ListPlus, ListChecks } from 'lucide-react';
 import { type NotebookGroup, type GroupTask, type GroupMember, type GroupChecklistItem } from '@/types/notebook';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
@@ -51,9 +51,20 @@ const AssigneeSelector = ({ members, selected, onSelectionChange }: { members: G
 const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTaskAdded: (task: GroupTask) => void }) => {
     const [taskLabel, setTaskLabel] = useState('');
     const [assignedTo, setAssignedTo] = useState<string[]>([]);
-    const [items, setItems] = useState<Omit<GroupChecklistItem, 'id'>[]>([]);
+    const [items, setItems] = useState<Omit<GroupChecklistItem, 'id' | 'taskId'>[]>([]);
     const [newItemLabel, setNewItemLabel] = useState('');
+    const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
+    const [bulkAddCount, setBulkAddCount] = useState(10);
+    const [isNumbered, setIsNumbered] = useState(false);
     const { user } = useAuth();
+    
+    const resetState = () => {
+        setTaskLabel('');
+        setAssignedTo([]);
+        setItems([]);
+        setNewItemLabel('');
+        setIsBulkAddOpen(false);
+    }
 
     const handleAddNewItem = () => {
         if (!newItemLabel.trim()) return;
@@ -63,6 +74,16 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
 
     const handleRemoveItem = (indexToRemove: number) => {
         setItems(items.filter((_, index) => index !== indexToRemove));
+    };
+    
+    const handleBulkAdd = () => {
+         const newItems: Omit<GroupChecklistItem, 'id' | 'taskId'>[] = Array.from({ length: bulkAddCount }, (_, i) => ({
+            uuid: uuidv4(),
+            label: isNumbered ? `${items.length + i + 1}. ` : '',
+            completed: false,
+        }));
+        setItems([...items, ...newItems]);
+        setIsBulkAddOpen(false);
     };
 
     const handleAddTask = () => {
@@ -77,15 +98,25 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
             createdBy: user.id,
             items: finalItems
         });
-        // Reset state
-        setTaskLabel('');
-        setAssignedTo([]);
-        setItems([]);
-        setNewItemLabel('');
+        resetState();
     };
 
     return (
-        <Dialog onOpenChange={(open) => !open && (setTaskLabel(''), setAssignedTo([]), setItems([]), setNewItemLabel(''))}>
+        <Dialog onOpenChange={(open) => !open && resetState()}>
+            <AlertDialog open={isBulkAddOpen} onOpenChange={setIsBulkAddOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader><AlertDialogTitle>Buat Banyak Item</AlertDialogTitle></AlertDialogHeader>
+                    <div className="py-4 space-y-4">
+                        <Input type="number" value={bulkAddCount} onChange={(e) => setBulkAddCount(Number(e.target.value))} min="1" max="100"/>
+                        <div className="flex items-center space-x-2">
+                           <Checkbox id="is-numbered" checked={isNumbered} onCheckedChange={(checked) => setIsNumbered(checked as boolean)} />
+                           <Label htmlFor="is-numbered">Penomoran Otomatis</Label>
+                        </div>
+                    </div>
+                    <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={handleBulkAdd}>Buat</AlertDialogAction></AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <DialogTrigger asChild>
                 <Button className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20">
                     <Plus className="h-8 w-8" />
@@ -101,19 +132,20 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
                     
                     <div className="space-y-2">
                         <Label>Checklist Item (Opsional)</Label>
-                        <div className="flex gap-2">
-                            <Input value={newItemLabel} onChange={(e) => setNewItemLabel(e.target.value)} placeholder="Tambah sub-tugas..." onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddNewItem(); }}} />
-                            <Button type="button" onClick={handleAddNewItem}><Plus /></Button>
-                        </div>
-                        <div className="space-y-1 pt-2">
-                            {items.map((item, index) => (
+                        <div className="space-y-2">
+                           {items.map((item, index) => (
                                 <div key={index} className="flex items-center gap-2 text-sm bg-secondary p-1 rounded-md">
-                                    <ListPlus className="h-4 w-4 text-muted-foreground"/>
-                                    <span className="flex-1">{item.label}</span>
+                                    <ListChecks className="h-4 w-4 text-muted-foreground"/>
+                                    <span className="flex-1">{item.label || <i className="text-muted-foreground">Item kosong</i>}</span>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveItem(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                                 </div>
                             ))}
                         </div>
+                         <div className="flex gap-2">
+                            <Input value={newItemLabel} onChange={(e) => setNewItemLabel(e.target.value)} placeholder="Tambah sub-tugas..." onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddNewItem(); }}} />
+                            <Button type="button" onClick={handleAddNewItem}><Plus /></Button>
+                        </div>
+                         <Button variant="outline" size="sm" onClick={() => setIsBulkAddOpen(true)}>Tambah Banyak Item</Button>
                     </div>
 
                     <AssigneeSelector members={members} selected={assignedTo} onSelectionChange={setAssignedTo} />
@@ -140,9 +172,7 @@ export default function GroupNotebookPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchGroupDetails = useCallback(async () => {
-    if (!isAuthenticated || !id) {
-        return;
-    }
+    if (!isAuthenticated || !id) return;
     setIsLoading(true);
     try {
         const res = await fetchWithAuth(`/api/notebook/group/${id}`);
@@ -162,7 +192,6 @@ export default function GroupNotebookPage() {
   }, [id, router, isAuthenticated, fetchWithAuth, toast]);
 
   useEffect(() => {
-    // Only fetch if authenticated. If not, the user shouldn't be here.
     if(isAuthenticated === true) {
         fetchGroupDetails();
     } else if (isAuthenticated === false) {
@@ -172,29 +201,23 @@ export default function GroupNotebookPage() {
 
   const toggleTaskCompletion = useCallback(async (task: GroupTask) => {
     if (!group) return;
-
     const updatedTask = { ...task, completed: !task.completed };
-    
-    // Optimistic UI update
-    setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.id === task.id ? updatedTask : t) } : null);
+    setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? updatedTask : t) } : null);
 
     try {
         const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, {
             method: 'PUT',
-            body: JSON.stringify(updatedTask)
+            body: JSON.stringify({ completed: updatedTask.completed })
         });
         if (!res.ok) throw new Error("Gagal memperbarui tugas");
     } catch (error) {
-        // Revert on failure
-        setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.id === task.id ? task : t) } : null);
+        setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? task : t) } : null);
         toast({ variant: 'destructive', title: 'Gagal Memperbarui Tugas'});
     }
   }, [group, fetchWithAuth, toast]);
 
   const handleAddTask = useCallback(async (newTask: GroupTask) => {
     if (!group) return;
-    
-    // Optimistic UI update
     setGroup(g => g ? { ...g, tasks: [newTask, ...g.tasks] } : null);
 
     try {
@@ -204,9 +227,8 @@ export default function GroupNotebookPage() {
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
-        
         toast({title: "Tugas Ditambahkan!"});
-        fetchGroupDetails(); // Re-fetch to get server-generated ID and confirm state
+        fetchGroupDetails();
     } catch (error) {
         setGroup(g => g ? { ...g, tasks: g.tasks.filter(t => t.uuid !== newTask.uuid)} : null);
         toast({ variant: 'destructive', title: "Gagal Menambah Tugas", description: (error as Error).message });
@@ -215,10 +237,8 @@ export default function GroupNotebookPage() {
   
   const handleRemoveTask = useCallback(async (task: GroupTask) => {
     if (!group) return;
-
     const originalTasks = group.tasks;
-    // Optimistic UI update
-    setGroup(g => g ? {...g, tasks: g.tasks.filter(t => t.id !== task.id)} : null);
+    setGroup(g => g ? {...g, tasks: g.tasks.filter(t => t.uuid !== task.uuid)} : null);
     
     try {
         const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, { method: 'DELETE' });
@@ -229,20 +249,19 @@ export default function GroupNotebookPage() {
         toast({variant: 'destructive', title: 'Gagal Menghapus Tugas'});
     }
   }, [group, fetchWithAuth, toast]);
-
-  const progress = useMemo(() => {
-    if (!group || group.tasks.length === 0) return 0;
-    const completedCount = group.tasks.filter(task => task.completed).length;
-    return (completedCount / group.tasks.length) * 100;
-  }, [group]);
   
   const getAssigneeAvatars = (task: GroupTask) => {
     if (!group) return [];
     const assignedIds = new Set(task.assignedTo);
     return task.assignedTo.length === 0
-        ? [{ id: 0, name: 'Semua', avatarUrl: '' }] // Use a placeholder ID
+        ? [{ id: 0, name: 'Semua', avatarUrl: '', role: 'member' as const }]
         : group.members.filter(member => assignedIds.has(member.id));
   };
+  
+  const currentUserRole = useMemo(() => {
+    if (!group || !user) return 'member';
+    return group.members.find(m => m.id === user.id)?.role || 'member';
+  }, [group, user]);
   
   if (isLoading || !group) {
     return (
@@ -259,87 +278,53 @@ export default function GroupNotebookPage() {
                 <ArrowLeft />
             </Button>
             <div className='flex items-center gap-3'>
-                <Avatar>
-                    <AvatarImage src={group.avatarUrl || `https://placehold.co/40x40.png?text=${group.title.charAt(0)}`}/>
-                    <AvatarFallback>{group.title.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className='flex-1'>
-                    <h1 className="font-bold text-lg truncate">{group.title}</h1>
-                    <p className="text-xs text-muted-foreground">{group.members.length} Anggota</p>
-                </div>
+                <Avatar><AvatarImage src={group.avatarUrl || `https://placehold.co/40x40.png?text=${group.title.charAt(0)}`}/><AvatarFallback>{group.title.charAt(0)}</AvatarFallback></Avatar>
+                <div className='flex-1'><h1 className="font-bold text-lg truncate">{group.title}</h1><p className="text-xs text-muted-foreground">{group.members.length} Anggota</p></div>
             </div>
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="ml-auto">
-                        <MoreVertical />
-                    </Button>
-                </DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="ml-auto"><MoreVertical /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuItem><UserPlus className="mr-2"/> Undang Anggota</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive"><Trash className="mr-2"/> Hapus Grup</DropdownMenuItem>
+                    {currentUserRole === 'admin' && <DropdownMenuItem className="text-destructive"><Trash className="mr-2"/> Hapus Grup</DropdownMenuItem>}
                 </DropdownMenuContent>
             </DropdownMenu>
         </header>
 
         <main className="flex-1 p-4 pb-24 overflow-y-auto">
-            <div className='mb-6'>
-                <Label className='text-xs text-muted-foreground'>Progres Penyelesaian</Label>
-                <div className='flex items-center gap-2 mt-1'>
-                    <Progress value={progress} />
-                    <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{Math.round(progress)}%</span>
-                </div>
-            </div>
-
             <div className="space-y-3">
-              {group.tasks.map((task) => (
-                <div key={task.id || task.uuid} className="flex items-start gap-3 p-3 bg-background rounded-lg">
-                  <Checkbox 
-                    id={`task-${task.id}`}
-                    checked={task.completed}
-                    onCheckedChange={() => toggleTaskCompletion(task)}
-                    className="w-5 h-5 mt-1"
-                  />
-                  <div className="flex-1">
-                      <Label htmlFor={`task-${task.id}`} className={task.completed ? 'line-through text-muted-foreground' : ''}>
-                        {task.label || <span className="text-muted-foreground italic">Tugas kosong</span>}
-                      </Label>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                         {getAssigneeAvatars(task).map(assignee => (
-                             assignee.name === 'Semua' 
-                             ? <Badge key="all" variant="secondary" className="flex items-center gap-1"><Users className="w-3 h-3"/>Semua</Badge>
-                             : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl || undefined} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
-                         ))}
-                      </div>
-                       {task.items && task.items.length > 0 && (
-                          <div className="mt-2 space-y-1 pl-4 border-l-2 ml-2">
-                              {task.items.map((item) => (
-                                  <div key={item.id} className="flex items-center gap-2 text-sm">
-                                      <Checkbox id={`item-${item.id}`} checked={item.completed} className="w-4 h-4" />
-                                      <Label htmlFor={`item-${item.id}`} className={item.completed ? 'line-through text-muted-foreground' : ''}>{item.label}</Label>
-                                  </div>
-                              ))}
+              {group.tasks.map((task) => {
+                 const progress = task.items.length > 0 ? (task.items.filter(i => i.completed).length / task.items.length) * 100 : task.completed ? 100 : 0;
+                 const isAssignedToCurrentUser = task.assignedTo.length === 0 || task.assignedTo.includes(user?.id ?? -1);
+
+                 return (
+                    <div key={task.uuid} className="flex items-start gap-3 p-3 bg-background rounded-lg">
+                      <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTaskCompletion(task)} className="w-5 h-5 mt-1" disabled={!isAssignedToCurrentUser}/>
+                      <div className="flex-1">
+                          <Label htmlFor={`task-${task.id}`} className={task.completed ? 'line-through text-muted-foreground' : ''}>
+                            {task.label || <span className="text-muted-foreground italic">Tugas kosong</span>}
+                          </Label>
+                           {task.items.length > 0 && <Progress value={progress} className="w-full mt-2 h-2" />}
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                             {getAssigneeAvatars(task).map(assignee => (
+                                 assignee.name === 'Semua' 
+                                 ? <Badge key="all" variant="secondary" className="flex items-center gap-1"><Users className="w-3 h-3"/>Semua</Badge>
+                                 : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl || undefined} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
+                             ))}
                           </div>
+                      </div>
+                      {currentUserRole === 'admin' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><Trash2 className="h-4 w-4 text-destructive" /></Button></AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Hapus Tugas Ini?</AlertDialogTitle><AlertDialogDescription>Tindakan ini tidak bisa dibatalkan.</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={() => handleRemoveTask(task)}>Hapus</AlertDialogAction></AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
-                  </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Hapus Tugas Ini?</AlertDialogTitle>
-                        <AlertDialogDescription>Tindakan ini tidak bisa dibatalkan.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleRemoveTask(task)}>Hapus</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              ))}
+                    </div>
+                )})}
               {group.tasks.length === 0 && (
-                  <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg bg-background">
                     <Notebook className="mx-auto h-12 w-12 mb-4" />
                     <h3 className="font-semibold">Belum Ada Tugas</h3>
                     <p className="text-sm">Klik tombol '+' untuk menambahkan tugas baru.</p>

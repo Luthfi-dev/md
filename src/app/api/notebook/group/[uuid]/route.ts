@@ -33,9 +33,9 @@ export async function GET(request: NextRequest, { params }: { params: { uuid: st
         }
         const groupData = groupRows[0];
 
-        // 2. Get all members of the group
+        // 2. Get all members of the group, including their role
         const [memberRows]: [RowDataPacket[], any] = await connection.execute(
-            `SELECT u.id, u.name, u.avatar_url
+            `SELECT u.id, u.name, u.avatar_url, gm.role
              FROM users u
              JOIN group_members gm ON u.id = gm.user_id
              WHERE gm.group_id = ?`,
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: { uuid: st
             id: row.id,
             name: row.name,
             avatarUrl: row.avatar_url,
+            role: row.role,
         }));
         
         // 3. Get all tasks for the group and their assignees

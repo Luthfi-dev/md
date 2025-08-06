@@ -1,8 +1,8 @@
 
 
 export interface ChecklistItem {
-    id: number; // Server ID
-    uuid: string; // Client ID
+    id?: number; // Server ID can be optional for new local notes
+    uuid: string; // Client ID is mandatory
     label: string;
     completed: boolean;
     noteId?: number;
@@ -23,10 +23,12 @@ export interface GroupMember {
     id: number;
     name: string;
     avatarUrl: string | null;
+    role: 'admin' | 'member';
 }
 
 export interface GroupChecklistItem {
     id: number; // Server ID
+    uuid: string; // Client ID for local manipulation before saving
     label: string;
     completed: boolean;
 }
@@ -45,7 +47,7 @@ export interface NotebookGroup {
     id: number;
     uuid: string;
     title: string;
-    description: string;
+    description: string | null;
     avatarUrl?: string | null; // Optional avatar for the group itself
     members: GroupMember[];
     tasks: GroupTask[];

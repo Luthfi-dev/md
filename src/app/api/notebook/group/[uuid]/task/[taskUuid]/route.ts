@@ -11,7 +11,7 @@ const taskUpdateSchema = z.object({
   completed: z.boolean().optional(),
   assignedTo: z.array(z.number()).optional(),
   items: z.array(z.object({
-    id: z.number().optional(), // ID can be missing for new items
+    uuid: z.string().uuid(),
     label: z.string(),
     completed: z.boolean()
   })).optional()
@@ -38,19 +38,32 @@ export async function PUT(request: NextRequest, { params }: { params: { uuid: st
         
         connection = await db.getConnection();
 
-        const [taskRows]: [RowDataPacket[], any] = await connection.execute(
-            `SELECT t.id FROM group_tasks t
-             JOIN note_groups g ON t.group_id = g.id
-             JOIN group_members gm ON g.id = gm.group_id
-             WHERE t.uuid = ? AND g.uuid = ? AND gm.user_id = ?`,
+        // Verify user is part of the group
+         const [memberRows]: [RowDataPacket[], any] = await connection.execute(
+            `SELECT gm.role, g.id as groupId, t.id as taskId
+             FROM group_members gm
+             JOIN note_groups g ON gm.group_id = g.id
+             LEFT JOIN group_tasks t ON g.id = t.group_id AND t.uuid = ?
+             WHERE g.uuid = ? AND gm.user_id = ?`,
             [taskUuid, groupUuid, user.id]
         );
-
-        if (taskRows.length === 0) {
-            return NextResponse.json({ success: false, message: 'Tugas tidak ditemukan atau Anda tidak memiliki akses.' }, { status: 404 });
-        }
-        const taskId = taskRows[0].id;
         
+        if (memberRows.length === 0) {
+            return NextResponse.json({ success: false, message: 'Grup tidak ditemukan atau Anda bukan anggota.'}, { status: 404 });
+        }
+        
+        const { role, taskId } = memberRows[0];
+
+        if (!taskId) {
+            return NextResponse.json({ success: false, message: 'Tugas tidak ditemukan di dalam grup ini.' }, { status: 404 });
+        }
+
+        // --- Permission Checks ---
+        const isEditingJustCompletion = completed !== undefined && label === undefined && assignedTo === undefined && items === undefined;
+        if (!isEditingJustCompletion && role !== 'admin') {
+             return NextResponse.json({ success: false, message: 'Hanya admin yang dapat mengedit detail tugas.' }, { status: 403 });
+        }
+
         await connection.beginTransaction();
 
         // Update task properties if they exist
@@ -83,8 +96,11 @@ export async function PUT(request: NextRequest, { params }: { params: { uuid: st
         if (items !== undefined) {
             await connection.execute('DELETE FROM group_task_items WHERE task_id = ?', [taskId]);
             if (items.length > 0) {
-                const itemValues = items.map(item => [taskId, item.label, item.completed]);
-                await connection.query('INSERT INTO group_task_items (task_id, label, completed) VALUES ?', [itemValues]);
+                const itemValues = items.map(item => [item.uuid, taskId, item.label, item.completed]);
+                await connection.query(
+                    'INSERT INTO group_task_items (uuid, task_id, label, completed) VALUES ?',
+                    [itemValues]
+                );
             }
         }
 
@@ -115,17 +131,17 @@ export async function DELETE(request: NextRequest, { params }: { params: { uuid:
     try {
         connection = await db.getConnection();
 
-        // Verify user is part of the group before deleting
+        // Verify user is an admin of the group before deleting
          const [taskRows]: [RowDataPacket[], any] = await connection.execute(
             `SELECT t.id FROM group_tasks t
              JOIN note_groups g ON t.group_id = g.id
              JOIN group_members gm ON g.id = gm.group_id
-             WHERE t.uuid = ? AND g.uuid = ? AND gm.user_id = ?`,
+             WHERE t.uuid = ? AND g.uuid = ? AND gm.user_id = ? AND gm.role = 'admin'`,
             [taskUuid, groupUuid, user.id]
         );
 
         if (taskRows.length === 0) {
-            return NextResponse.json({ success: false, message: 'Tugas tidak ditemukan atau Anda tidak memiliki akses.' }, { status: 404 });
+            return NextResponse.json({ success: false, message: 'Tugas tidak ditemukan atau Anda tidak memiliki izin untuk menghapus.' }, { status: 403 });
         }
         const taskId = taskRows[0].id;
 

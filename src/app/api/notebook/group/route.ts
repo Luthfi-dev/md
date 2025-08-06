@@ -36,12 +36,10 @@ export async function GET(request: NextRequest) {
         }
 
         const groupIds = groupsRows.map(g => g.id);
-
-        // -- FIX: Properly format the array for the SQL IN clause --
         const placeholders = groupIds.map(() => '?').join(',');
 
         const [membersRows]: [RowDataPacket[], any] = await connection.execute(
-            `SELECT gm.group_id, u.id, u.name, u.avatar_url
+            `SELECT gm.group_id, u.id, u.name, u.avatar_url, gm.role
              FROM users u
              JOIN group_members gm ON u.id = gm.user_id
              WHERE gm.group_id IN (${placeholders})`,
@@ -58,7 +56,7 @@ export async function GET(request: NextRequest) {
 
         const membersByGroupId = membersRows.reduce((acc: {[key: number]: GroupMember[]}, member) => {
             if (!acc[member.group_id]) acc[member.group_id] = [];
-            acc[member.group_id].push({ id: member.id, name: member.name, avatarUrl: member.avatar_url });
+            acc[member.group_id].push({ id: member.id, name: member.name, avatarUrl: member.avatar_url, role: member.role });
             return acc;
         }, {});
 
@@ -75,6 +73,7 @@ export async function GET(request: NextRequest) {
             avatarUrl: group.avatar_url,
             createdAt: group.created_at,
             members: membersByGroupId[group.id] || [],
+            tasks: [], // Tasks are not loaded in the list view for performance
             activeTaskCount: tasksCountByGroupId[group.id] || 0,
         }));
 
@@ -82,7 +81,6 @@ export async function GET(request: NextRequest) {
 
     } catch (error: any) {
         console.error("GET ALL GROUPS ERROR: ", error);
-        // -- FIX: Enhanced error logging and response --
         return NextResponse.json({ 
             success: false, 
             message: `Kesalahan server saat mengambil daftar grup: ${error.message}` 
@@ -127,14 +125,14 @@ export async function POST(request: NextRequest) {
 
         await connection.commit();
 
-        const newGroup: Partial<NotebookGroup> = {
+        const newGroup: NotebookGroup = {
             id: newGroupId,
             uuid,
             title,
-            description: description || '',
+            description: description || null,
             createdBy: user.id,
             createdAt: new Date().toISOString(),
-            members: [{ id: user.id, name: user.name, avatarUrl: user.avatar || null }],
+            members: [{ id: user.id, name: user.name, avatarUrl: user.avatar || null, role: 'admin' }],
             tasks: [], 
             activeTaskCount: 0,
         };

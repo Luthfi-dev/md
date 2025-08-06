@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, Search, ArrowLeft, Loader2, Notebook } from 'lucide-react';
 import { type NotebookGroup } from '@/types/notebook';
@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { CreateGroupDialog } from '@/components/notebook/CreateGroupDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 export default function GroupNotebookListPage() {
   const [allGroups, setAllGroups] = useState<NotebookGroup[]>([]);
@@ -19,18 +20,17 @@ export default function GroupNotebookListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { toast } = useToast();
-  const { isAuthenticated, user, fetchWithAuth } = useAuth();
+  const { isAuthenticated, fetchWithAuth } = useAuth();
 
   const fetchGroups = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsLoading(true);
     try {
       const res = await fetchWithAuth('/api/notebook/group');
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Gagal mengambil data grup.");
-      }
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal mengambil data grup.");
+      }
       setAllGroups(data.groups || []);
     } catch (e) {
       console.error(e);
@@ -90,10 +90,12 @@ export default function GroupNotebookListPage() {
         ) : filteredGroups.length > 0 ? (
           <div className="space-y-4">
             {filteredGroups.map(group => (
-              <Card key={group.id} className="hover:shadow-md transition-shadow cursor-pointer bg-background" onClick={() => handleGroupCardClick(group.uuid)}>
+              <Card key={group.uuid} className="hover:shadow-md transition-shadow cursor-pointer bg-background" onClick={() => handleGroupCardClick(group.uuid)}>
                 <CardHeader>
-                  <CardTitle>{group.title}</CardTitle>
-                  <CardDescription>{group.tasks?.length || 0} Tugas Aktif</CardDescription>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="truncate">{group.title}</span>
+                    {group.activeTaskCount > 0 && <Badge>{group.activeTaskCount} Tugas Aktif</Badge>}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
@@ -106,7 +108,10 @@ export default function GroupNotebookListPage() {
                       ))}
                       {group.members.length > 5 && <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{group.members.length - 5}</AvatarFallback></Avatar>}
                     </div>
-                    <Users className="text-muted-foreground" />
+                    <div className="flex items-center text-sm text-muted-foreground gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{group.members.length}</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

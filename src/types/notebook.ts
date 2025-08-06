@@ -1,7 +1,7 @@
 
 
 export interface ChecklistItem {
-    id?: number; // Server ID
+    id: number; // Server ID
     uuid: string; // Client ID
     label: string;
     completed: boolean;
@@ -9,7 +9,7 @@ export interface ChecklistItem {
 }
 
 export interface Note {
-    id?: number; // Server ID, optional on client
+    id: number; // Server ID
     uuid: string; // Client ID
     title: string;
     items: ChecklistItem[];
@@ -26,14 +26,13 @@ export interface GroupMember {
 }
 
 export interface GroupChecklistItem {
-    id?: number; // Server ID
-    uuid: string; // Client ID
+    id: number; // Server ID
     label: string;
     completed: boolean;
 }
 
 export interface GroupTask {
-    id?: number; // Server ID
+    id: number; // Server ID
     uuid: string; // Client ID
     label: string;
     completed: boolean;
@@ -50,6 +49,7 @@ export interface NotebookGroup {
     avatarUrl?: string | null; // Optional avatar for the group itself
     members: GroupMember[];
     tasks: GroupTask[];
+    activeTaskCount: number; // For list view
     createdBy: number;
     createdAt: string;
 }

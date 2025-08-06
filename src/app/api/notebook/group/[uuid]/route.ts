@@ -3,7 +3,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth-utils';
 import { db } from '@/lib/db';
-import type { RowDataPacket } from 'mysql2';
+import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import type { NotebookGroup, GroupMember, GroupTask, GroupChecklistItem } from '@/types/notebook';
 
 // GET a single group with all its details
@@ -119,6 +119,54 @@ export async function GET(request: NextRequest, { params }: { params: { uuid: st
             success: false, 
             message: `Kesalahan server saat mengambil detail grup: ${error.message}` 
         }, { status: 500 });
+    } finally {
+        if (connection) connection.release();
+    }
+}
+
+// DELETE a group
+export async function DELETE(request: NextRequest, { params }: { params: { uuid: string } }) {
+    const user = await getAuthFromRequest(request);
+    if (!user) {
+        return NextResponse.json({ success: false, message: 'Tidak terotentikasi' }, { status: 401 });
+    }
+
+    const { uuid } = params;
+    let connection;
+
+    try {
+        connection = await db.getConnection();
+
+        // Verify user is an admin of the group before deleting
+        const [groupRows]: [RowDataPacket[], any] = await connection.execute(
+           `SELECT g.id FROM note_groups g
+            JOIN group_members gm ON g.id = gm.group_id
+            WHERE g.uuid = ? AND gm.user_id = ? AND gm.role = 'admin'`,
+           [uuid, user.id]
+        );
+
+        if (groupRows.length === 0) {
+            return NextResponse.json({ success: false, message: 'Grup tidak ditemukan atau Anda tidak memiliki izin untuk menghapus.' }, { status: 403 });
+        }
+
+        const groupId = groupRows[0].id;
+
+        // Thanks to `ON DELETE CASCADE`, we only need to delete the group itself.
+        // Tasks, items, and members will be deleted automatically.
+        const [result] = await connection.execute<ResultSetHeader>(
+            'DELETE FROM note_groups WHERE id = ?',
+            [groupId]
+        );
+
+        if (result.affectedRows === 0) {
+            return NextResponse.json({ success: false, message: 'Gagal menghapus grup.' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, message: 'Grup berhasil dihapus.' });
+
+    } catch (error: any) {
+        console.error("DELETE GROUP ERROR: ", error);
+        return NextResponse.json({ success: false, message: `Kesalahan server: ${error.message}` }, { status: 500 });
     } finally {
         if (connection) connection.release();
     }

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook, ListPlus, ListChecks } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Users, MoreVertical, UserPlus, Trash, Loader2, Notebook, ListPlus, ListChecks, ChevronDown } from 'lucide-react';
 import { type NotebookGroup, type GroupTask, type GroupMember, type GroupChecklistItem } from '@/types/notebook';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
@@ -18,6 +18,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { v4 as uuidv4 } from 'uuid';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { cn } from '@/lib/utils';
 
 // --- Child Components for Readability ---
 
@@ -185,7 +187,7 @@ export default function GroupNotebookPage() {
     } catch (e) {
         console.error(e);
         toast({variant: 'destructive', title: "Error", description: (e as Error).message});
-        router.push('/notebook');
+        router.push('/notebook/groups');
     } finally {
         setIsLoading(false);
     }
@@ -274,7 +276,7 @@ export default function GroupNotebookPage() {
   return (
     <div className="min-h-screen bg-card flex flex-col">
         <header className="p-4 flex items-center gap-4 sticky top-0 bg-card/80 backdrop-blur-sm z-10 border-b">
-            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <Button variant="ghost" size="icon" onClick={() => router.push('/notebook/groups')}>
                 <ArrowLeft />
             </Button>
             <div className='flex items-center gap-3'>
@@ -297,31 +299,48 @@ export default function GroupNotebookPage() {
                  const isAssignedToCurrentUser = task.assignedTo.length === 0 || task.assignedTo.includes(user?.id ?? -1);
 
                  return (
-                    <div key={task.uuid} className="flex items-start gap-3 p-3 bg-background rounded-lg">
-                      <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTaskCompletion(task)} className="w-5 h-5 mt-1" disabled={!isAssignedToCurrentUser}/>
-                      <div className="flex-1">
-                          <Label htmlFor={`task-${task.id}`} className={task.completed ? 'line-through text-muted-foreground' : ''}>
-                            {task.label || <span className="text-muted-foreground italic">Tugas kosong</span>}
-                          </Label>
-                           {task.items.length > 0 && <Progress value={progress} className="w-full mt-2 h-2" />}
-                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                             {getAssigneeAvatars(task).map(assignee => (
-                                 assignee.name === 'Semua' 
-                                 ? <Badge key="all" variant="secondary" className="flex items-center gap-1"><Users className="w-3 h-3"/>Semua</Badge>
-                                 : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl || undefined} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
-                             ))}
+                    <Collapsible key={task.uuid} className="bg-background rounded-lg">
+                      <div className="flex items-start gap-3 p-3">
+                        <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTaskCompletion(task)} className="w-5 h-5 mt-1" disabled={!isAssignedToCurrentUser}/>
+                        <CollapsibleTrigger className="flex-1 text-left group">
+                          <div className="flex-1">
+                              <Label htmlFor={`task-${task.id}`} className={cn("cursor-pointer", task.completed && 'line-through text-muted-foreground')}>
+                                {task.label || <span className="text-muted-foreground italic">Tugas kosong</span>}
+                              </Label>
+                              {task.items.length > 0 && <Progress value={progress} className="w-full mt-2 h-2" />}
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  {getAssigneeAvatars(task).map(assignee => (
+                                      assignee.name === 'Semua' 
+                                      ? <Badge key="all" variant="secondary" className="flex items-center gap-1"><Users className="w-3 h-3"/>Semua</Badge>
+                                      : <Avatar key={assignee.id} className="h-5 w-5"><AvatarImage src={assignee.avatarUrl || undefined} /><AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback></Avatar>
+                                  ))}
+                                  {task.items.length > 0 && <ChevronDown className="w-4 h-4 ml-auto text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />}
+                              </div>
                           </div>
+                        </CollapsibleTrigger>
+                        {currentUserRole === 'admin' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><Trash2 className="h-4 w-4 text-destructive" /></Button></AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader><AlertDialogTitle>Hapus Tugas Ini?</AlertDialogTitle><AlertDialogDescription>Tindakan ini tidak bisa dibatalkan.</AlertDialogDescription></AlertDialogHeader>
+                              <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={() => handleRemoveTask(task)}>Hapus</AlertDialogAction></AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
-                      {currentUserRole === 'admin' && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><Trash2 className="h-4 w-4 text-destructive" /></Button></AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader><AlertDialogTitle>Hapus Tugas Ini?</AlertDialogTitle><AlertDialogDescription>Tindakan ini tidak bisa dibatalkan.</AlertDialogDescription></AlertDialogHeader>
-                            <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={() => handleRemoveTask(task)}>Hapus</AlertDialogAction></AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
+                       {task.items.length > 0 && (
+                          <CollapsibleContent>
+                            <div className="pl-10 pr-4 pb-3 space-y-2">
+                               {task.items.map(item => (
+                                <div key={item.uuid} className="flex items-center gap-2 text-sm">
+                                  <Checkbox id={`item-${item.uuid}`} checked={item.completed}/>
+                                  <Label htmlFor={`item-${item.uuid}`} className={cn(item.completed && "line-through text-muted-foreground")}>{item.label}</Label>
+                                </div>
+                               ))}
+                            </div>
+                          </CollapsibleContent>
+                       )}
+                    </Collapsible>
                 )})}
               {group.tasks.length === 0 && (
                   <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg bg-background">
@@ -337,3 +356,4 @@ export default function GroupNotebookPage() {
     </div>
   );
 }
+

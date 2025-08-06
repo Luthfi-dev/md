@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Search, ArrowLeft, Loader2, Notebook } from 'lucide-react';
+import { Plus, Users, Search, ArrowLeft, Loader2, Notebook, Trash2, MoreVertical } from 'lucide-react';
 import { type NotebookGroup } from '@/types/notebook';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -13,14 +13,17 @@ import { Input } from '@/components/ui/input';
 import { CreateGroupDialog } from '@/components/notebook/CreateGroupDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function GroupNotebookListPage() {
   const [allGroups, setAllGroups] = useState<NotebookGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deletingGroup, setDeletingGroup] = useState<NotebookGroup | null>(null);
   const router = useRouter();
   const { toast } = useToast();
-  const { isAuthenticated, fetchWithAuth } = useAuth();
+  const { user, isAuthenticated, fetchWithAuth } = useAuth();
 
   const fetchGroups = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -57,13 +60,54 @@ export default function GroupNotebookListPage() {
     router.push(`/notebook/group/${newGroup.uuid}`);
   }
 
+  const handleDeleteGroup = async () => {
+    if (!deletingGroup) return;
+    
+    const originalGroups = [...allGroups];
+    setAllGroups(prev => prev.filter(g => g.uuid !== deletingGroup.uuid));
+
+    try {
+        const res = await fetchWithAuth(`/api/notebook/group/${deletingGroup.uuid}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Gagal menghapus grup di server');
+        }
+        toast({ title: 'Grup Dihapus', description: `Grup "${deletingGroup.title}" telah dihapus.`});
+    } catch (error) {
+        setAllGroups(originalGroups);
+        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: (error as Error).message });
+    } finally {
+        setDeletingGroup(null);
+    }
+  }
+
   const filteredGroups = useMemo(() => {
     if (!searchTerm) return allGroups;
     return allGroups.filter(g => g.title.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [allGroups, searchTerm]);
+  
+  const canDelete = (group: NotebookGroup) => {
+      const currentUserMember = group.members.find(m => m.id === user?.id);
+      return currentUserMember?.role === 'admin';
+  };
 
   return (
     <div className="min-h-screen bg-card flex flex-col">
+       <AlertDialog open={!!deletingGroup} onOpenChange={(open) => !open && setDeletingGroup(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Anda yakin ingin menghapus grup "{deletingGroup?.title}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tindakan ini tidak bisa dibatalkan. Semua tugas dan data di dalamnya akan dihapus permanen.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
        <header className="sticky top-0 z-20 bg-card/80 backdrop-blur-sm p-4 border-b">
          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className='shrink-0' onClick={() => router.push('/notebook')}>
@@ -94,10 +138,22 @@ export default function GroupNotebookListPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span className="truncate">{group.title}</span>
-                    {group.activeTaskCount > 0 && <Badge>{group.activeTaskCount} Tugas Aktif</Badge>}
+                     <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreVertical className="w-5 h-5" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        {canDelete(group) && (
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeletingGroup(group)}>
+                                <Trash2 className="mr-2"/> Hapus Grup
+                            </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {group.activeTaskCount > 0 && <Badge className="mb-2">{group.activeTaskCount} Tugas Aktif</Badge>}
                   <div className="flex items-center justify-between">
                     <div className="flex -space-x-2 overflow-hidden">
                       {group.members.slice(0, 5).map(member => (

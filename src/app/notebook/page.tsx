@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Notebook, Trash2, Edit, Users, Cloud, CloudOff, Loader2, Info, X, Search } from 'lucide-react';
 import { type Note } from '@/types/notebook';
@@ -69,12 +69,10 @@ export default function NotebookListPage() {
     }
   }, [isAuthenticated, user, fetchWithAuth]);
 
-  // Main effect to fetch data only when auth status changes
   useEffect(() => {
     fetchPersonalNotes();
   }, [isAuthenticated, fetchPersonalNotes]);
   
-  // Effect to handle sync info visibility, depends on notes list but doesn't refetch
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const dismissCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10);
@@ -157,9 +155,16 @@ export default function NotebookListPage() {
         throw new Error(errorData.message || 'Gagal sinkronisasi');
       }
       
-      const updatedNotes = allNotes.map(n => n.uuid === note.uuid ? { ...n, isSynced: true } : n);
-      setAllNotes(updatedNotes);
-      localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(updatedNotes));
+      const updatedNote = { ...note, isSynced: true };
+      
+      // Update local storage
+      const localNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
+      const updatedLocalNotes = localNotes.map((n: Note) => n.uuid === note.uuid ? updatedNote : n);
+      localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(updatedLocalNotes));
+      
+      // Update state
+      setAllNotes(prev => prev.map(n => n.uuid === note.uuid ? updatedNote : n));
+
 
       toast({ title: 'Berhasil!', description: `Catatan "${note.title || 'Tanpa Judul'}" berhasil disimpan ke cloud.`});
     } catch (error) {
@@ -183,9 +188,9 @@ export default function NotebookListPage() {
   return (
     <div className="container mx-auto px-4 py-8 pb-24">
       <header className="mb-8 text-center">
-        <h1 className="text-4xl font-bold font-headline tracking-tight">Catatan Pribadi</h1>
+        <h1 className="text-4xl font-bold font-headline tracking-tight">Catatan Cerdas</h1>
         <p className="text-muted-foreground mt-2 text-lg">
-          Organisir ide dan tugas pribadi Anda.
+          Organisir ide dan tugas Anda.
         </p>
       </header>
 
@@ -212,7 +217,7 @@ export default function NotebookListPage() {
 
         {showSyncInfo && (
             <Alert>
-            <div className='flex items-start gap-3'>
+                <div className='flex items-start gap-3'>
                     <Info className="h-5 w-5 mt-0.5 text-primary" />
                 <div>
                     <AlertTitle className="font-bold">Informasi Sinkronisasi</AlertTitle>
@@ -296,7 +301,7 @@ export default function NotebookListPage() {
             <Notebook className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">{searchTerm ? 'Catatan Tidak Ditemukan' : 'Belum Ada Catatan'}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-                {searchTerm ? `Tidak ada catatan yang cocok dengan "${searchTerm}".` : 'Klik "Buat Catatan Baru" untuk memulai.'}
+                {searchTerm ? `Tidak ada catatan pribadi yang cocok dengan "${searchTerm}".` : 'Klik "Buat Catatan Baru" untuk memulai.'}
             </p>
             </div>
         )}

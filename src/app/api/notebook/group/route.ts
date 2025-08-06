@@ -37,20 +37,23 @@ export async function GET(request: NextRequest) {
 
         const groupIds = groupsRows.map(g => g.id);
 
+        // -- FIX: Properly format the array for the SQL IN clause --
+        const placeholders = groupIds.map(() => '?').join(',');
+
         const [membersRows]: [RowDataPacket[], any] = await connection.execute(
             `SELECT gm.group_id, u.id, u.name, u.avatar_url
              FROM users u
              JOIN group_members gm ON u.id = gm.user_id
-             WHERE gm.group_id IN (?)`,
-            [groupIds]
+             WHERE gm.group_id IN (${placeholders})`,
+            groupIds
         );
         
         const [tasksCountRows]: [RowDataPacket[], any] = await connection.execute(
             `SELECT group_id, COUNT(CASE WHEN completed = 0 THEN 1 END) as active_task_count
              FROM group_tasks
-             WHERE group_id IN (?)
+             WHERE group_id IN (${placeholders})
              GROUP BY group_id`,
-            [groupIds]
+            groupIds
         );
 
         const membersByGroupId = membersRows.reduce((acc: {[key: number]: GroupMember[]}, member) => {
@@ -77,9 +80,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ success: true, groups });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("GET ALL GROUPS ERROR: ", error);
-        return NextResponse.json({ success: false, message: 'Kesalahan server saat mengambil daftar grup' }, { status: 500 });
+        // -- FIX: Enhanced error logging and response --
+        return NextResponse.json({ 
+            success: false, 
+            message: `Kesalahan server saat mengambil daftar grup: ${error.message}` 
+        }, { status: 500 });
     } finally {
         if (connection) connection.release();
     }
@@ -120,7 +127,7 @@ export async function POST(request: NextRequest) {
 
         await connection.commit();
 
-        const newGroup: NotebookGroup = {
+        const newGroup: Partial<NotebookGroup> = {
             id: newGroupId,
             uuid,
             title,
@@ -128,7 +135,7 @@ export async function POST(request: NextRequest) {
             createdBy: user.id,
             createdAt: new Date().toISOString(),
             members: [{ id: user.id, name: user.name, avatarUrl: user.avatar || null }],
-            tasks: [], // Initialize with an empty array of tasks
+            tasks: [], 
             activeTaskCount: 0,
         };
         

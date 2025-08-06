@@ -60,7 +60,17 @@ export async function PUT(request: NextRequest, { params }: { params: { uuid: st
 
         // --- Permission Checks ---
         const isEditingJustCompletion = completed !== undefined && label === undefined && assignedTo === undefined && items === undefined;
-        if (!isEditingJustCompletion && role !== 'admin') {
+        const isEditingJustItems = items !== undefined && completed !== undefined && label === undefined && assignedTo === undefined;
+        const isAssigned = (await connection.execute('SELECT COUNT(*) as count FROM group_task_assignees WHERE task_id = ? AND user_id = ?', [taskId, user.id]) as RowDataPacket[][])[0][0].count > 0;
+        const isAssignedToAll = (await connection.execute('SELECT COUNT(*) as count FROM group_task_assignees WHERE task_id = ?', [taskId]) as RowDataPacket[][])[0][0].count === 0;
+
+        // Allow editing completion or items if assigned (or assigned to all)
+        if (isEditingJustCompletion || isEditingJustItems) {
+            if (!isAssigned && !isAssignedToAll) {
+                return NextResponse.json({ success: false, message: 'Anda tidak ditugaskan untuk tugas ini.' }, { status: 403 });
+            }
+        } else if (role !== 'admin') {
+             // For other edits (label, assignees), require admin
              return NextResponse.json({ success: false, message: 'Hanya admin yang dapat mengedit detail tugas.' }, { status: 403 });
         }
 

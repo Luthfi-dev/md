@@ -218,6 +218,30 @@ export default function GroupNotebookPage() {
     }
   }, [group, fetchWithAuth, toast]);
 
+    const toggleChecklistItemCompletion = useCallback(async (task: GroupTask, itemUuid: string) => {
+        if (!group) return;
+
+        const updatedItems = task.items.map(item =>
+            item.uuid === itemUuid ? { ...item, completed: !item.completed } : item
+        );
+        const allItemsCompleted = updatedItems.every(item => item.completed);
+        const updatedTask = { ...task, items: updatedItems, completed: allItemsCompleted };
+
+        setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? updatedTask : t) } : null);
+
+        try {
+            const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, {
+                method: 'PUT',
+                body: JSON.stringify({ items: updatedItems, completed: allItemsCompleted })
+            });
+            if (!res.ok) throw new Error("Gagal memperbarui item checklist");
+        } catch (error) {
+            // Revert optimistic update
+            setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? task : t) } : null);
+            toast({ variant: 'destructive', title: 'Gagal Memperbarui Item' });
+        }
+    }, [group, fetchWithAuth, toast]);
+
   const handleAddTask = useCallback(async (newTask: GroupTask) => {
     if (!group) return;
     setGroup(g => g ? { ...g, tasks: [newTask, ...g.tasks] } : null);
@@ -333,8 +357,13 @@ export default function GroupNotebookPage() {
                             <div className="pl-10 pr-4 pb-3 space-y-2">
                                {task.items.map(item => (
                                 <div key={item.uuid} className="flex items-center gap-2 text-sm">
-                                  <Checkbox id={`item-${item.uuid}`} checked={item.completed}/>
-                                  <Label htmlFor={`item-${item.uuid}`} className={cn(item.completed && "line-through text-muted-foreground")}>{item.label}</Label>
+                                  <Checkbox 
+                                    id={`item-${item.uuid}`} 
+                                    checked={item.completed} 
+                                    onCheckedChange={() => toggleChecklistItemCompletion(task, item.uuid)}
+                                    disabled={!isAssignedToCurrentUser}
+                                    />
+                                  <Label htmlFor={`item-${item.uuid}`} className={cn("cursor-pointer", item.completed && "line-through text-muted-foreground", !isAssignedToCurrentUser && "cursor-not-allowed")}>{item.label}</Label>
                                 </div>
                                ))}
                             </div>

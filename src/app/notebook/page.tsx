@@ -3,27 +3,29 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Notebook, Trash2, Edit, Users, Cloud, CloudOff, Loader2, Info, X } from 'lucide-react';
-import { type Note, type NotebookGroup } from '@/types/notebook';
+import { Plus, Notebook, Trash2, Edit, Users, Cloud, CloudOff, Loader2, Info, X, Search } from 'lucide-react';
+import { type Note } from '@/types/notebook';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 
 const LOCAL_STORAGE_KEY_NOTES = 'notebook_notes_v1';
 const LOCAL_STORAGE_KEY_SYNC_INFO = 'notebook_sync_info_dismiss_count';
 const MAX_DISMISS_COUNT = 3;
 
 export default function NotebookListPage() {
-  const [personalNotes, setPersonalNotes] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncingNoteId, setSyncingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [showSyncInfo, setShowSyncInfo] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const router = useRouter();
   const { toast } = useToast();
@@ -37,30 +39,28 @@ export default function NotebookListPage() {
         const res = await fetchWithAuth('/api/notebook/personal');
         if (res.ok) {
           const data = await res.json();
-          cloudNotes = data.notes?.map((n: Note) => ({ ...n, isSynced: true })) || [];
+          cloudNotes = data.notes?.map((n: Note) => ({ ...n, isSynced: true, lastModified: n.lastModified || n.createdAt })) || [];
         }
       }
 
       const localNotesRaw = localStorage.getItem(LOCAL_STORAGE_KEY_NOTES);
-      const localNotes: Note[] = localNotesRaw ? JSON.parse(localNotesRaw) : [];
+      const localNotes: Note[] = localNotesRaw ? JSON.parse(localNotesRaw).map((n:Note) => ({...n, lastModified: n.lastModified || n.createdAt})) : [];
       
       const cloudNoteUuids = new Set(cloudNotes.map(n => n.uuid));
       const uniqueLocalNotes = localNotes.filter(ln => !cloudNoteUuids.has(ln.uuid));
 
-      // For notes that exist in both, the cloud version is the source of truth,
-      // but we must check if the local version is newer.
       const syncedNotes = cloudNotes.map(cn => {
           const correspondingLocal = localNotes.find(ln => ln.uuid === cn.uuid);
-          if (correspondingLocal && new Date(correspondingLocal.lastModified || 0) > new Date(cn.lastModified || 0)) {
-              return { ...correspondingLocal, isSynced: false }; // Local is newer, mark as unsynced
+          if (correspondingLocal && new Date(correspondingLocal.lastModified) > new Date(cn.lastModified)) {
+              return { ...correspondingLocal, isSynced: false };
           }
-          return cn; // Cloud is newer or they are the same
+          return cn;
       });
       
       const finalNotes = [...syncedNotes, ...uniqueLocalNotes];
-      finalNotes.sort((a, b) => new Date(b.lastModified || b.createdAt).getTime() - new Date(a.lastModified || a.createdAt).getTime());
+      finalNotes.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
       
-      setPersonalNotes(finalNotes);
+      setAllNotes(finalNotes);
 
     } catch (e) {
       console.error("Failed to fetch personal notes", e);
@@ -69,16 +69,24 @@ export default function NotebookListPage() {
     }
   }, [isAuthenticated, user, fetchWithAuth]);
 
+  // Main effect to fetch data only when auth status changes
   useEffect(() => {
     fetchPersonalNotes();
-    if(typeof window !== 'undefined'){
-       const dismissCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10);
-       const hasUnsynced = personalNotes.some(n => !n.isSynced);
-       if (isAuthenticated && hasUnsynced && dismissCount < MAX_DISMISS_COUNT) {
-         setShowSyncInfo(true);
-       }
+  }, [isAuthenticated, fetchPersonalNotes]);
+  
+  // Effect to handle sync info visibility, depends on notes list but doesn't refetch
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10);
+      const hasUnsynced = allNotes.some(n => !n.isSynced);
+      if (isAuthenticated && hasUnsynced && dismissCount < MAX_DISMISS_COUNT) {
+        setShowSyncInfo(true);
+      } else {
+        setShowSyncInfo(false);
+      }
     }
-  }, [fetchPersonalNotes, isAuthenticated, personalNotes]);
+  }, [allNotes, isAuthenticated]);
+
 
   const handleDismissSyncInfo = () => {
      const newCount = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_SYNC_INFO) || '0', 10) + 1;
@@ -86,7 +94,7 @@ export default function NotebookListPage() {
      setShowSyncInfo(false);
   }
 
-  const handleCreateNewPersonalNote = async () => {
+  const handleCreateNewPersonalNote = () => {
     const newNote: Note = {
       uuid: uuidv4(),
       title: 'Catatan Baru Tanpa Judul',
@@ -96,10 +104,9 @@ export default function NotebookListPage() {
       isSynced: false,
     };
     
-    // Add to local state and storage first for immediate UI feedback
     const currentNotes = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_NOTES) || '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify([newNote, ...currentNotes]));
-    setPersonalNotes(prev => [newNote, ...prev]);
+    setAllNotes(prev => [newNote, ...prev]);
 
     router.push(`/notebook/${newNote.uuid}?edit=true`);
   };
@@ -114,8 +121,8 @@ export default function NotebookListPage() {
   };
 
   const handleDelete = async (note: Note) => {
-    const originalNotes = [...personalNotes];
-    setPersonalNotes(prev => prev.filter(n => n.uuid !== note.uuid));
+    const originalNotes = [...allNotes];
+    setAllNotes(prev => prev.filter(n => n.uuid !== note.uuid));
     setDeletingNoteId(null);
 
     try {
@@ -128,7 +135,7 @@ export default function NotebookListPage() {
 
       toast({title: "Catatan Dihapus"});
     } catch (error) {
-      setPersonalNotes(originalNotes);
+      setAllNotes(originalNotes);
       toast({variant: 'destructive', title: "Gagal Menghapus Catatan"});
     }
   };
@@ -149,8 +156,11 @@ export default function NotebookListPage() {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Gagal sinkronisasi');
       }
+      
+      const updatedNotes = allNotes.map(n => n.uuid === note.uuid ? { ...n, isSynced: true } : n);
+      setAllNotes(updatedNotes);
+      localStorage.setItem(LOCAL_STORAGE_KEY_NOTES, JSON.stringify(updatedNotes));
 
-      setPersonalNotes(prev => prev.map(n => n.uuid === note.uuid ? { ...n, isSynced: true } : n));
       toast({ title: 'Berhasil!', description: `Catatan "${note.title || 'Tanpa Judul'}" berhasil disimpan ke cloud.`});
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal Sinkronisasi', description: (error as Error).message });
@@ -158,6 +168,11 @@ export default function NotebookListPage() {
       setSyncingNoteId(null);
     }
   }
+  
+  const filteredNotes = useMemo(() => {
+    if (!searchTerm) return allNotes;
+    return allNotes.filter(note => note.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [allNotes, searchTerm]);
 
   const getProgress = (note: Note) => {
     if (!note.items || note.items.length === 0) return 0;
@@ -176,12 +191,18 @@ export default function NotebookListPage() {
 
       <div className="max-w-4xl mx-auto space-y-6">
          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-            <div className="relative flex-1">
-                {/* Search input can go here */}
+             <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input 
+                    placeholder="Cari catatan..."
+                    className="pl-10 h-11"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
             </div>
             <div className="flex gap-2 w-full md:w-auto">
                 <Button onClick={() => router.push('/notebook/groups')} variant="outline" className="w-full">
-                    <Users className="mr-2" /> Grup Kolaborasi
+                    <Users className="mr-2" /> Grup
                 </Button>
                 <Button onClick={handleCreateNewPersonalNote} className="w-full">
                     <Plus className="mr-2" /> Buat Baru
@@ -209,8 +230,8 @@ export default function NotebookListPage() {
 
         {isLoading ? (
             <div className="text-center py-16"><Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" /></div>
-        ) : personalNotes.length > 0 ? (
-            personalNotes.map(note => {
+        ) : filteredNotes.length > 0 ? (
+            filteredNotes.map(note => {
             const progress = getProgress(note);
             const isCompleted = progress === 100 && note.items.length > 0;
 
@@ -273,9 +294,9 @@ export default function NotebookListPage() {
         ) : (
             <div className="text-center py-16 border-2 border-dashed rounded-lg">
             <Notebook className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium">Belum Ada Catatan</h3>
+            <h3 className="mt-4 text-lg font-medium">{searchTerm ? 'Catatan Tidak Ditemukan' : 'Belum Ada Catatan'}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-                Klik "Buat Catatan Baru" untuk memulai.
+                {searchTerm ? `Tidak ada catatan yang cocok dengan "${searchTerm}".` : 'Klik "Buat Catatan Baru" untuk memulai.'}
             </p>
             </div>
         )}

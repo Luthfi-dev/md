@@ -13,7 +13,6 @@ import { Plus, Trash2, HelpCircle, ListPlus, Edit, ArrowLeft, Loader2, Save } fr
 import { type Note, type ChecklistItem } from '@/types/notebook';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/hooks/use-auth';
 import { v4 as uuidv4 } from 'uuid';
 import { useDebouncedCallback } from 'use-debounce';
 
@@ -26,7 +25,6 @@ export default function NotebookEditPage() {
 
   const id = params.id as string; // This is UUID
   const { toast } = useToast();
-  const { user, fetchWithAuth, isAuthenticated } = useAuth();
 
   const [note, setNote] = useState<Note | null>(null);
   const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
@@ -34,7 +32,6 @@ export default function NotebookEditPage() {
   const [isNumbered, setIsNumbered] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Debounced save to avoid excessive saving on every keystroke
   const debouncedSave = useDebouncedCallback((noteToSave: Note) => {

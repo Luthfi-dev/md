@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { cn } from '@/lib/utils';
+import { InviteMemberDialog } from '@/components/notebook/InviteMemberDialog';
 
 // --- Child Components for Readability ---
 
@@ -307,13 +308,15 @@ export default function GroupNotebookPage() {
                 <Avatar><AvatarImage src={group.avatarUrl || `https://placehold.co/40x40.png?text=${group.title.charAt(0)}`}/><AvatarFallback>{group.title.charAt(0)}</AvatarFallback></Avatar>
                 <div className='flex-1'><h1 className="font-bold text-lg truncate">{group.title}</h1><p className="text-xs text-muted-foreground">{group.members.length} Anggota</p></div>
             </div>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="ml-auto"><MoreVertical /></Button></DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem><UserPlus className="mr-2"/> Undang Anggota</DropdownMenuItem>
-                    {currentUserRole === 'admin' && <DropdownMenuItem className="text-destructive"><Trash className="mr-2"/> Hapus Grup</DropdownMenuItem>}
-                </DropdownMenuContent>
-            </DropdownMenu>
+             <div className="ml-auto flex items-center">
+                <InviteMemberDialog group={group} onMemberInvited={fetchGroupDetails} />
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        {currentUserRole === 'admin' && <DropdownMenuItem className="text-destructive"><Trash className="mr-2"/> Hapus Grup</DropdownMenuItem>}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+             </div>
         </header>
 
         <main className="flex-1 p-4 pb-24 overflow-y-auto">
@@ -385,4 +388,3 @@ export default function GroupNotebookPage() {
     </div>
   );
 }
-

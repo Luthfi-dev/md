@@ -66,7 +66,12 @@ export default function AccountPage() {
 
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
-                await login(email, password);
+                // Automatically log in the user after successful registration
+                const loginResult = await login(email, password);
+                 if (loginResult.success) {
+                    // Remove guest data from local storage after successful registration and login
+                    localStorage.removeItem('guestRewardState_v3');
+                }
             } else {
                  toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
             }

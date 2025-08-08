@@ -62,13 +62,37 @@ export default function MessagesPage() {
     const viewportRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const isMobile = useIsMobile();
+    
+    const typingSoundRef = useRef<HTMLAudioElement | null>(null);
+    const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         setAssistantName(assistantData.name);
         if (assistantData.avatarUrl) {
             setAssistantAvatar(assistantData.avatarUrl);
         }
+
+        // Add welcome message on mount
+        const welcomeMessage: ChatMessage = {
+            role: 'model',
+            content: `Hai! Aku ${assistantData.name}. Ada yang bisa kubantu hari ini?`
+        };
+        setMessages([welcomeMessage]);
+
+        // Preload sounds
+        if (typeof window !== 'undefined') {
+            typingSoundRef.current = new Audio('/sounds/typing.mp3');
+            typingSoundRef.current.volume = 0.2;
+            notificationSoundRef.current = new Audio('/sounds/notification.mp3');
+        }
     }, []);
+    
+    useEffect(() => {
+        // Play notification sound for the initial welcome message
+        if (messages.length === 1 && messages[0].role === 'model') {
+            notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
+        }
+    }, [messages.length]);
 
     const scrollToBottom = () => {
         if (viewportRef.current) {
@@ -83,6 +107,11 @@ export default function MessagesPage() {
         scrollToBottom();
     }, [messages, isLoading]);
     
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInput(e.target.value);
+        typingSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
+    }
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
@@ -96,9 +125,11 @@ export default function MessagesPage() {
 
         try {
             const aiResponse = await chat(newMessages);
+            notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
              console.error("Chat error:", error);
+             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
              const errorMessage: ChatMessage = {
                 role: 'model',
                 content: "Waduh, ada sedikit gangguan di koneksiku. Coba tanya lagi ya."
@@ -129,7 +160,7 @@ export default function MessagesPage() {
                 </CardHeader>
              </header>
 
-            <ScrollArea className="h-full pt-20 pb-24 md:pb-28" viewportRef={viewportRef}>
+            <ScrollArea className="h-full pt-20 pb-28 md:pb-28" viewportRef={viewportRef}>
                 <div className="space-y-6 p-4">
                     {messages.map((message, index) => (
                         <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
@@ -167,13 +198,6 @@ export default function MessagesPage() {
                             </div>
                         </div>
                     )}
-                        {messages.length === 0 && !isLoading && (
-                        <div className="text-center py-16 text-muted-foreground">
-                            <Bot className="mx-auto h-12 w-12 mb-4" />
-                            <p className="font-semibold">Selamat Datang!</p>
-                            <p className="text-sm">Tanyakan apa saja kepada {assistantName}.</p>
-                        </div>
-                    )}
                 </div>
             </ScrollArea>
            
@@ -181,7 +205,7 @@ export default function MessagesPage() {
                 <form onSubmit={handleSubmit} className="flex w-full items-center gap-2 max-w-4xl mx-auto">
                     <Input
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={handleInputChange}
                         placeholder={`Ketik pesan untuk ${assistantName}...`}
                         className="flex-grow rounded-full h-12 px-5"
                         disabled={isLoading}

@@ -20,6 +20,16 @@
     "isNew": true,
     "order": 1
   },
+   {
+    "id": "app_wallet",
+    "title": "Dompet Digital",
+    "description": "Catat, kelola, dan analisis arus kas keuangan pribadi Anda.",
+    "href": "/wallet",
+    "icon": "Wallet",
+    "isPopular": true,
+    "isNew": true,
+    "order": 2
+  },
   {
     "id": "app_unit_converter",
     "title": "Konversi Unit",
@@ -28,7 +38,7 @@
     "icon": "BookOpen",
     "isPopular": false,
     "isNew": false,
-    "order": 3
+    "order": 4
   },
   {
     "id": "app_scanner",
@@ -38,7 +48,7 @@
     "icon": "ScanLine",
     "isPopular": true,
     "isNew": false,
-    "order": 2
+    "order": 3
   },
   {
     "id": "app_calculator",
@@ -48,7 +58,7 @@
     "icon": "Calculator",
     "isPopular": true,
     "isNew": false,
-    "order": 4
+    "order": 5
   },
   {
     "id": "app_surat_generator",
@@ -58,7 +68,7 @@
     "icon": "FileSignature",
     "isPopular": true,
     "isNew": true,
-    "order": 5
+    "order": 6
   },
   {
     "id": "app_color_generator",
@@ -68,7 +78,7 @@
     "icon": "Palette",
     "isPopular": false,
     "isNew": true,
-    "order": 6
+    "order": 7
   },
   {
     "id": "app_stopwatch",
@@ -78,7 +88,7 @@
     "icon": "Timer",
     "isPopular": false,
     "isNew": false,
-    "order": 7
+    "order": 8
   },
    {
     "id": "app_all_apps",
@@ -88,6 +98,6 @@
     "icon": "Grid3x3",
     "isPopular": false,
     "isNew": false,
-    "order": 8
+    "order": 9
   }
 ]

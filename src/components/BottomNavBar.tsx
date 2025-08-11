@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, User, Notebook, MessageSquare } from "lucide-react";
+import { Home, Compass, User, Notebook, MessageSquare, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 const navItems = [
   { href: "/", label: "Beranda", icon: Home },
   { href: "/explore", label: "Jelajah", icon: Compass },
-  { href: "/messages", label: "Asisten", icon: MessageSquare, isCenter: true },
+  { href: "/wallet", label: "Dompet", icon: Wallet, isCenter: true },
   { href: "/notebook", label: "Catatan", icon: Notebook },
   { href: "/account", label: "Akun", icon: User },
 ];

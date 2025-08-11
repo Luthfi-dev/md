@@ -10,6 +10,7 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { CountUp } from '@/components/CountUp';
 import { AddTransactionSheet } from '@/components/wallet/AddTransactionSheet';
 import * as LucideIcons from 'lucide-react';
+import Link from 'next/link';
 
 export default function WalletDashboardPage() {
   const { isAuthenticated, isLoading: isAuthLoading, fetchWithAuth } = useAuth();
@@ -136,27 +137,36 @@ export default function WalletDashboardPage() {
         <div className="space-y-3">
           <div className="flex justify-between items-center px-2">
             <h2 className="font-bold text-lg">5 Transaksi Terakhir</h2>
-            <Button variant="ghost" size="sm" onClick={() => router.push('/wallet/transactions')}>Lihat Semua</Button>
+            <Button variant="ghost" size="sm" asChild>
+                <Link href="/wallet/transactions">Lihat Semua</Link>
+            </Button>
           </div>
           {isLoading ? (
              <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary"/></div>
-          ) : transactions.length > 0 ? transactions.map((t: any) => (
-              <div className="flex items-center p-3 rounded-lg bg-background" key={t.id}>
-                <div className={`p-3 rounded-full mr-4 ${t.type === 'income' ? 'bg-green-100 dark:bg-green-900/50 text-green-600' : 'bg-red-100 dark:bg-red-900/50 text-red-500'}`}>
-                    {getIcon(t.category_icon)}
-                </div>
-                <div className="flex-grow">
-                  <p className="font-semibold">{t.description || t.category_name}</p>
-                  <p className="text-sm text-muted-foreground">{t.category_name}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
-                    {t.type === 'expense' && '-'}Rp{parseFloat(t.amount).toLocaleString('id-ID')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{new Date(t.transaction_date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
-                </div>
-              </div>
-          )) : (
+          ) : transactions.length > 0 ? (
+            <>
+              {transactions.map((t: any) => (
+                  <div className="flex items-center p-3 rounded-lg bg-background" key={t.id}>
+                    <div className={`p-3 rounded-full mr-4 ${t.type === 'income' ? 'bg-green-100 dark:bg-green-900/50 text-green-600' : 'bg-red-100 dark:bg-red-900/50 text-red-500'}`}>
+                        {getIcon(t.category_icon)}
+                    </div>
+                    <div className="flex-grow">
+                      <p className="font-semibold">{t.description || t.category_name}</p>
+                      <p className="text-sm text-muted-foreground">{t.category_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
+                        {t.type === 'expense' && '-'}Rp{parseFloat(t.amount).toLocaleString('id-ID')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{new Date(t.transaction_date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
+                    </div>
+                  </div>
+              ))}
+               <p className="text-xs text-muted-foreground text-center px-4 pt-2">
+                 Untuk mengelola atau menghapus transaksi, silakan kunjungi halaman <Link href="/wallet/transactions" className="text-primary underline">Riwayat Transaksi</Link>.
+               </p>
+            </>
+          ) : (
             <div className="text-center text-muted-foreground py-8 bg-background rounded-lg">
                 <p>Belum ada transaksi.</p>
                 <Button variant="link" onClick={() => setIsSheetOpen(true)}>Tambah sekarang</Button>

@@ -32,7 +32,8 @@ export interface Category {
 
 export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }: AddTransactionSheetProps) {
   const [type, setType] = useState<'income' | 'expense'>('expense');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(''); // Raw numeric string
+  const [displayAmount, setDisplayAmount] = useState(''); // Formatted string for UI
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [description, setDescription] = useState('');
   const [transactionDate, setTransactionDate] = useState<Date | undefined>(new Date());
@@ -64,10 +65,24 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
   const resetForm = () => {
     setType('expense');
     setAmount('');
+    setDisplayAmount('');
     setCategoryId(undefined);
     setDescription('');
     setTransactionDate(new Date());
   }
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+    setAmount(rawValue);
+
+    if (rawValue) {
+        const numericValue = parseInt(rawValue, 10);
+        setDisplayAmount(numericValue.toLocaleString('id-ID'));
+    } else {
+        setDisplayAmount('');
+    }
+  };
+
 
   const handleSubmit = async () => {
     if (!amount || !categoryId || !transactionDate) {
@@ -134,7 +149,18 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
             <TabsContent value={type} className="pt-4 space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="amount">Jumlah</Label>
-                    <Input id="amount" type="number" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rp</span>
+                        <Input 
+                            id="amount" 
+                            type="text" 
+                            inputMode='numeric'
+                            placeholder="0" 
+                            value={displayAmount} 
+                            onChange={handleAmountChange}
+                            className="pl-9 font-semibold"
+                         />
+                    </div>
                 </div>
                 <div className="space-y-2">
                     <Label>Kategori</Label>
@@ -163,7 +189,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
                             className={cn("w-full justify-start text-left font-normal", !transactionDate && "text-muted-foreground")}
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {transactionDate ? format(transactionDate, "PPP") : <span>Pilih tanggal</span>}
+                            {transactionDate ? format(transactionDate, "PPP", { locale: require('date-fns/locale/id') }) : <span>Pilih tanggal</span>}
                         </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">

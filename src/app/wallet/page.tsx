@@ -135,7 +135,7 @@ export default function WalletDashboardPage() {
         {/* Recent Transactions */}
         <div className="space-y-3">
           <div className="flex justify-between items-center px-2">
-            <h2 className="font-bold text-lg">Transaksi Terakhir</h2>
+            <h2 className="font-bold text-lg">5 Transaksi Terakhir</h2>
             <Button variant="ghost" size="sm" onClick={() => router.push('/wallet/transactions')}>Lihat Semua</Button>
           </div>
           {isLoading ? (

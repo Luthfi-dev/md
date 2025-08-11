@@ -148,6 +148,9 @@ export default function BudgetPage() {
                         const budget = budgets.find(b => b.categoryId === cat.id)?.amount || 0;
                         const expense = monthlyExpenses.find(e => e.categoryId === cat.id)?.total || 0;
                         const progress = budget > 0 ? (expense / budget) * 100 : 0;
+                        const isOverBudget = progress > 100;
+                        const isNearBudget = progress > 80 && !isOverBudget;
+
 
                         if (!isEditing && budget === 0) return null;
 
@@ -170,8 +173,9 @@ export default function BudgetPage() {
                                             </p>
                                         )}
                                     </div>
-                                    <Progress value={progress} className={progress > 100 ? 'bg-red-500' : ''}/>
-                                    {progress > 100 && <p className="text-xs text-red-500 mt-1">Anggaran terlampaui!</p>}
+                                    <Progress value={Math.min(progress, 100)} className={ (isOverBudget || isNearBudget) ? '[&>div]:bg-red-500' : ''}/>
+                                    {isOverBudget && <p className="text-xs text-red-500 mt-1">Anggaran terlampaui!</p>}
+                                    {isNearBudget && <p className="text-xs text-red-500 mt-1">Anggaran hampir mencapai batas!</p>}
                                 </CardContent>
                             </Card>
                         )

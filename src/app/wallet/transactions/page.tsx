@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowUp, ArrowDown, Search, Filter, Trash2, MoreVertical } from 'lucide-react';
@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +19,7 @@ export default function WalletTransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [filterType, setFilterType] = useState('all'); // 'all', 'income', 'expense'
   const { toast } = useToast();
 
   const fetchTransactions = useCallback(async () => {
@@ -65,10 +66,17 @@ export default function WalletTransactionsPage() {
     }
   };
 
-  const filteredTransactions = transactions.filter((t: any) => 
-    t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.category_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTransactions = useMemo(() => {
+    return transactions
+      .filter((t: any) => {
+        if (filterType === 'all') return true;
+        return t.type === filterType;
+      })
+      .filter((t: any) => 
+        t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.category_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+  }, [transactions, searchTerm, filterType]);
   
   if (isAuthLoading || isLoading) {
     return <LoadingOverlay isLoading={true} message="Memuat transaksi..." />;
@@ -112,9 +120,22 @@ export default function WalletTransactionsPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                   />
               </div>
-              <Button variant="outline" size="icon">
-                  <Filter className="w-5 h-5"/>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                      <Filter className="w-5 h-5"/>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter Tipe Transaksi</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup value={filterType} onValueChange={setFilterType}>
+                    <DropdownMenuRadioItem value="all">Semua</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="income">Pemasukan</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="expense">Pengeluaran</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
 
           <div className="space-y-4">

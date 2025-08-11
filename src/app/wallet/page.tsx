@@ -3,15 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, ArrowDown, History, BarChart, Wallet as WalletIcon, MoreVertical, Loader2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, History, BarChart, Wallet as WalletIcon, MoreVertical, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { CountUp } from '@/components/CountUp';
 import { AddTransactionSheet } from '@/components/wallet/AddTransactionSheet';
 import * as LucideIcons from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-
 
 export default function WalletDashboardPage() {
   const { isAuthenticated, isLoading: isAuthLoading, fetchWithAuth } = useAuth();
@@ -80,17 +78,12 @@ export default function WalletDashboardPage() {
   return (
     <>
     <AddTransactionSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} onTransactionAdded={handleTransactionAdded} />
-    <div className="min-h-screen bg-card">
-      <div className="px-4 py-8 pb-24">
+    <div className="min-h-screen bg-card flex flex-col">
+      <main className="flex-1 p-4 pb-28">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold font-headline">DompetKu</h1>
-            <p className="text-muted-foreground">Arus kas Anda dalam satu genggaman.</p>
-          </div>
-           <Button size="icon" className="rounded-full h-12 w-12 shadow-lg" onClick={() => setIsSheetOpen(true)}>
-             <WalletIcon className="w-6 h-6" />
-           </Button>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold font-headline">DompetKu</h1>
+          <p className="text-muted-foreground">Arus kas Anda dalam satu genggaman.</p>
         </div>
 
         {/* Balance Card */}
@@ -170,7 +163,10 @@ export default function WalletDashboardPage() {
             </div>
           )}
         </div>
-      </div>
+      </main>
+      <Button size="icon" className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20" onClick={() => setIsSheetOpen(true)}>
+        <Plus className="w-8 h-8" />
+      </Button>
     </div>
     </>
   );

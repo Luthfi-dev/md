@@ -100,7 +100,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
       <SheetContent side="bottom" className="rounded-t-2xl">
         <SheetHeader>
           <SheetTitle>Tambah Transaksi Baru</SheetTitle>
-          <SheetDescription>Catat pemasukan atau pengeluaran Anda.</SheetDescription>
+          <SheetDescription>Pilih tipe, kategori, dan masukkan jumlah transaksi.</SheetDescription>
         </SheetHeader>
         <div className="py-4">
           <Tabs value={type} onValueChange={(value) => setType(value as any)} className="w-full">
@@ -115,12 +115,13 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
                 </div>
                 <div className="space-y-2">
                     <Label>Kategori</Label>
+                     <p className="text-xs text-muted-foreground">Kategori membantu Anda melacak sumber pemasukan atau tujuan pengeluaran.</p>
                     <Select value={categoryId} onValueChange={setCategoryId}>
                         <SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger>
                         <SelectContent>
-                            {filteredCategories.map(cat => (
+                            {filteredCategories.length > 0 ? filteredCategories.map(cat => (
                                 <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
-                            ))}
+                            )) : <p className="p-4 text-sm text-muted-foreground">Tidak ada kategori. Buat di pengaturan.</p>}
                         </SelectContent>
                     </Select>
                 </div>

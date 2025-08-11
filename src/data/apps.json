@@ -31,16 +31,6 @@
     "order": 2
   },
   {
-    "id": "app_unit_converter",
-    "title": "Konversi Unit",
-    "description": "Konversi berbagai satuan ukuran seperti panjang, berat, dan suhu secara instan.",
-    "href": "/unit-converter",
-    "icon": "BookOpen",
-    "isPopular": false,
-    "isNew": false,
-    "order": 4
-  },
-  {
     "id": "app_scanner",
     "title": "Scanner",
     "description": "Pindai QR code atau barcode dengan cepat menggunakan kamera perangkat Anda.",
@@ -49,6 +39,16 @@
     "isPopular": true,
     "isNew": false,
     "order": 3
+  },
+  {
+    "id": "app_unit_converter",
+    "title": "Konversi Unit",
+    "description": "Konversi berbagai satuan ukuran seperti panjang, berat, dan suhu secara instan.",
+    "href": "/unit-converter",
+    "icon": "BookOpen",
+    "isPopular": false,
+    "isNew": false,
+    "order": 4
   },
   {
     "id": "app_calculator",

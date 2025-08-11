@@ -1,28 +1,53 @@
 
 'use client';
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowUp, ArrowDown, Search, Filter } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Search, Filter, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/use-auth';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
-// Placeholder data
-const transactions = [
-  { id: 1, type: 'expense', category: 'Makanan', description: 'Makan Siang', amount: 50000, date: '2024-05-23' },
-  { id: 2, type: 'income', category: 'Gaji', description: 'Gaji Bulan Mei', amount: 8000000, date: '2024-05-22' },
-  { id: 3, type: 'expense', category: 'Transportasi', description: 'Bensin Motor', amount: 30000, date: '2024-05-22' },
-  { id: 4, type: 'expense', category: 'Hiburan', description: 'Tiket Bioskop', amount: 100000, date: '2024-05-21' },
-];
 
 export default function WalletTransactionsPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading: isAuthLoading, fetchWithAuth } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [transactions, setTransactions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredTransactions = transactions.filter(t => 
-    t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.category.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      router.push('/account');
+      return;
+    }
+    if (isAuthenticated) {
+      const fetchTransactions = async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetchWithAuth('/api/wallet/transactions');
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          setTransactions(data.transactions);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchTransactions();
+    }
+  }, [isAuthLoading, isAuthenticated, router, fetchWithAuth]);
+
+  const filteredTransactions = transactions.filter((t: any) => 
+    t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.category_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  if (isAuthLoading || isLoading) {
+    return <LoadingOverlay isLoading={true} message="Memuat transaksi..." />;
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -31,7 +56,7 @@ export default function WalletTransactionsPage() {
         <div className="flex justify-between items-center mb-4">
           <Button variant="ghost" onClick={() => router.push('/wallet')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Kembali ke Dompet
+            Kembali
           </Button>
         </div>
         <h1 className="text-3xl font-bold font-headline mb-2">Riwayat Transaksi</h1>
@@ -55,26 +80,25 @@ export default function WalletTransactionsPage() {
 
         {/* Transactions List */}
         <div className="space-y-4">
-          {filteredTransactions.map(t => (
+          {filteredTransactions.length > 0 ? filteredTransactions.map((t: any) => (
             <Card key={t.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4 flex items-center gap-4">
                  <div className={`p-3 rounded-full ${t.type === 'income' ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}`}>
                     {t.type === 'income' ? <ArrowDown className="w-5 h-5 text-green-500" /> : <ArrowUp className="w-5 h-5 text-red-500" />}
                  </div>
                  <div className="flex-grow">
-                  <p className="font-semibold">{t.description}</p>
-                  <p className="text-sm text-muted-foreground">{t.category}</p>
+                  <p className="font-semibold">{t.description || t.category_name}</p>
+                  <p className="text-sm text-muted-foreground">{t.category_name}</p>
                 </div>
                 <div className="text-right">
                   <p className={`font-bold ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                    {t.type === 'expense' && '-'}{t.amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                    {t.type === 'expense' && '-'}{parseFloat(t.amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </p>
-                  <p className="text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(t.transaction_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 </div>
               </CardContent>
             </Card>
-          ))}
-          {filteredTransactions.length === 0 && (
+          )) : (
              <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
                 <p>Tidak ada transaksi yang cocok.</p>
             </div>

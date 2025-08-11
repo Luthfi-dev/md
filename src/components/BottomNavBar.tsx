@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 const navItems = [
   { href: "/", label: "Beranda", icon: Home },
   { href: "/explore", label: "Jelajah", icon: Compass },
-  { href: "/wallet", label: "Dompet", icon: Wallet, isCenter: true },
+  { href: "/messages", label: "Asisten", icon: MessageSquare, isCenter: true },
   { href: "/notebook", label: "Catatan", icon: Notebook },
   { href: "/account", label: "Akun", icon: User },
 ];

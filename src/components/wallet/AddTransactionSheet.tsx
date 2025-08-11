@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,25 @@ import { Textarea } from '../ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AddCategoryDialog } from './AddCategoryDialog';
 
 interface AddTransactionSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onTransactionAdded: () => void;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  type: 'income' | 'expense';
+  icon?: string;
 }
 
 export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }: AddTransactionSheetProps) {
@@ -29,27 +37,29 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
   const [description, setDescription] = useState('');
   const [transactionDate, setTransactionDate] = useState<Date | undefined>(new Date());
   
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const { fetchWithAuth } = useAuth();
   const { toast } = useToast();
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/api/wallet/categories');
+      const data = await res.json();
+      if (data.success) {
+        setCategories(data.categories);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories", error);
+    }
+  }, [fetchWithAuth]);
+
   useEffect(() => {
     if (isOpen) {
-      const fetchCategories = async () => {
-        try {
-          const res = await fetchWithAuth('/api/wallet/categories');
-          const data = await res.json();
-          if (data.success) {
-            setCategories(data.categories);
-          }
-        } catch (error) {
-          console.error("Failed to fetch categories", error);
-        }
-      };
       fetchCategories();
     }
-  }, [isOpen, fetchWithAuth]);
+  }, [isOpen, fetchCategories]);
   
   const resetForm = () => {
     setType('expense');
@@ -93,9 +103,22 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
     }
   };
   
+  const handleCategoryAdded = (newCategory: Category) => {
+    fetchCategories().then(() => {
+        setCategoryId(String(newCategory.id));
+    });
+  }
+
   const filteredCategories = categories.filter(c => c.type === type);
 
   return (
+    <>
+    <AddCategoryDialog 
+        isOpen={isCategoryDialogOpen} 
+        onOpenChange={setIsCategoryDialogOpen}
+        onCategoryAdded={handleCategoryAdded}
+        categoryType={type}
+    />
     <Sheet open={isOpen} onOpenChange={(open) => { if(!open) resetForm(); onOpenChange(open); }}>
       <SheetContent side="bottom" className="rounded-t-2xl">
         <SheetHeader>
@@ -103,7 +126,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
           <SheetDescription>Pilih tipe, kategori, dan masukkan jumlah transaksi.</SheetDescription>
         </SheetHeader>
         <div className="py-4">
-          <Tabs value={type} onValueChange={(value) => setType(value as any)} className="w-full">
+          <Tabs value={type} onValueChange={(value) => { setType(value as any); setCategoryId(undefined); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="expense">Pengeluaran</TabsTrigger>
               <TabsTrigger value="income">Pemasukan</TabsTrigger>
@@ -115,15 +138,17 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
                 </div>
                 <div className="space-y-2">
                     <Label>Kategori</Label>
-                     <p className="text-xs text-muted-foreground">Kategori membantu Anda melacak sumber pemasukan atau tujuan pengeluaran.</p>
                     <Select value={categoryId} onValueChange={setCategoryId}>
                         <SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger>
                         <SelectContent>
                             {filteredCategories.length > 0 ? filteredCategories.map(cat => (
                                 <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
-                            )) : <p className="p-4 text-sm text-muted-foreground">Tidak ada kategori. Buat di pengaturan.</p>}
+                            )) : <div className="p-4 text-sm text-center text-muted-foreground">Tidak ada kategori.</div>}
                         </SelectContent>
                     </Select>
+                    <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setIsCategoryDialogOpen(true)}>
+                        <Plus className="mr-1" /> Tambah Kategori
+                    </Button>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="description">Deskripsi (Opsional)</Label>
@@ -162,5 +187,6 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
         </SheetFooter>
       </SheetContent>
     </Sheet>
+    </>
   );
 }

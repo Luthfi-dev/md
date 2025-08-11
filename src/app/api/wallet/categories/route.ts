@@ -9,7 +9,6 @@ import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 const categorySchema = z.object({
   name: z.string().min(1, "Nama kategori tidak boleh kosong"),
   type: z.enum(['income', 'expense']),
-  icon: z.string().optional().default('Package'),
 });
 
 // GET all categories for a user
@@ -23,7 +22,7 @@ export async function GET(request: NextRequest) {
     try {
         connection = await db.getConnection();
         const [categories]: [RowDataPacket[], any] = await connection.execute(
-            `SELECT id, name, type, icon FROM transaction_categories WHERE user_id = ? ORDER BY name ASC`,
+            `SELECT id, name, type, icon FROM transaction_categories WHERE user_id = ? OR user_id IS NULL ORDER BY user_id, name ASC`,
             [user.id]
         );
         return NextResponse.json({ success: true, categories });
@@ -51,7 +50,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, message: validation.error.errors.map(e => e.message).join(', ') }, { status: 400 });
         }
         
-        const { name, type, icon } = validation.data;
+        const { name, type } = validation.data;
+        const icon = 'Package'; // Default icon
 
         connection = await db.getConnection();
         

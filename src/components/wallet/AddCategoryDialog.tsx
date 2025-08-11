@@ -19,7 +19,6 @@ interface AddCategoryDialogProps {
 
 export function AddCategoryDialog({ isOpen, onOpenChange, onCategoryAdded, categoryType }: AddCategoryDialogProps) {
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { fetchWithAuth } = useAuth();
   const { toast } = useToast();
@@ -31,7 +30,7 @@ export function AddCategoryDialog({ isOpen, onOpenChange, onCategoryAdded, categ
     }
     setIsLoading(true);
     try {
-      const payload = { name, type: categoryType, icon };
+      const payload = { name, type: categoryType };
       const res = await fetchWithAuth('/api/wallet/categories', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -40,10 +39,9 @@ export function AddCategoryDialog({ isOpen, onOpenChange, onCategoryAdded, categ
       if (!data.success) throw new Error(data.message || 'Gagal menyimpan kategori');
 
       toast({ title: 'Kategori Ditambahkan!' });
-      onCategoryAdded({ ...payload, id: data.categoryId });
+      onCategoryAdded({ ...payload, id: data.categoryId, icon: 'Package' });
       onOpenChange(false);
       setName('');
-      setIcon('');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Terjadi kesalahan';
       toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: message });
@@ -65,11 +63,6 @@ export function AddCategoryDialog({ isOpen, onOpenChange, onCategoryAdded, categ
           <div className="space-y-2">
             <Label htmlFor="category-name">Nama Kategori</Label>
             <Input id="category-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Contoh: Transportasi" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="category-icon">Nama Ikon (Lucide, Opsional)</Label>
-            <Input id="category-icon" value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="Contoh: Car, Home" />
-            <p className="text-xs text-muted-foreground">Lihat daftar di lucide.dev</p>
           </div>
         </div>
         <DialogFooter>

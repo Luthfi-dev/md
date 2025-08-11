@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Loader2, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -189,7 +190,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
                             className={cn("w-full justify-start text-left font-normal", !transactionDate && "text-muted-foreground")}
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {transactionDate ? format(transactionDate, "PPP", { locale: require('date-fns/locale/id') }) : <span>Pilih tanggal</span>}
+                            {transactionDate ? format(transactionDate, "PPP", { locale: idLocale }) : <span>Pilih tanggal</span>}
                         </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">

@@ -26,13 +26,14 @@ export async function GET(request: NextRequest) {
     try {
         connection = await db.getConnection();
         const [transactions]: [RowDataPacket[], any] = await connection.execute(
-            `SELECT t.id, t.amount, t.type, t.description, t.transaction_date, c.name as category_name, c.icon as category_icon
+            `SELECT t.id, t.amount, t.type, t.description, t.transaction_date, t.category_id, c.name as category_name, c.icon as category_icon
              FROM transactions t
              JOIN transaction_categories c ON t.category_id = c.id
              WHERE t.user_id = ?
              ORDER BY t.transaction_date DESC, t.created_at DESC`,
             [user.id]
         );
+        
         return NextResponse.json({ success: true, transactions });
     } catch (error) {
         console.error("GET TRANSACTIONS ERROR: ", error);
@@ -63,11 +64,12 @@ export async function POST(request: NextRequest) {
 
         connection = await db.getConnection();
         
-        // Verify category belongs to user
+        // Verify category belongs to user or is a default category (user_id IS NULL)
         const [categoryRows]: [RowDataPacket[], any] = await connection.execute(
-            'SELECT id FROM transaction_categories WHERE id = ? AND user_id = ? AND type = ?',
+            'SELECT id FROM transaction_categories WHERE id = ? AND (user_id = ? OR user_id IS NULL) AND type = ?',
             [categoryId, user.id, type]
         );
+
         if (categoryRows.length === 0) {
             return NextResponse.json({ success: false, message: 'Kategori tidak valid atau tidak cocok dengan tipe transaksi.' }, { status: 400 });
         }

@@ -32,7 +32,7 @@ interface Expense {
   total: number;
 }
 
-export default function BudgetPage() {
+export default function WalletReportPage() {
     const router = useRouter();
     const { isAuthenticated, isLoading: isAuthLoading, fetchWithAuth } = useAuth();
     const { toast } = useToast();
@@ -56,6 +56,8 @@ export default function BudgetPage() {
             ]);
             
             if(!catRes.ok || !budgetRes.ok || !transRes.ok) {
+                const errorData = await Promise.all([catRes.json(), budgetRes.json(), transRes.json()]);
+                console.error("Fetch errors:", errorData);
                 throw new Error('Gagal memuat semua data yang diperlukan.');
             }
 
@@ -64,6 +66,7 @@ export default function BudgetPage() {
             const transData = await transRes.json();
 
             if (!catData.success || !budgetData.success || !transData.success) {
+                console.error("API errors:", {catData, budgetData, transData});
                 throw new Error('Gagal mengambil data dari server.');
             }
             
@@ -74,9 +77,9 @@ export default function BudgetPage() {
             transData.transactions
                 .filter((t: any) => t.type === 'expense' && t.transaction_date.startsWith(currentMonth))
                 .forEach((t: any) => {
-                    // Corrected to use 'categoryId' which is now guaranteed by the API
-                    if (t.categoryId) {
-                         expenses[t.categoryId] = (expenses[t.categoryId] || 0) + parseFloat(t.amount);
+                    // THE FIX: Use `category_id` which is the actual key from the API response
+                    if (t.category_id) { 
+                         expenses[t.category_id] = (expenses[t.category_id] || 0) + parseFloat(t.amount);
                     }
                 });
             
@@ -156,8 +159,8 @@ export default function BudgetPage() {
                     {expenseCategories.map(cat => {
                         const budget = budgets.find(b => b.categoryId === cat.id)?.amount || 0;
                         const expense = monthlyExpenses.find(e => e.categoryId === cat.id)?.total || 0;
-                        const progress = budget > 0 ? (expense / budget) * 100 : 0;
-                        const isOverBudget = progress > 100;
+                        const progress = budget > 0 ? Math.min((expense / budget) * 100, 100) : 0;
+                        const isOverBudget = expense > budget && budget > 0;
                         const isNearBudget = progress > 80 && !isOverBudget;
 
                         if (!isEditing && budget === 0) return null;

@@ -3,7 +3,7 @@
 /**
  * @fileOverview A simple chat flow for an AI assistant.
  */
-import { ai } from '@/ai/genkit';
+import { ai, configureAi } from '@/ai/genkit';
 import { z } from 'zod';
 import assistant from '@/data/assistant.json';
 
@@ -16,6 +16,8 @@ export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 const ChatHistorySchema = z.array(ChatMessageSchema);
 
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
+  // Dynamically configure Genkit with the appropriate API key before running the flow
+  await configureAi();
   return chatFlow(history);
 }
 

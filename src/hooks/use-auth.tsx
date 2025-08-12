@@ -48,6 +48,23 @@ const getAccessTokenClient = () => {
     return accessToken;
 };
 
+const publicPaths = [
+    '/',
+    '/login',
+    '/account/forgot-password',
+    '/account/reset-password',
+    '/explore',
+    '/pricing',
+    '/converter',
+    '/scanner',
+    '/calculator',
+    '/unit-converter',
+    '/color-generator',
+    '/stopwatch',
+    '/surat/share',
+    '/surat/shared-template',
+];
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
@@ -162,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         // Skip auth check for public pages to avoid unnecessary refreshes
-        const isPublic = publicPaths.some(p => pathname.startsWith(p));
+        const isPublic = publicPaths.some(p => pathname.startsWith(p) && p.length > 1) || pathname === '/';
         if (isPublic && !getCookie('refreshToken')) {
             setIsAuthenticated(false);
             return;

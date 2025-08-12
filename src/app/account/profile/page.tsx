@@ -41,7 +41,7 @@ export default function ProfilePage() {
     
     // While redirecting, it's good practice to render null or a loader
     if (!isAuthenticated) {
-        return null;
+        return <LoadingOverlay isLoading={true} message="Mengarahkan..." />;
     }
 
     const handleLogout = async () => {

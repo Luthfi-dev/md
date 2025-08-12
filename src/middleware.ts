@@ -7,6 +7,7 @@ import type { UserForToken } from '@/lib/jwt';
 const publicPaths = [
     '/',
     '/login',
+    '/account',
     '/account/forgot-password',
     '/account/reset-password',
     '/explore',
@@ -41,7 +42,7 @@ export function middleware(request: NextRequest) {
     }
     
     // Allow access to public paths even without a refresh token
-    const isPublic = publicPaths.some(p => pathname.startsWith(p) && p.length > 1) || pathname === '/';
+    const isPublic = publicPaths.some(p => pathname.startsWith(p)) || pathname === '/';
     if(isPublic) {
         return NextResponse.next();
     }
@@ -62,13 +63,6 @@ export function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL('/account', request.url));
         }
         
-        // If the user is trying to access the login page while already logged in, redirect them.
-        if (pathname === '/account') {
-            if (decoded.role === 1) return NextResponse.redirect(new URL('/superadmin', request.url));
-            if (decoded.role === 2) return NextResponse.redirect(new URL('/admin', request.url));
-            return NextResponse.redirect(new URL('/account/profile', request.url));
-        }
-
     } catch (err) {
         // Invalid refresh token, clear it and redirect to login
         const response = NextResponse.redirect(new URL('/account', request.url));

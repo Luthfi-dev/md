@@ -44,7 +44,7 @@ export default function AccountPage() {
         } else if (user.role === 2) { // Admin
             router.push('/admin');
         } else {
-            router.push('/account/profile');
+            router.push('/'); // Default redirect for regular users
         }
     }
   }, [isAuthenticated, user, router]);
@@ -91,7 +91,7 @@ export default function AccountPage() {
     }
   };
   
-  if (isAuthenticated === undefined) {
+  if (isAuthenticated === undefined || (isAuthenticated === true && user)) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
 

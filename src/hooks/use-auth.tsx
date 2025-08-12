@@ -2,7 +2,7 @@
 'use client';
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { getCookie } from '@/lib/utils'; 
 
 export interface User {
@@ -53,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const pathname = usePathname();
 
     const setAccessToken = useCallback((token: string | null) => {
         accessToken = token;
@@ -155,12 +154,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const response = await fetch(url, { ...options, headers });
 
-        if (response.status === 401 && pathname !== '/account') {
+        if (response.status === 401) {
              await logout();
         }
 
         return response;
-    }, [silentRefresh, logout, pathname]);
+    }, [silentRefresh, logout]);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true);

@@ -2,8 +2,8 @@
 'use client';
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useRouter } from 'next/navigation';
-import { getCookie } from '@/lib/utils'; // We'll create this utility
+import { useRouter, usePathname } from 'next/navigation';
+import { getCookie } from '@/lib/utils'; 
 
 export interface User {
     id: number;
@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const pathname = usePathname();
 
     const setAccessToken = useCallback((token: string | null) => {
         accessToken = token;
@@ -76,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    const logout = useCallback(async () => {
+    const logout = useCallback(async (redirect = true) => {
         setIsLoading(true);
         setAccessToken(null);
         try {
@@ -85,11 +86,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Logout fetch failed:", error);
         } finally {
             setIsLoading(false);
+            if (redirect) {
+                router.push('/account');
+            }
         }
-    }, [setAccessToken]);
+    }, [setAccessToken, router]);
 
     const silentRefresh = useCallback(async () => {
-        // Only attempt to refresh if a refresh token cookie exists.
         const refreshToken = getCookie('refreshToken');
         if (!refreshToken) {
             setIsAuthenticated(false);
@@ -108,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Refresh token invalid');
         } catch (error) {
             console.error('Silent refresh failed:', error);
-            await logout();
+            await logout(false); // Don't redirect on silent failure
             return null;
         }
     }, [logout, setAccessToken]);
@@ -116,13 +119,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
         let token = getAccessTokenClient();
         
-        if (token && isTokenExpired(token)) {
+        if (!token || isTokenExpired(token)) {
             token = await silentRefresh();
         }
 
         if (!token) {
             await logout();
-            router.push('/account');
             throw new Error('Not authenticated');
         }
 
@@ -136,11 +138,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (response.status === 401) {
             await logout();
-            router.push('/account');
         }
 
         return response;
-    }, [silentRefresh, logout, router]);
+    }, [silentRefresh, logout]);
 
     const initializeAuth = useCallback(async () => {
         const storedToken = getAccessTokenClient();
@@ -151,14 +152,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await silentRefresh();
             }
         } else {
-            // Also attempt a silent refresh in case there's a refresh cookie but no access token
             await silentRefresh();
+        }
+        // If still not authenticated after checks, set it to false
+        if(!getAccessTokenClient()) {
+            setIsAuthenticated(false);
         }
     }, [silentRefresh, setAccessToken]);
 
     useEffect(() => {
+        // Skip auth check for public pages to avoid unnecessary refreshes
+        const isPublic = publicPaths.some(p => pathname.startsWith(p));
+        if (isPublic && !getCookie('refreshToken')) {
+            setIsAuthenticated(false);
+            return;
+        }
         initializeAuth();
-    }, [initializeAuth]);
+    }, [initializeAuth, pathname]);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true);

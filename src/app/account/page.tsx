@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import Link from "next/link";
 
 // A simple function to generate a browser fingerprint
 const getBrowserFingerprint = () => {
@@ -37,9 +38,14 @@ export default function AccountPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If auth state is confirmed and user is authenticated, redirect to profile
     if (isAuthenticated && user) {
-        router.push('/account/profile');
+        if(user.role === 1) { // Superadmin
+            router.push('/superadmin');
+        } else if (user.role === 2) { // Admin
+            router.push('/admin');
+        } else {
+            router.push('/account/profile');
+        }
     }
   }, [isAuthenticated, user, router]);
 
@@ -66,10 +72,8 @@ export default function AccountPage() {
 
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
-                // Automatically log in the user after successful registration
                 const loginResult = await login(email, password);
                  if (loginResult.success) {
-                    // Remove guest data from local storage after successful registration and login
                     localStorage.removeItem('guestRewardState_v3');
                 }
             } else {
@@ -87,7 +91,6 @@ export default function AccountPage() {
     }
   };
   
-  // Render loading overlay while checking auth status to prevent login form flash
   if (isAuthenticated === undefined) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
@@ -128,6 +131,14 @@ export default function AccountPage() {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input id="repeatPassword" name="repeatPassword" type="password" required placeholder="Ulangi Kata Sandi" className="pl-10 h-12 rounded-full" />
                   </div>
+                )}
+                
+                {isLogin && (
+                     <div className="text-right text-sm">
+                        <Link href="/account/forgot-password" className="text-primary hover:underline">
+                            Lupa Kata Sandi?
+                        </Link>
+                    </div>
                 )}
                 
                 <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-lg font-bold group" disabled={isLoading}>

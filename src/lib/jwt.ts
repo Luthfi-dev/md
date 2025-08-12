@@ -7,7 +7,7 @@ const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'your_super_secre
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'your_super_secret_refresh_key';
 
 const ACCESS_TOKEN_EXPIRATION = '15m';
-const REFRESH_TOKEN_EXPIRATION = '7d';
+const REFRESH_TOKEN_EXPIRATION = '30d'; // Extended to 30 days
 
 export interface UserForToken {
     id: number;
@@ -44,7 +44,7 @@ export function setTokenCookie(res: NextResponse, refreshToken: string) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         path: '/',
-        maxAge: 60 * 60 * 24 * 7 // 7 days
+        maxAge: 30 * 24 * 60 * 60 // 30 days in seconds
     });
     res.headers.set('Set-Cookie', cookie);
 }

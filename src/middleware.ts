@@ -7,6 +7,7 @@ import type { UserForToken } from '@/lib/jwt';
 const publicPaths = [
     '/',
     '/login',
+    '/account',
     '/account/forgot-password',
     '/account/reset-password',
     '/explore',
@@ -17,69 +18,82 @@ const publicPaths = [
     '/unit-converter',
     '/color-generator',
     '/stopwatch',
-    '/surat/share',
+    '/surat/share-fallback',
     '/surat/shared-template',
 ];
 
-const adminPaths = ['/admin', '/superadmin'];
+const adminPaths = ['/admin'];
+const superAdminPaths = ['/superadmin'];
+
+const isPathPublic = (path: string): boolean => {
+    if (path === '/') return true;
+    for (const publicPath of publicPaths) {
+        if (path.startsWith(publicPath)) {
+            return true;
+        }
+    }
+    // Handle dynamic public routes like /surat/some-id
+    if (path.startsWith('/surat/') && !path.startsWith('/surat-generator')) {
+        return true;
+    }
+    return false;
+}
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
-    // Check if the path is for static files, API routes, or images, and skip middleware
-    const isStaticAsset = pathname.startsWith('/_next') || 
-                          pathname.startsWith('/api') || 
-                          pathname.startsWith('/images') || 
-                          pathname.startsWith('/sounds') ||
-                          pathname.includes('icon-') ||
-                          pathname.includes('favicon.ico') ||
-                          pathname.includes('.png');
+    const isApiOrStatic = pathname.startsWith('/api/') || 
+                          pathname.startsWith('/_next/') || 
+                          pathname.startsWith('/images/') ||
+                          pathname.startsWith('/sounds/') ||
+                          pathname.endsWith('.png') ||
+                          pathname.endsWith('.ico');
+    
+    if (isApiOrStatic) {
+        return NextResponse.next();
+    }
 
-    if (isStaticAsset) {
+    const isPublic = isPathPublic(pathname);
+
+    // If user is trying to access a public path, let them through
+    if (isPublic) {
         return NextResponse.next();
     }
-    
-    // Allow access to public paths
-    const isPublic = publicPaths.some(p => pathname.startsWith(p) && p.length > 1) || pathname === '/';
-    if(isPublic) {
-        // Exception: If user is already logged in and tries to access /account, redirect them away.
-        // This is handled client-side in useAuth now to prevent redirect loops.
-        return NextResponse.next();
-    }
-    
-    // For protected paths (including admin), a refresh token is required.
+
+    // --- Protected Routes Logic ---
+    // From here on, all routes require a valid token.
     if (!refreshToken) {
-        const loginUrl = new URL('/account', request.url)
-        loginUrl.searchParams.set('redirect', pathname);
-        return NextResponse.redirect(loginUrl);
+        return NextResponse.redirect(new URL('/account', request.url));
     }
 
     try {
         const decoded = verifyRefreshToken(refreshToken) as UserForToken;
-        
-        const isSuperAdminPath = pathname.startsWith('/superadmin');
-        const isAdminPath = pathname.startsWith('/admin');
 
-        // Role-based access control for admin paths
+        const isSuperAdminPath = superAdminPaths.some(p => pathname.startsWith(p));
+        const isAdminPath = adminPaths.some(p => pathname.startsWith(p));
+        
+        // If it's a superadmin path, user MUST have role 1
         if (isSuperAdminPath && decoded.role !== 1) {
-            return NextResponse.redirect(new URL('/', request.url)); // Redirect non-superadmins from superadmin page
+            return NextResponse.redirect(new URL('/', request.url));
         }
+
+        // If it's an admin path (but not superadmin), user MUST have role 1 or 2
         if (isAdminPath && !isSuperAdminPath && decoded.role !== 1 && decoded.role !== 2) {
-             return NextResponse.redirect(new URL('/', request.url)); // Redirect non-admins from admin page
+            return NextResponse.redirect(new URL('/', request.url));
         }
         
+        // User has a valid token and the correct role (or it's a general protected path), allow access.
+        return NextResponse.next();
+
     } catch (err) {
-        // Invalid refresh token, clear it and redirect to login
+        // Invalid token
         const loginUrl = new URL('/account', request.url);
         const response = NextResponse.redirect(loginUrl);
         response.cookies.delete('refreshToken');
         return response;
     }
-
-    return NextResponse.next();
 }
-
 
 export const config = {
   matcher: [

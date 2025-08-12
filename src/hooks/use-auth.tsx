@@ -2,7 +2,7 @@
 'use client';
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { getCookie } from '@/lib/utils'; 
 
 export interface User {
@@ -48,29 +48,11 @@ const getAccessTokenClient = () => {
     return accessToken;
 };
 
-const publicPaths = [
-    '/',
-    '/login',
-    '/account/forgot-password',
-    '/account/reset-password',
-    '/explore',
-    '/pricing',
-    '/converter',
-    '/scanner',
-    '/calculator',
-    '/unit-converter',
-    '/color-generator',
-    '/stopwatch',
-    '/surat/share',
-    '/surat/shared-template',
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const pathname = usePathname();
 
     const setAccessToken = useCallback((token: string | null) => {
         accessToken = token;
@@ -165,27 +147,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (storedToken) {
             if (!isTokenExpired(storedToken)) {
                 setAccessToken(storedToken);
-            } else {
-                await silentRefresh();
+                return; 
             }
-        } else {
-            await silentRefresh();
         }
-        // If still not authenticated after checks, set it to false
+        
+        // If no valid stored token, try to refresh
+        await silentRefresh();
+        
+        // If still not authenticated after checks, mark as not authenticated
         if(!getAccessTokenClient()) {
             setIsAuthenticated(false);
         }
     }, [silentRefresh, setAccessToken]);
 
     useEffect(() => {
-        // Skip auth check for public pages to avoid unnecessary refreshes
-        const isPublic = publicPaths.some(p => pathname.startsWith(p) && p.length > 1) || pathname === '/';
-        if (isPublic && !getCookie('refreshToken')) {
-            setIsAuthenticated(false);
-            return;
-        }
         initializeAuth();
-    }, [initializeAuth, pathname]);
+    }, [initializeAuth]);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true);

@@ -7,7 +7,6 @@ import type { UserForToken } from '@/lib/jwt';
 const publicPaths = [
     '/',
     '/login',
-    '/account',
     '/account/forgot-password',
     '/account/reset-password',
     '/explore',
@@ -41,31 +40,39 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
     
-    // Allow access to public paths even without a refresh token
-    const isPublic = publicPaths.some(p => pathname.startsWith(p)) || pathname === '/';
+    // Allow access to public paths
+    const isPublic = publicPaths.some(p => pathname.startsWith(p) && p.length > 1) || pathname === '/';
     if(isPublic) {
+        // Exception: If user is already logged in and tries to access /account, redirect them away.
+        // This is handled client-side in useAuth now to prevent redirect loops.
         return NextResponse.next();
     }
-
-    // For all other (protected) paths, check for a valid refresh token.
+    
+    // For protected paths (including admin), a refresh token is required.
     if (!refreshToken) {
-        return NextResponse.redirect(new URL('/account', request.url));
+        const loginUrl = new URL('/account', request.url)
+        loginUrl.searchParams.set('redirect', pathname);
+        return NextResponse.redirect(loginUrl);
     }
 
     try {
         const decoded = verifyRefreshToken(refreshToken) as UserForToken;
         
-        // If the user is authenticated, check for role-based access to admin paths
-        if (pathname.startsWith('/superadmin') && decoded.role !== 1) {
-            return NextResponse.redirect(new URL('/account', request.url));
+        const isSuperAdminPath = pathname.startsWith('/superadmin');
+        const isAdminPath = pathname.startsWith('/admin');
+
+        // Role-based access control for admin paths
+        if (isSuperAdminPath && decoded.role !== 1) {
+            return NextResponse.redirect(new URL('/', request.url)); // Redirect non-superadmins from superadmin page
         }
-        if (pathname.startsWith('/admin') && decoded.role !== 1 && decoded.role !== 2) {
-            return NextResponse.redirect(new URL('/account', request.url));
+        if (isAdminPath && !isSuperAdminPath && decoded.role !== 1 && decoded.role !== 2) {
+             return NextResponse.redirect(new URL('/', request.url)); // Redirect non-admins from admin page
         }
         
     } catch (err) {
         // Invalid refresh token, clear it and redirect to login
-        const response = NextResponse.redirect(new URL('/account', request.url));
+        const loginUrl = new URL('/account', request.url);
+        const response = NextResponse.redirect(loginUrl);
         response.cookies.delete('refreshToken');
         return response;
     }

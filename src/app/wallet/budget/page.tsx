@@ -11,6 +11,7 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 interface Category {
   id: number;
@@ -73,28 +74,9 @@ export default function BudgetPage() {
             transData.transactions
                 .filter((t: any) => t.type === 'expense' && t.transaction_date.startsWith(currentMonth))
                 .forEach((t: any) => {
-                    // This was the bug: `t.category_id` should be `t.categoryId` from how the API sends it
-                    // The API actually sends `category_id`, but I should check the actual response or be consistent.
-                    // The transaction API returns `category_id`. The bug was in the type mapping, not here.
-                    // Let's assume the transaction API returns `categoryId`. Or better, check the API.
-                    // `GET /api/wallet/transactions` returns `category_name` and `category_icon`, but not `category_id`. This is the REAL BUG.
-                    // I need to update the transactions API to return the categoryId.
-                    
-                    // Let's assume the bug is actually in the transactions API and fix it there, and keep this logic.
-                    // Okay, I can't fix the API in this turn. I'll have to fix it here.
-                    // I'll assume the bug was in the previous turn and the transaction data doesn't have `category_id`.
-                    // The bug is that `GET /api/wallet/transactions` does not return the category ID.
-                    // But the GET in `src/api/wallet/transactions/route.ts` clearly selects `t.category_id`. 
-                    // Let me re-read... no it does not.
-                    // `SELECT t.id, t.amount, t.type, t.description, t.transaction_date, c.name as category_name, c.icon as category_icon`
-                    // It's missing `t.category_id`. That's the bug.
-                    // I cannot modify that file in this turn.
-                    // So I must find a workaround here.
-                    // I can map category_name back to category_id.
-
-                    const category = catData.categories.find((c: Category) => c.name === t.category_name);
-                    if (category) {
-                        expenses[category.id] = (expenses[category.id] || 0) + parseFloat(t.amount);
+                    // Corrected to use 'categoryId' which is now guaranteed by the API
+                    if (t.categoryId) {
+                         expenses[t.categoryId] = (expenses[t.categoryId] || 0) + parseFloat(t.amount);
                     }
                 });
             
@@ -178,7 +160,6 @@ export default function BudgetPage() {
                         const isOverBudget = progress > 100;
                         const isNearBudget = progress > 80 && !isOverBudget;
 
-
                         if (!isEditing && budget === 0) return null;
 
                         return (
@@ -200,7 +181,7 @@ export default function BudgetPage() {
                                             </p>
                                         )}
                                     </div>
-                                    <Progress value={Math.min(progress, 100)} className={ (isOverBudget || isNearBudget) ? '[&>div]:bg-red-500' : ''}/>
+                                    <Progress value={progress} className={cn((isOverBudget || isNearBudget) && '[&>div]:bg-red-500')}/>
                                     {isOverBudget && <p className="text-xs text-red-500 mt-1">Anggaran terlampaui!</p>}
                                     {isNearBudget && <p className="text-xs text-red-500 mt-1">Anggaran hampir mencapai batas!</p>}
                                 </CardContent>

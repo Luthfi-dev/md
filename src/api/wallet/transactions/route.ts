@@ -33,9 +33,11 @@ export async function GET(request: NextRequest) {
              ORDER BY t.transaction_date DESC, t.created_at DESC`,
             [user.id]
         );
+        
+        // Ensure categoryId is correctly named for frontend consumption
         const formattedTransactions = transactions.map(t => ({
             ...t,
-            categoryId: t.category_id // Ensure categoryId is correctly named
+            categoryId: t.category_id
         }));
 
         return NextResponse.json({ success: true, transactions: formattedTransactions });

@@ -26,7 +26,15 @@ const adminPaths = ['/admin'];
 const superAdminPaths = ['/superadmin'];
 
 const isPathPublic = (path: string): boolean => {
+    // Exact match for homepage
     if (path === '/') return true;
+
+    // Allow public access to API routes, static files, and images
+    if (path.startsWith('/api/') || path.startsWith('/_next/') || path.startsWith('/images/') || path.startsWith('/sounds/') || path.endsWith('.png') || path.endsWith('.ico')) {
+        return true;
+    }
+
+    // Check against defined public paths
     for (const publicPath of publicPaths) {
         if (path.startsWith(publicPath)) {
             return true;
@@ -43,51 +51,41 @@ export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
-    const isApiOrStatic = pathname.startsWith('/api/') || 
-                          pathname.startsWith('/_next/') || 
-                          pathname.startsWith('/images/') ||
-                          pathname.startsWith('/sounds/') ||
-                          pathname.endsWith('.png') ||
-                          pathname.endsWith('.ico');
-    
-    if (isApiOrStatic) {
-        return NextResponse.next();
-    }
-
     const isPublic = isPathPublic(pathname);
 
-    // If user is trying to access a public path, let them through
+    // If the path is public, let them through
     if (isPublic) {
         return NextResponse.next();
     }
 
-    // --- Protected Routes Logic ---
-    // From here on, all routes require a valid token.
+    // --- From this point, the route is protected ---
+    
+    // If no token, redirect to login page immediately
     if (!refreshToken) {
         return NextResponse.redirect(new URL('/account', request.url));
     }
 
     try {
+        // Verify the token
         const decoded = verifyRefreshToken(refreshToken) as UserForToken;
 
         const isSuperAdminPath = superAdminPaths.some(p => pathname.startsWith(p));
         const isAdminPath = adminPaths.some(p => pathname.startsWith(p));
         
-        // If it's a superadmin path, user MUST have role 1
+        // Role-based authorization checks
         if (isSuperAdminPath && decoded.role !== 1) {
-            return NextResponse.redirect(new URL('/', request.url));
+            return NextResponse.redirect(new URL('/', request.url)); // Not a superadmin, redirect to home
         }
 
-        // If it's an admin path (but not superadmin), user MUST have role 1 or 2
-        if (isAdminPath && !isSuperAdminPath && decoded.role !== 1 && decoded.role !== 2) {
-            return NextResponse.redirect(new URL('/', request.url));
+        if (isAdminPath && decoded.role !== 1 && decoded.role !== 2) {
+            return NextResponse.redirect(new URL('/', request.url)); // Not an admin/superadmin, redirect to home
         }
         
-        // User has a valid token and the correct role (or it's a general protected path), allow access.
+        // If the user is authenticated and has the correct role, allow access
         return NextResponse.next();
 
     } catch (err) {
-        // Invalid token
+        // If token verification fails, it's invalid. Redirect to login and clear the bad cookie.
         const loginUrl = new URL('/account', request.url);
         const response = NextResponse.redirect(loginUrl);
         response.cookies.delete('refreshToken');
@@ -99,13 +97,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - images/ (public images)
-     * - sounds/ (public sounds)
+     * This ensures the middleware runs on all pages and API routes.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|images/|sounds/).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

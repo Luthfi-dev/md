@@ -2,7 +2,7 @@
 'use client';
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getCookie } from '@/lib/utils'; 
 
 export interface User {
@@ -18,7 +18,7 @@ export interface User {
 
 interface AuthContextType {
     user: User | null;
-    isAuthenticated: boolean | undefined;
+    isAuthenticated: boolean | undefined; // undefined: checking, false: no, true: yes
     isLoading: boolean;
     login: (email: string, password: string) => Promise<{success: boolean, message: string, user?: User}>;
     register: (data: any) => Promise<{success: boolean, message: string}>;
@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const pathname = usePathname();
 
     const setAccessToken = useCallback((token: string | null) => {
         accessToken = token;
@@ -114,6 +115,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return null;
         }
     }, [logout, setAccessToken]);
+    
+    // Auth Check Effect
+    useEffect(() => {
+        const initializeAuth = async () => {
+            const token = getAccessTokenClient();
+            if (token && !isTokenExpired(token)) {
+                setAccessToken(token);
+            } else {
+                await silentRefresh();
+            }
+            
+            // Final check after all attempts
+            if (!getAccessTokenClient()) {
+                setIsAuthenticated(false);
+            }
+        };
+        initializeAuth();
+    }, [silentRefresh, setAccessToken]);
+
 
     const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
         let token = getAccessTokenClient();
@@ -123,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            await logout();
+            await logout(); // Full logout with redirect if fetch is attempted without auth
             throw new Error('Not authenticated');
         }
 
@@ -135,34 +155,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const response = await fetch(url, { ...options, headers });
 
-        if (response.status === 401) {
-            await logout();
+        if (response.status === 401 && pathname !== '/account') {
+             await logout();
         }
 
         return response;
-    }, [silentRefresh, logout]);
-
-    const initializeAuth = useCallback(async () => {
-        const storedToken = getAccessTokenClient();
-        if (storedToken) {
-            if (!isTokenExpired(storedToken)) {
-                setAccessToken(storedToken);
-                return; 
-            }
-        }
-        
-        // If no valid stored token, try to refresh
-        await silentRefresh();
-        
-        // If still not authenticated after checks, mark as not authenticated
-        if(!getAccessTokenClient()) {
-            setIsAuthenticated(false);
-        }
-    }, [silentRefresh, setAccessToken]);
-
-    useEffect(() => {
-        initializeAuth();
-    }, [initializeAuth]);
+    }, [silentRefresh, logout, pathname]);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true);

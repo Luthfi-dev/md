@@ -14,7 +14,7 @@ const navItems = [
   { href: "/explore", label: "Jelajah", icon: Compass },
   { href: "/messages", label: "Asisten", icon: MessageSquare, isCenter: true },
   { href: "/notebook", label: "Catatan", icon: Notebook },
-  { href: "/account", label: "Akun", icon: User },
+  { href: "/account/profile", label: "Akun", icon: User },
 ];
 
 const BottomNavBar = () => {
@@ -24,15 +24,10 @@ const BottomNavBar = () => {
   const getHref = (href: string) => {
     // If user is not authenticated and clicks the "Akun" tab,
     // they should be directed to the page that handles login, which is /account.
-    if (href === '/account' && !isAuthenticated) {
+    if (href === '/account/profile' && !isAuthenticated) {
         return '/account';
     }
     return href;
-  }
-
-  // Hide the nav bar on admin pages
-  if (pathname.startsWith('/admin')) {
-    return null;
   }
 
   return (

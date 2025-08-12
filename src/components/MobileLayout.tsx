@@ -5,17 +5,19 @@ import BottomNavBar from './BottomNavBar';
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 
 export function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
   
-  // Hide nav bar only on the exact login page and admin pages.
-  // The nav bar should now appear on `/account/profile`, `/account/edit-profile` etc.
-  const showBottomNav = pathname !== '/account' && !pathname.startsWith('/admin');
-
+  // Conditionally show the nav bar.
+  // Hide it on the login page itself or if the user is not authenticated and on an account page.
+  const showBottomNav = !(pathname === '/account' || (pathname.startsWith('/account') && !isAuthenticated));
+  
   return (
     <div className="flex flex-col flex-1 min-h-screen">
-      <main className={cn("flex-1", showBottomNav ? "pb-20" : "")}>{children}</main>
+      <main className={cn("flex-1", showBottomNav ? "pb-16" : "")}>{children}</main>
       {showBottomNav && <BottomNavBar />}
     </div>
   );

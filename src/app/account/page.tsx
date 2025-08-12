@@ -65,6 +65,7 @@ export default function AccountPage() {
             if (!result.success) {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
+            // The useEffect will handle redirection
         } else {
             const fingerprint = getBrowserFingerprint();
             const guestData = localStorage.getItem('guestRewardState_v3');
@@ -72,8 +73,10 @@ export default function AccountPage() {
 
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
+                // Automatically log in after successful registration
                 const loginResult = await login(email, password);
                  if (loginResult.success) {
+                    // Clear guest data only after successful login post-registration
                     localStorage.removeItem('guestRewardState_v3');
                 }
             } else {
@@ -91,6 +94,8 @@ export default function AccountPage() {
     }
   };
   
+  // Render loading overlay while checking auth status to prevent login form flash
+  // OR if we are authenticated and waiting for the redirect useEffect to fire.
   if (isAuthenticated === undefined || (isAuthenticated === true && user)) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }

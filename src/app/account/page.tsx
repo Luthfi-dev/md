@@ -38,7 +38,8 @@ export default function AccountPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If auth state is confirmed and user is authenticated, redirect them away from the login page.
+    // This effect handles redirecting the user if they are ALREADY authenticated
+    // and try to access the login page.
     if (isAuthenticated && user) {
         if(user.role === 1) { // Superadmin
             router.replace('/superadmin');
@@ -52,7 +53,8 @@ export default function AccountPage() {
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoadingMessage(isLogin ? "Lagi cek data kamu, tunggu ya..." : "Tunggu sebentar, aku lagi daftarin data kamu nih...");
+    const loadingMsg = isLogin ? "Mengecek data Anda..." : "Mendaftarkan akun Anda...";
+    setLoadingMessage(loadingMsg);
     
     const formData = new FormData(event.currentTarget);
     const name = formData.get("name") as string;
@@ -66,7 +68,7 @@ export default function AccountPage() {
             if (!result.success) {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
-            // The useEffect will handle redirection on successful login
+            // The useEffect will handle redirection on successful login.
         } else {
             const fingerprint = getBrowserFingerprint();
             const guestData = localStorage.getItem('guestRewardState_v3');
@@ -91,11 +93,12 @@ export default function AccountPage() {
     }
   };
   
-  // While checking auth status OR if we are authenticated and waiting for redirect
-  if (isAuthenticated === undefined || (isAuthenticated && user)) {
+  // While checking auth status OR if we are authenticated and waiting for redirect to kick in
+  if (isAuthenticated === undefined || isAuthenticated === true) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
 
+  // Only render the form if authentication check is complete and user is NOT authenticated.
   return (
     <>
       <LoadingOverlay isLoading={isLoading} message={loadingMessage} />

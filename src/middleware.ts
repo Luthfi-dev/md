@@ -29,14 +29,12 @@ const isPathPublic = (path: string): boolean => {
     if (path.startsWith('/api/') || path.startsWith('/_next/') || path.startsWith('/images/') || path.startsWith('/sounds/') || path.endsWith('.png') || path.endsWith('.ico') || path.endsWith('.json')) {
         return true;
     }
+    // Check for exact matches or if the path starts with a public path followed by a '/'
     if (publicPaths.some(publicPath => path === publicPath || (publicPath !== '/' && path.startsWith(publicPath + '/')))) {
         return true;
     }
-    // Handle dynamic public surat links, but not the generator
+     // Handle dynamic public surat links, but not the generator
     if (path.startsWith('/surat/') && !path.startsWith('/surat-generator')) {
-      // This logic was flawed, the share page is now static. Keeping this as an example of dynamic route handling.
-      // e.g. /surat/some-uuid should be public, but it's handled by /surat/[id]/page.tsx now.
-      // A better check is if it's not the generator page.
       return !path.startsWith('/surat-generator');
     }
     return false;
@@ -46,50 +44,43 @@ export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
-    // If the path is public, let them pass.
-    if (isPathPublic(pathname)) {
-        return NextResponse.next();
+    const isPublic = isPathPublic(pathname);
+    const isAdminPath = pathname.startsWith('/admin');
+    const isSuperAdminPath = pathname.startsWith('/superadmin');
+
+    // If accessing a protected route without a token, redirect to login
+    if (!isPublic && !refreshToken) {
+        return NextResponse.redirect(new URL('/account', request.url));
     }
 
-    // --- From this point, all routes are protected ---
+    if (refreshToken) {
+        try {
+            const decoded = verifyRefreshToken(refreshToken) as UserForToken;
 
-    // 1. If there's no token, redirect to login immediately.
-    if (!refreshToken) {
-        const loginUrl = new URL('/account', request.url);
-        return NextResponse.redirect(loginUrl);
-    }
+            // Role-based access control for protected routes
+            if (isSuperAdminPath && decoded.role !== 1) {
+                return NextResponse.redirect(new URL('/', request.url));
+            }
 
-    try {
-        // 2. Verify the token. If it's invalid or expired, it will throw an error.
-        const decoded = verifyRefreshToken(refreshToken) as UserForToken;
+            if (isAdminPath && decoded.role !== 1 && decoded.role !== 2) {
+                return NextResponse.redirect(new URL('/', request.url));
+            }
 
-        const isSuperAdminPath = pathname.startsWith('/superadmin');
-        const isAdminPath = pathname.startsWith('/admin');
-
-        // 3. Role-based access control.
-        if (isSuperAdminPath && decoded.role !== 1) {
-            // Non-superadmins trying to access /superadmin get sent to home.
-            return NextResponse.redirect(new URL('/', request.url));
+        } catch (err) {
+            // If token is invalid/expired and they are trying to access a protected route
+            if (!isPublic) {
+                const response = NextResponse.redirect(new URL('/account', request.url));
+                response.cookies.delete('refreshToken');
+                response.cookies.delete('accessToken'); // Also clear access token if it exists
+                return response;
+            }
         }
-
-        if (isAdminPath && decoded.role !== 1 && decoded.role !== 2) {
-            // Non-admins trying to access /admin get sent to home.
-            return NextResponse.redirect(new URL('/', request.url));
-        }
-        
-        // 4. If token is valid and role is correct, allow access.
-        return NextResponse.next();
-
-    } catch (err) {
-        // 5. If token verification fails, redirect to login and clear the bad cookie.
-        const loginUrl = new URL('/account', request.url);
-        const response = NextResponse.redirect(loginUrl);
-        response.cookies.delete('refreshToken');
-        return response;
     }
+
+    return NextResponse.next();
 }
 
 export const config = {
-  // This matcher ensures the middleware runs on every request.
+  // This matcher ensures the middleware runs on every request, excluding static assets.
   matcher: '/((?!api|_next/static|_next/image|favicon.ico|sounds).*)',
 };

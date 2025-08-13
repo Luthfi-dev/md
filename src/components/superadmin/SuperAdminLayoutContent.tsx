@@ -1,7 +1,7 @@
 
 'use client';
 
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar } from '@/components/ui/sidebar';
+import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { LayoutDashboard, Settings, LogOut, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -27,7 +27,7 @@ export function SuperAdminLayoutContent({
   }
 
   return (
-    <SidebarProvider>
+    <>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -80,6 +80,6 @@ export function SuperAdminLayoutContent({
           {children}
         </main>
       </SidebarInset>
-    </SidebarProvider>
+    </>
   )
 }

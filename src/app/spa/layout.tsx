@@ -3,6 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import { SuperAdminLayoutContent } from '@/components/superadmin/SuperAdminLayoutContent';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 export default function SpaLayout({
   children,
@@ -17,5 +18,9 @@ export default function SpaLayout({
   }
 
   // Otherwise, wrap with the sidebar and header
-  return <SuperAdminLayoutContent>{children}</SuperAdminLayoutContent>;
+  return (
+    <SidebarProvider>
+      <SuperAdminLayoutContent>{children}</SuperAdminLayoutContent>
+    </SidebarProvider>
+  );
 }

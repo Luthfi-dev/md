@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { ArrowRight, Lock, Mail, User } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import Link from "next/link";
 
 // A simple function to generate a browser fingerprint
 const getBrowserFingerprint = () => {
@@ -35,9 +36,9 @@ export default function LoginPage() {
   const [loadingMessage, setLoadingMessage] = useState('');
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Middleware now handles redirecting logged-in users away from this page
-  // This effect is a safeguard for client-side navigation.
   useEffect(() => {
     if (isAuthenticated) {
         router.replace('/');
@@ -58,9 +59,8 @@ export default function LoginPage() {
         if (isLoginView) {
             const result = await login(email, password);
             if (result.success) {
-                // On successful login, ALWAYS redirect to the homepage.
-                // The middleware will handle role-based redirects.
-                router.push('/');
+                const redirectUrl = searchParams.get('redirect') || '/';
+                router.push(redirectUrl);
             } else {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
@@ -71,7 +71,7 @@ export default function LoginPage() {
 
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: 'Silakan masuk dengan akun baru Anda.' });
-                setIsLoginView(true); // Switch to login view after successful registration
+                setIsLoginView(true);
             } else {
                  toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
@@ -122,6 +122,13 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
                 </div>
+                 {isLoginView && (
+                    <div className="text-right">
+                        <Button variant="link" size="sm" asChild>
+                            <Link href="/account/forgot-password">Lupa kata sandi?</Link>
+                        </Button>
+                    </div>
+                )}
                 {!isLoginView && (
                   <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

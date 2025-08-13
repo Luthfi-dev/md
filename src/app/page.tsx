@@ -7,16 +7,15 @@ import { useAuth } from '@/hooks/use-auth';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
 export default function Page() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
-  // Hanya tampilkan loading saat status autentikasi belum ditentukan.
-  // Setelah ditentukan (baik login maupun tidak), middleware akan memastikan
-  // pengguna berada di halaman yang benar.
+  // Show a loading screen while the authentication status is being determined.
+  // This prevents content flashing and ensures middleware has time to process.
   if (isAuthenticated === undefined) {
     return <LoadingOverlay isLoading={true} message="Mempersiapkan aplikasi..." />;
   }
 
-  // Render konten halaman utama untuk semua orang.
-  // Middleware sudah menangani perlindungan rute.
+  // Once auth status is known, render the main content.
+  // The middleware is now the single source of truth for protecting routes.
   return <HomePageContent />;
 }

@@ -21,10 +21,12 @@ const BottomNavBar = () => {
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
   
-  // This component now assumes middleware will handle the redirection for unauthenticated users.
-  // It always points to the intended destination for an authenticated user.
   const getHref = (href: string) => {
-      // The middleware will catch the unauthenticated user and redirect to /login.
+      // Jika tautan adalah untuk profil dan pengguna belum login, arahkan ke login.
+      // Middleware akan menangani ini di server, tetapi ini adalah fallback client-side yang baik.
+      if (href === '/account/profile' && !isAuthenticated) {
+          return '/login';
+      }
       return href;
   }
 
@@ -33,9 +35,8 @@ const BottomNavBar = () => {
       <div className="flex justify-around items-center h-full max-w-lg mx-auto">
         {navItems.map((item) => {
           const href = getHref(item.href);
-          // Simplified active check. /account/* should highlight the Akun tab.
-          const isActive = pathname.startsWith(href) && href !== '/';
-          const isHomeActive = pathname === '/';
+          // Cek aktif yang lebih akurat
+          const isActive = (item.href === "/" && pathname === "/") || (item.href !== "/" && pathname.startsWith(item.href));
 
           if (item.isCenter) {
             return (
@@ -56,10 +57,10 @@ const BottomNavBar = () => {
              <Link key={item.label} href={href} className="flex flex-col items-center justify-center w-1/5 h-full transition-colors duration-300">
                 <div className={cn(
                   "flex flex-col items-center gap-1 text-center w-full transition-all duration-300 relative pt-1", 
-                  (item.href === '/' ? isHomeActive : isActive) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 )}>
                   <item.icon className="h-6 w-6" />
-                  <span className={cn("text-xs transition-all", (item.href === '/' ? isHomeActive : isActive) ? 'font-bold' : 'font-medium')}>
+                  <span className={cn("text-xs transition-all", isActive ? 'font-bold' : 'font-medium')}>
                     {item.label}
                   </span>
                 </div>

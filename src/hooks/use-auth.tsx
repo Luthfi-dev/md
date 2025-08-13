@@ -22,7 +22,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (email: string, password: string) => Promise<{success: boolean, message: string, user?: User}>;
     register: (data: any) => Promise<{success: boolean, message: string}>;
-    logout: () => Promise<void>;
+    logout: (options?: { redirect?: boolean, route?: string }) => Promise<void>;
     fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
     updateUser: (newUser: Partial<User>) => void;
     setAccessToken: (token: string | null) => void;
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    const logout = useCallback(async (redirect = true) => {
+    const logout = useCallback(async (options: { redirect?: boolean, route?: string } = { redirect: true, route: '/login' }) => {
         setIsLoading(true);
         setAccessToken(null);
         try {
@@ -85,8 +85,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Logout fetch failed:", error);
         } finally {
             setIsLoading(false);
-            if (redirect) {
-                window.location.href = '/login'; // Use window.location to force a full refresh and ensure middleware runs
+            if (options.redirect) {
+                window.location.href = options.route || '/login';
+            } else {
+                // If not redirecting, still ensure client state is fully cleared
+                setUser(null);
+                setIsAuthenticated(false);
             }
         }
     }, [setAccessToken]);
@@ -110,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Refresh token invalid');
         } catch (error) {
             console.error('Silent refresh failed:', error);
-            await logout(false);
+            await logout({ redirect: false });
             return null;
         }
     }, [logout, setAccessToken]);
@@ -141,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            await logout(true);
+            await logout({ redirect: true }); // Default redirect to /login
             throw new Error('Not authenticated');
         }
 
@@ -154,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await fetch(url, { ...options, headers });
 
         if (response.status === 401) {
-             await logout(true);
+             await logout({ redirect: true });
         }
 
         return response;

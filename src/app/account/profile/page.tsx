@@ -28,8 +28,8 @@ export default function ProfilePage() {
     const router = useRouter();
     const { user, logout, isAuthenticated, isLoading } = useAuth();
 
-    // Middleware menangani perlindungan rute ini.
-    // Efek ini adalah pengaman tambahan untuk navigasi sisi klien.
+    // Middleware menangani sebagian besar perlindungan rute.
+    // Efek ini adalah pengaman tambahan untuk navigasi sisi klien jika diperlukan.
     useEffect(() => {
         if (isAuthenticated === false) {
             router.push('/login');
@@ -40,15 +40,16 @@ export default function ProfilePage() {
         return <LoadingOverlay isLoading={true} message="Memuat profil Anda..." />;
     }
     
-    // Tidak perlu lagi render LoadingOverlay jika !isAuthenticated, karena middleware sudah mengarahkan.
-    // Cukup kembalikan null agar tidak terjadi render singkat konten yang tidak seharusnya.
+    // Jika middleware karena suatu alasan gagal dan komponen ini dirender,
+    // kembalikan null agar tidak terjadi render singkat konten yang tidak seharusnya.
     if (!isAuthenticated) {
         return null;
     }
 
     const handleLogout = async () => {
         await logout();
-        router.push('/'); // Arahkan ke halaman utama setelah logout
+        // Arahkan ke halaman utama setelah logout, middleware akan menghalangi akses jika diperlukan.
+        router.push('/');
     };
     
     const getInitials = (name: string) => {

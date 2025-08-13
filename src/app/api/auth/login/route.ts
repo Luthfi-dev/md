@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       user: userForToken
     }, { status: 200 });
 
-    setTokenCookie(response, refreshToken);
+    setTokenCookie(response, userForToken.role, refreshToken);
 
     return response;
 

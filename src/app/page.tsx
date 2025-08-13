@@ -16,6 +16,7 @@ export default function Page() {
   }
 
   // Once auth status is known, render the main content.
-  // The middleware is now the single source of truth for protecting routes.
+  // The middleware is the single source of truth for protecting routes and redirecting.
+  // This page no longer needs to handle any redirection logic.
   return <HomePageContent />;
 }

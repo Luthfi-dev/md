@@ -39,11 +39,6 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
 
   // Middleware now handles redirecting logged-in users away from this page
-  useEffect(() => {
-    if (isAuthenticated) {
-        router.replace('/');
-    }
-  }, [isAuthenticated, router]);
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -87,7 +82,7 @@ export default function LoginPage() {
     }
   };
   
-  if (isAuthenticated === undefined || isAuthenticated === true) {
+  if (isAuthenticated === undefined) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
 

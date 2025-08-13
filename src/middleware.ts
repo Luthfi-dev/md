@@ -15,8 +15,6 @@ const publicPaths = [
     '/unit-converter',
     '/scanner',
     '/surat',
-    '/surat/share-fallback',
-    '/surat/shared-template',
 ];
 
 const authPaths = [
@@ -31,8 +29,6 @@ const authPaths = [
     '/wallet'
 ];
 
-const adminPaths = ['/admin'];
-const superAdminPaths = ['/superadmin'];
 const userLoginPath = '/login';
 const adminLoginPath = '/admin/login';
 const superAdminLoginPath = '/superadmin/login';
@@ -41,60 +37,80 @@ const isPathMatch = (pathname: string, paths: string[]) => {
     return paths.some(path => pathname.startsWith(path));
 }
 
-const getRoleFromToken = (req: NextRequest, role: number): UserForToken | null => {
+const getTokenPayload = (req: NextRequest, role: number): UserForToken | null => {
     const tokenName = getRefreshTokenName(role);
     const token = req.cookies.get(tokenName)?.value;
     if (!token) return null;
     try {
         return jwtDecode(token);
     } catch {
+        // Clear invalid token
+        const res = NextResponse.next();
+        res.cookies.delete(tokenName);
         return null;
     }
 }
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
-
-    // Allow all public paths
-    if (isPathMatch(pathname, publicPaths)) {
+    
+    const superAdminToken = getTokenPayload(request, 1);
+    const adminToken = getTokenPayload(request, 2);
+    const userToken = getTokenPayload(request, 3);
+    
+    // --- Super Admin Area Protection ---
+    if (pathname.startsWith('/superadmin')) {
+        if (pathname.startsWith(superAdminLoginPath)) {
+            // If already logged in as superadmin, redirect to dashboard
+            if (superAdminToken) {
+                 return NextResponse.redirect(new URL('/superadmin', request.url));
+            }
+            return NextResponse.next();
+        }
+        // For any other /superadmin page, require a valid superadmin token
+        if (!superAdminToken) {
+            return NextResponse.redirect(new URL(superAdminLoginPath, request.url));
+        }
         return NextResponse.next();
     }
     
-    const userToken = getRoleFromToken(request, 3);
-    const adminToken = getRoleFromToken(request, 2);
-    const superAdminToken = getRoleFromToken(request, 1);
-
-    // --- Super Admin Area ---
-    if (isPathMatch(pathname, superAdminPaths)) {
-        if (!superAdminToken) return NextResponse.redirect(new URL(superAdminLoginPath, request.url));
-        if (superAdminToken.role !== 1) return NextResponse.redirect(new URL(superAdminLoginPath, request.url));
-        return NextResponse.next();
-    }
-
-    // --- Admin Area ---
-    if (isPathMatch(pathname, adminPaths)) {
-        if (!adminToken && !superAdminToken) return NextResponse.redirect(new URL(adminLoginPath, request.url));
-        if (adminToken?.role !== 2 && superAdminToken?.role !== 1) return NextResponse.redirect(new URL(adminLoginPath, request.url));
+    // --- Admin Area Protection ---
+    if (pathname.startsWith('/admin')) {
+         if (pathname.startsWith(adminLoginPath)) {
+            // If already logged in as admin or superadmin, redirect to dashboard
+            if (adminToken || superAdminToken) {
+                 return NextResponse.redirect(new URL('/admin', request.url));
+            }
+            return NextResponse.next();
+        }
+        // For any other /admin page, require a valid admin or superadmin token
+        if (!adminToken && !superAdminToken) {
+             return NextResponse.redirect(new URL(adminLoginPath, request.url));
+        }
         return NextResponse.next();
     }
     
-    // --- User Auth Area ---
+    // --- User Login Page Protection ---
+    if (pathname.startsWith(userLoginPath)) {
+        // If any user is already logged in, redirect them away from the login page
+        if (userToken || adminToken || superAdminToken) {
+            return NextResponse.redirect(new URL('/', request.url));
+        }
+        return NextResponse.next();
+    }
+
+    // --- General Authenticated User Area Protection ---
     if (isPathMatch(pathname, authPaths)) {
-         if (!userToken) return NextResponse.redirect(new URL(userLoginPath, request.url));
-         return NextResponse.next();
+        if (!userToken) {
+            // Append redirect URL so user can be sent back after login
+            const url = new URL(userLoginPath, request.url);
+            url.searchParams.set('redirect', pathname);
+            return NextResponse.redirect(url);
+        }
+        return NextResponse.next();
     }
-
-    // --- Login Pages ---
-    if (pathname === userLoginPath && userToken) {
-        return NextResponse.redirect(new URL('/account/profile', request.url));
-    }
-    if (pathname === adminLoginPath && (adminToken || superAdminToken)) {
-        return NextResponse.redirect(new URL('/admin', request.url));
-    }
-    if (pathname === superAdminLoginPath && superAdminToken) {
-        return NextResponse.redirect(new URL('/superadmin', request.url));
-    }
-
+    
+    // For all other paths, including public ones, allow access.
     return NextResponse.next();
 }
 

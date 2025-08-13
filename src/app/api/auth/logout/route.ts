@@ -1,18 +1,14 @@
 
-import { NextResponse } from 'next/server';
-import { serialize } from 'cookie';
+import { NextResponse, type NextRequest } from 'next/server';
+import { clearTokenCookie } from '@/lib/jwt';
 
-export async function POST() {
-  // Clear the refresh token cookie
-  const cookie = serialize('refreshToken', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-    expires: new Date(0), // Set expiry date to the past
-  });
-
+export async function POST(request: NextRequest) {
   const response = NextResponse.json({ success: true, message: 'Logout berhasil' });
-  response.headers.set('Set-Cookie', cookie);
+  
+  // Clear all possible tokens for a full logout, ensuring no session residue.
+  clearTokenCookie(response, 1); // Super Admin
+  clearTokenCookie(response, 2); // Admin
+  clearTokenCookie(response, 3); // User
+
   return response;
 }

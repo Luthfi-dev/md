@@ -82,17 +82,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const currentRole = user?.role;
         setAccessToken(null); // Clear client-side state
         try {
-            // Tell server which tokens to clear
             await fetch('/api/auth/logout', { 
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ role: currentRole })
+              body: JSON.stringify({ role: currentRole }) // Send role to clear specific tokens
             });
         } catch (error) {
             console.error("Logout fetch failed:", error);
         } finally {
             setIsLoading(false);
-            window.location.href = '/login'; // Force a full page refresh to clear all state
+            window.location.href = '/login'; // Force a full page refresh to clear all state and redirect
         }
     }, [user, setAccessToken]);
 
@@ -108,9 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             throw new Error('Refresh token invalid');
         } catch (error) {
-            console.error('Silent refresh failed:', error);
-            setIsAuthenticated(false);
-            setUser(null);
+            console.warn('Silent refresh failed:', error);
+            setAccessToken(null);
             return null;
         }
     }, [setAccessToken]);
@@ -121,12 +119,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const token = getAccessTokenClient();
             if (token && !isTokenExpired(token)) {
                 setAccessToken(token);
+                setIsAuthenticated(true);
             } else {
                  const hasAnyRefreshToken = getCookie(getRefreshTokenName(1)) || getCookie(getRefreshTokenName(2)) || getCookie(getRefreshTokenName(3));
                  if(hasAnyRefreshToken) {
                     await silentRefresh();
                  } else {
                     setIsAuthenticated(false);
+                    setUser(null);
                  }
             }
         };

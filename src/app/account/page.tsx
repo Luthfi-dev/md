@@ -31,24 +31,20 @@ const getBrowserFingerprint = () => {
 
 export default function AccountPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const { isLoading, login, register, isAuthenticated, user } = useAuth();
+  const { isLoading, login, register, isAuthenticated } = useAuth();
   const [loadingMessage, setLoadingMessage] = useState('');
   const { toast } = useToast();
   const router = useRouter();
 
-  // This effect will handle redirection based on role AFTER a successful login action.
-  // The middleware handles protecting routes and redirecting already-logged-in users.
+  // Redirect already logged in users away from this page.
+  // This is now handled by the middleware.
+  // We keep a simple check here as a fallback for client-side navigation.
   useEffect(() => {
-    if (isAuthenticated && user) {
-        if(user.role === 1) {
-            router.replace('/superadmin');
-        } else if (user.role === 2) {
-            router.replace('/admin');
-        } else {
-            router.replace('/'); 
-        }
+    if (isAuthenticated) {
+      router.replace('/');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, router]);
+
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -64,10 +60,13 @@ export default function AccountPage() {
     try {
         if (isLogin) {
             const result = await login(email, password);
-            if (!result.success) {
+            if (result.success) {
+                // On successful login, always redirect to the homepage.
+                // The middleware will handle authorization for protected routes.
+                router.push('/');
+            } else {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
-            // The useEffect will handle redirection on successful login.
         } else {
             const fingerprint = getBrowserFingerprint();
             const guestData = localStorage.getItem('guestRewardState_v3');
@@ -75,7 +74,10 @@ export default function AccountPage() {
 
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
-                await login(email, password);
+                const loginResult = await login(email, password);
+                if (loginResult.success) {
+                    router.push('/');
+                }
             } else {
                  toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
@@ -91,14 +93,10 @@ export default function AccountPage() {
     }
   };
   
-  // This page should only be visible if the user is NOT authenticated.
-  // The middleware will redirect authenticated users away before this component mounts.
-  // We can show a loader while the initial auth status is being determined.
-  if (isAuthenticated === undefined) {
+  if (isAuthenticated === undefined || isAuthenticated === true) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
 
-  // Render the form only if not authenticated.
   return (
     <>
       <LoadingOverlay isLoading={isLoading} message={loadingMessage} />

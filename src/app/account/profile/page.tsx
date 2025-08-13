@@ -28,8 +28,9 @@ export default function ProfilePage() {
     const router = useRouter();
     const { user, logout, isAuthenticated, isLoading } = useAuth();
 
+    // The middleware handles protecting this route.
+    // This effect is a fallback for client-side navigation.
     useEffect(() => {
-        // Redirect if auth check is complete and user is not authenticated
         if (isAuthenticated === false) {
             router.push('/account');
         }
@@ -39,7 +40,6 @@ export default function ProfilePage() {
         return <LoadingOverlay isLoading={true} message="Memuat profil Anda..." />;
     }
     
-    // While redirecting, it's good practice to render null or a loader
     if (!isAuthenticated) {
         return <LoadingOverlay isLoading={true} message="Mengarahkan..." />;
     }

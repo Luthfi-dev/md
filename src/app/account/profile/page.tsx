@@ -32,7 +32,7 @@ export default function ProfilePage() {
     // This effect is a fallback for client-side navigation.
     useEffect(() => {
         if (isAuthenticated === false) {
-            router.push('/account');
+            router.push('/login');
         }
     }, [isAuthenticated, router]);
 

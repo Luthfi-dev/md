@@ -23,9 +23,9 @@ const BottomNavBar = () => {
   
   const getHref = (href: string) => {
     // If user is not authenticated and clicks the "Akun" tab,
-    // they should be directed to the page that handles login, which is /account.
+    // they should be directed to the page that handles login, which is /login.
     if (href === '/account/profile' && !isAuthenticated) {
-        return '/account';
+        return '/login';
     }
     return href;
   }

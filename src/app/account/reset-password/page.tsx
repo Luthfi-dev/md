@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
           title: 'Berhasil!',
           description: 'Kata sandi Anda telah berhasil diatur ulang. Silakan login.',
         });
-        router.push('/account');
+        router.push('/login');
       } else {
         toast({ variant: 'destructive', title: 'Gagal', description: result.message || 'Token tidak valid atau telah kedaluwarsa.' });
       }

@@ -9,11 +9,8 @@ import { useAuth } from '@/hooks/use-auth';
 
 export function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
   
-  // Conditionally show the nav bar.
-  // Hide it on the login page itself or if the user is not authenticated and on an account page.
-  const isLoginPage = pathname === '/account' && !isAuthenticated;
+  const isLoginPage = pathname === '/login';
   const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/superadmin');
 
   const showBottomNav = !isLoginPage && !isAdminRoute;

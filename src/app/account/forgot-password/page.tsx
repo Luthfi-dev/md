@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
         </Card>
         <div className="mt-4 text-center">
             <Button variant="ghost" asChild>
-                <Link href="/account">
+                <Link href="/login">
                     <ArrowLeft className="mr-2"/> Kembali ke Halaman Login
                 </Link>
             </Button>

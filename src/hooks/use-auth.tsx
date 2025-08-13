@@ -86,8 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } finally {
             setIsLoading(false);
             if (redirect) {
-                // Using replace to prevent user from going back to the logged-in page
-                router.replace('/account');
+                router.replace('/login');
             }
         }
     }, [setAccessToken, router]);
@@ -111,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Refresh token invalid');
         } catch (error) {
             console.error('Silent refresh failed:', error);
-            await logout(false); // Don't redirect on silent failure, middleware will handle it
+            await logout(false);
             return null;
         }
     }, [logout, setAccessToken]);
@@ -123,11 +122,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (token && !isTokenExpired(token)) {
                 setAccessToken(token);
             } else {
-                // If there's a refresh token, try to get a new access token
                 if (getCookie('refreshToken')) {
                     await silentRefresh();
                 } else {
-                    // No access token and no refresh token
                     setIsAuthenticated(false);
                 }
             }
@@ -144,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            await logout(true); // Full logout with redirect if fetch is attempted without auth
+            await logout(true);
             throw new Error('Not authenticated');
         }
 

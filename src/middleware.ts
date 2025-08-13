@@ -54,33 +54,38 @@ export function middleware(request: NextRequest) {
     }
 
     if (refreshToken) {
+        let decoded: UserForToken;
         try {
-            const decoded = jwtDecode(refreshToken) as UserForToken;
-            const userRole = decoded.role;
-
-            // If user is authenticated and tries to access login page, redirect to home
-            if (pathname === '/account' || pathname === '/login') {
-                return NextResponse.redirect(new URL('/', request.url));
-            }
-
-            // Check authorization for superadmin routes
-            if (isPathPrefixOf(pathname, superAdminPaths) && userRole !== 1) {
-                // If not a superadmin, redirect to home
-                return NextResponse.redirect(new URL('/', request.url));
-            }
-
-            // Check authorization for admin routes
-            if (isPathPrefixOf(pathname, adminPaths) && userRole !== 1 && userRole !== 2) {
-                // If not an admin or superadmin, redirect to home
-                return NextResponse.redirect(new URL('/', request.url));
-            }
-
+            decoded = jwtDecode(refreshToken) as UserForToken;
         } catch (err) {
             // Invalid or expired token
             const response = NextResponse.redirect(new URL('/account', request.url));
             response.cookies.delete('refreshToken'); // Clear the bad cookie
             return response;
         }
+        
+        const userRole = decoded.role;
+
+        // If user is authenticated and tries to access login page, redirect them.
+        if (pathname === '/account' || pathname === '/login') {
+            // For admins/superadmins, redirect to their dashboard. For users, redirect to profile.
+            if(userRole === 1) return NextResponse.redirect(new URL('/superadmin', request.url));
+            if(userRole === 2) return NextResponse.redirect(new URL('/admin', request.url));
+            return NextResponse.redirect(new URL('/account/profile', request.url));
+        }
+
+        // Check authorization for superadmin routes
+        if (isPathPrefixOf(pathname, superAdminPaths) && userRole !== 1) {
+            // If not a superadmin, redirect to profile page.
+            return NextResponse.redirect(new URL('/account/profile', request.url));
+        }
+
+        // Check authorization for admin routes
+        if (isPathPrefixOf(pathname, adminPaths) && userRole !== 1 && userRole !== 2) {
+            // If not an admin or superadmin, redirect to profile page.
+            return NextResponse.redirect(new URL('/account/profile', request.url));
+        }
+
     } else {
         // User is not authenticated
         const isProtectedRoute = isPathPrefixOf(pathname, protectedPaths) || isPathPrefixOf(pathname, adminPaths) || isPathPrefixOf(pathname, superAdminPaths);

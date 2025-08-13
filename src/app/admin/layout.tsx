@@ -4,7 +4,8 @@
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from '@/components/ui/sidebar';
 import { LayoutDashboard, Settings, Bot, LogOut, AppWindow, ChevronsLeftRight, Gem, FolderGit2 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
 
 function AdminLayoutContent({
   children,
@@ -13,11 +14,18 @@ function AdminLayoutContent({
 }>) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const { logout } = useAuth();
+  const router = useRouter();
 
   const handleLinkClick = () => {
     setOpenMobile(false);
   };
   
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  }
+
   return (
     <>
       <Sidebar>
@@ -96,11 +104,9 @@ function AdminLayoutContent({
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href="/" onClick={handleLinkClick}>
-                  <LogOut />
-                  Exit Admin
-                </Link>
+              <SidebarMenuButton onClick={handleLogout}>
+                <LogOut />
+                Keluar
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

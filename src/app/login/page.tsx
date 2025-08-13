@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Lock, Mail, User } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,7 +32,7 @@ const getBrowserFingerprint = () => {
 
 export default function LoginPage() {
   const [isLoginView, setIsLoginView] = useState(true);
-  const { isLoading, login, register, isAuthenticated } = useAuth();
+  const { isLoading, login, register } = useAuth();
   const [loadingMessage, setLoadingMessage] = useState('');
   const { toast } = useToast();
   const router = useRouter();
@@ -82,10 +82,6 @@ export default function LoginPage() {
     }
   };
   
-  if (isAuthenticated === undefined) {
-     return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
-  }
-
   return (
     <>
       <LoadingOverlay isLoading={isLoading} message={loadingMessage} />
@@ -102,7 +98,7 @@ export default function LoginPage() {
             </div>
 
             <div className="bg-card p-8 rounded-2xl shadow-xl">
-              <form onSubmit={handleFormSubmit} className="space-y-6">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 {!isLoginView && (
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -118,8 +114,8 @@ export default function LoginPage() {
                   <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
                 </div>
                  {isLoginView && (
-                    <div className="text-right">
-                        <Button variant="link" size="sm" asChild>
+                    <div className="text-right -mt-2 -mb-2">
+                        <Button variant="link" size="sm" asChild className="p-0 h-auto">
                             <Link href="/account/forgot-password">Lupa kata sandi?</Link>
                         </Button>
                     </div>
@@ -131,7 +127,7 @@ export default function LoginPage() {
                   </div>
                 )}
                 
-                <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-lg font-bold group" disabled={isLoading}>
+                <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-lg font-bold group !mt-6" disabled={isLoading}>
                   {isLoginView ? "Masuk" : "Daftar"}
                   <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Button>

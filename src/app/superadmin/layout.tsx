@@ -4,7 +4,9 @@
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { LayoutDashboard, Settings, LogOut, KeyRound, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+
 
 function SuperAdminLayoutContent({
   children,
@@ -13,11 +15,19 @@ function SuperAdminLayoutContent({
 }>) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const { logout } = useAuth();
+  const router = useRouter();
+
 
   const handleLinkClick = () => {
     setOpenMobile(false);
   };
   
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  }
+
   return (
     <>
       <Sidebar>
@@ -48,11 +58,9 @@ function SuperAdminLayoutContent({
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href="/" onClick={handleLinkClick}>
-                  <LogOut />
-                  Exit Super Admin
-                </Link>
+              <SidebarMenuButton onClick={handleLogout}>
+                <LogOut />
+                Keluar
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

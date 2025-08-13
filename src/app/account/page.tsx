@@ -2,8 +2,9 @@
 'use client';
 import ProfilePage from "./profile/page";
 
-// The base /account route now directly renders the profile page
-// for a seamless user experience. The middleware protects this route.
+// Arahkan /account langsung ke halaman profil.
+// Middleware akan menangani perlindungan rute ini dan mengarahkan pengguna yang belum login
+// ke halaman /login.
 export default function AccountPage() {
     return <ProfilePage />;
 }

@@ -35,7 +35,7 @@ const BottomNavBar = () => {
       <div className="flex justify-around items-center h-full max-w-lg mx-auto">
         {navItems.map((item) => {
           const href = getHref(item.href);
-          const isActive = (pathname === href) || (href !== '/' && pathname.startsWith(href));
+          const isActive = (pathname === href) || (href !== '/' && pathname.startsWith(href) && href !== '/account/profile') || (href === '/account/profile' && pathname.startsWith('/account'));
           
           if (item.isCenter) {
             return (

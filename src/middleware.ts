@@ -6,7 +6,6 @@ import type { UserForToken } from '@/lib/jwt';
 // Define public paths that are accessible without authentication
 const publicPaths = [
     '/login',
-    '/account',
     '/account/forgot-password',
     '/account/reset-password',
     '/explore',
@@ -68,10 +67,12 @@ export function middleware(request: NextRequest) {
 
         // If user is authenticated and tries to access login page, redirect them.
         if (pathname === '/account' || pathname === '/login') {
-            // For admins/superadmins, redirect to their dashboard. For users, redirect to profile.
             if(userRole === 1) return NextResponse.redirect(new URL('/superadmin', request.url));
             if(userRole === 2) return NextResponse.redirect(new URL('/admin', request.url));
-            return NextResponse.redirect(new URL('/account/profile', request.url));
+            // For regular users, redirect to their profile page.
+            if(userRole === 3) return NextResponse.redirect(new URL('/account/profile', request.url));
+            // Fallback for any other case
+            return NextResponse.redirect(new URL('/', request.url));
         }
 
         // Check authorization for superadmin routes

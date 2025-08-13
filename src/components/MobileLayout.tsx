@@ -13,7 +13,10 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
   
   // Conditionally show the nav bar.
   // Hide it on the login page itself or if the user is not authenticated and on an account page.
-  const showBottomNav = !(pathname === '/account' || (pathname.startsWith('/account') && !isAuthenticated));
+  const isLoginPage = pathname === '/account' && !isAuthenticated;
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/superadmin');
+
+  const showBottomNav = !isLoginPage && !isAdminRoute;
   
   return (
     <div className="flex flex-col flex-1 min-h-screen">

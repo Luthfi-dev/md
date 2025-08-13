@@ -1,97 +1,21 @@
 
 'use client';
 
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
+import { usePathname } from 'next/navigation';
+import { SuperAdminLayoutContent } from '@/components/superadmin/SuperAdminLayoutContent';
 
-
-function SuperAdminLayoutContent({
+export default function SpaLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const { setOpenMobile } = useSidebar();
-  const { logout } = useAuth();
-  const router = useRouter();
 
-
-  const handleLinkClick = () => {
-    setOpenMobile(false);
-  };
-  
-  const handleLogout = async () => {
-    await logout();
-    router.push('/');
+  // If it's the login page, don't wrap it with the main super admin layout
+  if (pathname === '/spa/login') {
+    return <>{children}</>;
   }
 
-  return (
-    <>
-      <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-destructive text-destructive-foreground flex items-center justify-center font-bold">
-              SA
-            </div>
-            <p className="font-semibold text-lg">Super Admin</p>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/spa'}>
-                <Link href="/spa" onClick={handleLinkClick}>
-                  <LayoutDashboard />
-                  Dashboard
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/spa/settings')}>
-                <Link href="/spa/settings" onClick={handleLinkClick}>
-                  <Settings />
-                  Kelola API & SMTP
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarHeader className='border-t'>
-           <SidebarMenu>
-             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogout}>
-                <LogOut />
-                Keluar
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex items-center justify-between p-4 border-b bg-card md:bg-transparent">
-           <SidebarTrigger className="md:hidden" />
-           <h1 className="text-xl font-semibold">Super Admin Dashboard</h1>
-        </header>
-        <main className="p-4 bg-secondary/40 flex-1">
-          {children}
-        </main>
-      </SidebarInset>
-    </>
-  )
-}
-
-
-export default function SuperAdminLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <SidebarProvider>
-      <SuperAdminLayoutContent>{children}</SuperAdminLayoutContent>
-    </SidebarProvider>
-  );
+  // Otherwise, wrap with the sidebar and header
+  return <SuperAdminLayoutContent>{children}</SuperAdminLayoutContent>;
 }

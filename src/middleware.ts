@@ -8,21 +8,22 @@ import { getRefreshTokenName } from '@/lib/jwt';
 const publicPaths = [
     '/', '/explore', '/pricing', '/converter', '/calculator', 
     '/color-generator', '/stopwatch', '/unit-converter', '/scanner', 
-    '/surat', '/surat/share', '/surat/shared-template', '/surat/share-fallback'
-];
-
-const authPaths = [
-    '/account/profile', '/account/edit-profile', '/account/security', 
-    '/account/notifications', '/account/settings', '/account/invite', 
-    '/messages', '/notebook', '/wallet'
+    '/surat', '/surat/share', '/surat/shared-template', '/surat/share-fallback', '/surat-generator',
+    '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf'
 ];
 
 const userLoginPath = '/login';
-const adminLoginPath = '/adm/login';
-const superAdminLoginPath = '/spa/login';
+const authPaths = [
+    '/account', '/account/profile', '/account/edit-profile', '/account/security', 
+    '/account/notifications', '/account/settings', '/account/invite', 
+    '/messages', '/notebook', '/wallet', '/notebook/groups',
+];
 
-const isAdminPath = (pathname: string) => pathname.startsWith('/adm');
-const isSuperAdminPath = (pathname: string) => pathname.startsWith('/spa');
+const admLoginPath = '/adm/login';
+const isAdmPath = (pathname: string) => pathname.startsWith('/adm');
+
+const spaLoginPath = '/spa/login';
+const isSpaPath = (pathname: string) => pathname.startsWith('/spa');
 
 const getTokenPayload = (req: NextRequest, role: number): UserForToken | null => {
     const tokenName = getRefreshTokenName(role);
@@ -30,7 +31,6 @@ const getTokenPayload = (req: NextRequest, role: number): UserForToken | null =>
     if (!token) return null;
     try {
         const decoded: UserForToken = jwtDecode(token);
-        // Simple validation of expiry
         if (decoded.exp && Date.now() >= decoded.exp * 1000) {
             return null;
         }
@@ -46,35 +46,39 @@ export function middleware(request: NextRequest) {
     const superAdminToken = getTokenPayload(request, 1);
     const adminToken = getTokenPayload(request, 2);
     const userToken = getTokenPayload(request, 3);
-    const hasAnyValidToken = superAdminToken || adminToken || userToken;
-
+    
     // --- Super Admin Area Protection ---
-    if (isSuperAdminPath(pathname)) {
-        // If trying to access login page with a valid super admin token, redirect to dashboard
-        if (pathname === superAdminLoginPath && superAdminToken) {
-            return NextResponse.redirect(new URL('/spa', request.url));
+    if (isSpaPath(pathname)) {
+        if (!superAdminToken && pathname !== spaLoginPath) {
+            const url = new URL(spaLoginPath, request.url);
+            // Don't add lock=0 automatically
+            return NextResponse.redirect(url);
         }
-        // If trying to access any other super admin page without a valid token, redirect to login
-        if (!superAdminToken && pathname !== superAdminLoginPath) {
-            return NextResponse.redirect(new URL(superAdminLoginPath, request.url));
+        if (superAdminToken && pathname === spaLoginPath) {
+            return NextResponse.redirect(new URL('/spa', request.url));
         }
         return NextResponse.next();
     }
 
     // --- Admin Area Protection ---
-    if (isAdminPath(pathname)) {
+    if (isAdmPath(pathname)) {
         const hasAdminAccess = adminToken || superAdminToken;
-        if (pathname === adminLoginPath && hasAdminAccess) {
-            return NextResponse.redirect(new URL('/adm', request.url));
+        if (!hasAdminAccess && pathname !== admLoginPath) {
+             const url = new URL(admLoginPath, request.url);
+             // Don't add lock=0 automatically
+            return NextResponse.redirect(url);
         }
-        if (!hasAdminAccess && pathname !== adminLoginPath) {
-            return NextResponse.redirect(new URL(adminLoginPath, request.url));
+        if (hasAdminAccess && pathname === admLoginPath) {
+            return NextResponse.redirect(new URL('/adm', request.url));
         }
         return NextResponse.next();
     }
     
     // --- Public & User Area Logic ---
-
+    if (publicPaths.some(p => pathname === p || (p !== '/' && pathname.startsWith(p+'/')))) {
+        return NextResponse.next();
+    }
+    
     // Redirect logged-in users away from the main login page
     if (pathname === userLoginPath && userToken) {
         return NextResponse.redirect(new URL('/', request.url));

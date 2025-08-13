@@ -103,6 +103,10 @@ function AdminLayoutContent({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarHeader className='border-t'>
+           <SidebarMenu>
              <SidebarMenuItem>
               <SidebarMenuButton onClick={handleLogout}>
                 <LogOut />
@@ -110,7 +114,7 @@ function AdminLayoutContent({
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-        </SidebarContent>
+        </SidebarHeader>
       </Sidebar>
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b bg-card md:bg-transparent">

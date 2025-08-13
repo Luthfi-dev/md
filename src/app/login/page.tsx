@@ -114,7 +114,7 @@ export default function LoginPage() {
                   <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
                 </div>
                  {isLoginView && (
-                    <div className="text-right -mt-2 -mb-2">
+                    <div className="text-right -mt-2">
                         <Button variant="link" size="sm" asChild className="p-0 h-auto">
                             <Link href="/account/forgot-password">Lupa kata sandi?</Link>
                         </Button>
@@ -134,7 +134,7 @@ export default function LoginPage() {
               </form>
             </div>
 
-            <div className="text-center mt-8">
+            <div className="text-center mt-6">
               <p className="text-muted-foreground">
                 {isLoginView ? "Belum punya akun?" : "Sudah punya akun?"}{' '}
                 <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-primary hover:underline" disabled={isLoading}>

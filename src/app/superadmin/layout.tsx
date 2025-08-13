@@ -2,7 +2,7 @@
 'use client';
 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, KeyRound, Mail } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -57,6 +57,10 @@ function SuperAdminLayoutContent({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarHeader className='border-t'>
+           <SidebarMenu>
              <SidebarMenuItem>
               <SidebarMenuButton onClick={handleLogout}>
                 <LogOut />
@@ -64,7 +68,7 @@ function SuperAdminLayoutContent({
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-        </SidebarContent>
+        </SidebarHeader>
       </Sidebar>
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b bg-card md:bg-transparent">

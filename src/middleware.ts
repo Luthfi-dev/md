@@ -37,10 +37,8 @@ const superAdminPaths = ['/superadmin'];
 
 const isPathMatch = (path: string, patterns: string[]): boolean => {
     return patterns.some(pattern => {
-        if (pattern.endsWith('/')) {
-            return path.startsWith(pattern);
-        }
-        return path === pattern;
+        // Handle exact matches and directory matches (e.g., /account/)
+        return path === pattern || path.startsWith(`${pattern}/`);
     });
 };
 
@@ -53,12 +51,13 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
     
-    // Handle authenticated users
+    // --- Step 1: Handle Authenticated Users ---
     if (refreshToken) {
         let decoded: UserForToken;
         try {
             decoded = jwtDecode(refreshToken);
         } catch (err) {
+            // Invalid refresh token, clear it and redirect to login
             const response = NextResponse.redirect(new URL('/login', request.url));
             response.cookies.delete('refreshToken');
             return response;
@@ -66,23 +65,24 @@ export function middleware(request: NextRequest) {
 
         const userRole = decoded.role;
 
-        // If a logged-in user tries to access the login page, redirect them to the home page.
-        // This is a key step in preventing redirect loops.
+        // **Key change: Redirect authenticated users away from login page**
         if (pathname === '/login') {
             return NextResponse.redirect(new URL('/', request.url));
         }
 
         // --- Role-based access control for admin pages ---
         if (isPathMatch(pathname, superAdminPaths) && userRole !== 1) {
-            return NextResponse.redirect(new URL('/', request.url)); // Redirect non-superadmins away
+            // Redirect non-superadmins away from superadmin pages
+            return NextResponse.redirect(new URL('/', request.url)); 
         }
 
         if (isPathMatch(pathname, adminPaths) && userRole !== 1 && userRole !== 2) {
-            return NextResponse.redirect(new URL('/', request.url)); // Redirect non-admins away
+            // Redirect non-admins away from admin pages
+            return NextResponse.redirect(new URL('/', request.url));
         }
         
     } else {
-        // --- Handle unauthenticated users ---
+        // --- Step 2: Handle Unauthenticated Users ---
         
         // Combine all protected path patterns for the check
         const allProtectedPaths = [...protectedPaths, ...adminPaths, ...superAdminPaths];

@@ -3,9 +3,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { jwtDecode } from 'jwt-decode';
 import type { UserForToken } from '@/lib/jwt';
 
+// Define public paths that are accessible without authentication
 const publicPaths = [
-    '/',
     '/login',
+    '/account',
     '/account/forgot-password',
     '/account/reset-password',
     '/explore',
@@ -20,57 +21,73 @@ const publicPaths = [
     '/surat/shared-template',
 ];
 
-const isPathPublic = (path: string): boolean => {
-    if (path.startsWith('/api/') || path.startsWith('/_next/') || path.startsWith('/images/') || path.startsWith('/sounds/') || path.endsWith('.png') || path.endsWith('.ico') || path.endsWith('.json')) {
-        return true;
+// Define protected paths that require authentication
+const protectedPaths = [
+    '/account/profile',
+    '/account/edit-profile',
+    '/account/security',
+    '/account/notifications',
+    '/account/settings',
+    '/account/invite',
+    '/messages',
+    '/notebook',
+    '/wallet'
+];
+
+const adminPaths = ['/admin'];
+const superAdminPaths = ['/superadmin'];
+
+const isPathPrefixOf = (path: string, prefixes: string[]): boolean => {
+    for (const prefix of prefixes) {
+        if (path.startsWith(prefix)) return true;
     }
-    if (path.startsWith('/surat/') && !path.startsWith('/surat-generator')) {
-      return true;
-    }
-    // Match exact path or sub-paths for public routes
-    return publicPaths.some(p => path === p || (p !== '/' && path.startsWith(p + '/')));
-}
+    return false;
+};
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
-    const isPublic = isPathPublic(pathname);
-
-    // If user is not logged in and trying to access a protected route
-    if (!refreshToken && !isPublic) {
-        return NextResponse.redirect(new URL('/account', request.url));
+    // Allow static files and API routes to pass through
+    if (pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.')) {
+        return NextResponse.next();
     }
 
-    // If user is logged in, perform role-based checks for admin routes
     if (refreshToken) {
         try {
             const decoded = jwtDecode(refreshToken) as UserForToken;
             const userRole = decoded.role;
 
-            // If user tries to access superadmin pages
-            if (pathname.startsWith('/superadmin') && userRole !== 1) {
-                return NextResponse.redirect(new URL('/account/profile', request.url));
+            // If user is authenticated and tries to access login page, redirect to home
+            if (pathname === '/account' || pathname === '/login') {
+                return NextResponse.redirect(new URL('/', request.url));
             }
 
-            // If user tries to access admin pages
-            if (pathname.startsWith('/admin') && userRole !== 1 && userRole !== 2) {
-                 return NextResponse.redirect(new URL('/account/profile', request.url));
+            // Check authorization for superadmin routes
+            if (isPathPrefixOf(pathname, superAdminPaths) && userRole !== 1) {
+                // If not a superadmin, redirect to home
+                return NextResponse.redirect(new URL('/', request.url));
             }
-            
-            // If an authenticated user tries to access the login page, redirect them to the home page.
-            if(pathname === '/account' || pathname === '/login') {
+
+            // Check authorization for admin routes
+            if (isPathPrefixOf(pathname, adminPaths) && userRole !== 1 && userRole !== 2) {
+                // If not an admin or superadmin, redirect to home
                 return NextResponse.redirect(new URL('/', request.url));
             }
 
         } catch (err) {
-            // Invalid token, clear it and redirect to login if accessing a protected route
-            const response = isPublic 
-                ? NextResponse.next() 
-                : NextResponse.redirect(new URL('/account', request.url));
-            
-            response.cookies.delete('refreshToken');
+            // Invalid or expired token
+            const response = NextResponse.redirect(new URL('/account', request.url));
+            response.cookies.delete('refreshToken'); // Clear the bad cookie
             return response;
+        }
+    } else {
+        // User is not authenticated
+        const isProtectedRoute = isPathPrefixOf(pathname, protectedPaths) || isPathPrefixOf(pathname, adminPaths) || isPathPrefixOf(pathname, superAdminPaths);
+
+        if (isProtectedRoute) {
+            // If trying to access a protected route without a token, redirect to login
+            return NextResponse.redirect(new URL('/account', request.url));
         }
     }
 
@@ -78,5 +95,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/((?!api|_next/static|_next/image|favicon.ico|sounds).*)',
+  matcher: '/((?!_next/static|_next/image|favicon.ico).*)',
 };

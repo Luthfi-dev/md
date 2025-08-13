@@ -36,15 +36,12 @@ export default function AccountPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // Redirect already logged in users away from this page.
-  // This is now handled by the middleware.
-  // We keep a simple check here as a fallback for client-side navigation.
+  // This effect is now handled by the middleware, but kept as a fallback for client-side navigation.
   useEffect(() => {
     if (isAuthenticated) {
       router.replace('/');
     }
   }, [isAuthenticated, router]);
-
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,8 +58,7 @@ export default function AccountPage() {
         if (isLogin) {
             const result = await login(email, password);
             if (result.success) {
-                // On successful login, always redirect to the homepage.
-                // The middleware will handle authorization for protected routes.
+                // ALWAYS redirect to home. Middleware and root page will handle role-based redirection.
                 router.push('/');
             } else {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });

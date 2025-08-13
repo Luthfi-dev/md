@@ -23,7 +23,7 @@ const publicPaths = [
 
 // Define protected paths that require authentication
 const protectedPaths = [
-    '/account', // Now the whole /account section is protected
+    '/account',
     '/messages',
     '/notebook',
     '/wallet'
@@ -53,6 +53,7 @@ export function middleware(request: NextRequest) {
         try {
             decoded = jwtDecode(refreshToken) as UserForToken;
         } catch (err) {
+            // Invalid refresh token, clear it and redirect to login
             const response = NextResponse.redirect(new URL('/login', request.url));
             response.cookies.delete('refreshToken');
             return response;
@@ -60,30 +61,32 @@ export function middleware(request: NextRequest) {
         
         const userRole = decoded.role;
 
-        // If user is authenticated and tries to access login page, redirect them.
+        // If user is authenticated and tries to access login page, redirect them away.
         if (pathname === '/login') {
              return NextResponse.redirect(new URL('/', request.url));
         }
 
         // Check authorization for superadmin routes
         if (isPathPrefixOf(pathname, superAdminPaths) && userRole !== 1) {
-            return NextResponse.redirect(new URL('/account/profile', request.url));
+            return NextResponse.redirect(new URL('/', request.url));
         }
 
         // Check authorization for admin routes
         if (isPathPrefixOf(pathname, adminPaths) && userRole !== 1 && userRole !== 2) {
-            return NextResponse.redirect(new URL('/account/profile', request.url));
+            return NextResponse.redirect(new URL('/', request.url));
         }
 
     } else {
         // User is not authenticated
         const isProtectedRoute = isPathPrefixOf(pathname, protectedPaths) || isPathPrefixOf(pathname, adminPaths) || isPathPrefixOf(pathname, superAdminPaths);
 
+        // If trying to access a protected route without a token, redirect to login
         if (isProtectedRoute) {
             return NextResponse.redirect(new URL('/login', request.url));
         }
     }
 
+    // Allow the request to proceed if no other conditions were met
     return NextResponse.next();
 }
 

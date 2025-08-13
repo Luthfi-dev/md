@@ -59,7 +59,7 @@ export default function LoginPage() {
             const result = await login(email, password);
             if (result.success) {
                 // On successful login, ALWAYS redirect to the homepage.
-                // The homepage (or middleware) will handle role-based redirects.
+                // The middleware will handle role-based redirects.
                 router.push('/');
             } else {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });

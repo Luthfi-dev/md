@@ -86,10 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } finally {
             setIsLoading(false);
             if (redirect) {
-                router.replace('/login');
+                window.location.href = '/login'; // Use window.location to force a full refresh and ensure middleware runs
             }
         }
-    }, [setAccessToken, router]);
+    }, [setAccessToken]);
 
     const silentRefresh = useCallback(async () => {
         const refreshToken = getCookie('refreshToken');

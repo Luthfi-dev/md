@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
 export default function Page() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
 
   // Show a loading overlay while checking authentication.
   // The middleware now handles all redirection logic, so this page

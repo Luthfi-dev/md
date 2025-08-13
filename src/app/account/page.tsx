@@ -38,13 +38,14 @@ export default function AccountPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // If the hook confirms the user is authenticated, redirect them away from the login page.
     if (isAuthenticated && user) {
         if(user.role === 1) { // Superadmin
             router.push('/superadmin');
         } else if (user.role === 2) { // Admin
             router.push('/admin');
-        } else {
-            router.push('/'); // Default redirect for regular users
+        } else { // Regular User
+            router.push('/'); 
         }
     }
   }, [isAuthenticated, user, router]);
@@ -65,7 +66,7 @@ export default function AccountPage() {
             if (!result.success) {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
             }
-            // The useEffect will handle redirection
+            // The useEffect will handle redirection on successful login
         } else {
             const fingerprint = getBrowserFingerprint();
             const guestData = localStorage.getItem('guestRewardState_v3');
@@ -94,9 +95,8 @@ export default function AccountPage() {
     }
   };
   
-  // Render loading overlay while checking auth status to prevent login form flash
-  // OR if we are authenticated and waiting for the redirect useEffect to fire.
-  if (isAuthenticated === undefined || (isAuthenticated === true && user)) {
+  // While checking auth status OR if we are authenticated and waiting for redirect
+  if (isAuthenticated === undefined || (isAuthenticated && user)) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
 

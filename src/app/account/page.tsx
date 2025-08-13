@@ -29,7 +29,6 @@ const getBrowserFingerprint = () => {
   return hash.toString();
 };
 
-
 export default function AccountPage() {
   const [isLogin, setIsLogin] = useState(true);
   const { isLoading, login, register, isAuthenticated, user } = useAuth();
@@ -37,15 +36,15 @@ export default function AccountPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  // This effect will handle redirection based on role AFTER a successful login action.
+  // The middleware handles protecting routes and redirecting already-logged-in users.
   useEffect(() => {
-    // This effect handles redirecting the user if they are ALREADY authenticated
-    // and try to access the login page.
     if (isAuthenticated && user) {
-        if(user.role === 1) { // Superadmin
+        if(user.role === 1) {
             router.replace('/superadmin');
-        } else if (user.role === 2) { // Admin
+        } else if (user.role === 2) {
             router.replace('/admin');
-        } else { // Regular User
+        } else {
             router.replace('/'); 
         }
     }
@@ -76,7 +75,6 @@ export default function AccountPage() {
 
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
-                // Automatically log in after successful registration
                 await login(email, password);
             } else {
                  toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
@@ -93,12 +91,14 @@ export default function AccountPage() {
     }
   };
   
-  // While checking auth status OR if we are authenticated and waiting for redirect to kick in
-  if (isAuthenticated === undefined || isAuthenticated === true) {
+  // This page should only be visible if the user is NOT authenticated.
+  // The middleware will redirect authenticated users away before this component mounts.
+  // We can show a loader while the initial auth status is being determined.
+  if (isAuthenticated === undefined) {
      return <LoadingOverlay isLoading={true} message="Memeriksa sesi Anda..." />;
   }
 
-  // Only render the form if authentication check is complete and user is NOT authenticated.
+  // Render the form only if not authenticated.
   return (
     <>
       <LoadingOverlay isLoading={isLoading} message={loadingMessage} />

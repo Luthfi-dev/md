@@ -38,14 +38,14 @@ export default function AccountPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If the hook confirms the user is authenticated, redirect them away from the login page.
+    // If auth state is confirmed and user is authenticated, redirect them away from the login page.
     if (isAuthenticated && user) {
         if(user.role === 1) { // Superadmin
-            router.push('/superadmin');
+            router.replace('/superadmin');
         } else if (user.role === 2) { // Admin
-            router.push('/admin');
+            router.replace('/admin');
         } else { // Regular User
-            router.push('/'); 
+            router.replace('/'); 
         }
     }
   }, [isAuthenticated, user, router]);
@@ -75,11 +75,7 @@ export default function AccountPage() {
             if (result.success) {
                 toast({ title: 'Registrasi Berhasil!', description: result.message });
                 // Automatically log in after successful registration
-                const loginResult = await login(email, password);
-                 if (loginResult.success) {
-                    // Clear guest data only after successful login post-registration
-                    localStorage.removeItem('guestRewardState_v3');
-                }
+                await login(email, password);
             } else {
                  toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
             }

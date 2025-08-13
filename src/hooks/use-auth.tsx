@@ -86,7 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } finally {
             setIsLoading(false);
             if (redirect) {
-                router.push('/account');
+                // Using replace to prevent user from going back to the logged-in page
+                router.replace('/account');
             }
         }
     }, [setAccessToken, router]);
@@ -110,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Refresh token invalid');
         } catch (error) {
             console.error('Silent refresh failed:', error);
-            await logout(false); // Don't redirect on silent failure
+            await logout(false); // Don't redirect on silent failure, middleware will handle it
             return null;
         }
     }, [logout, setAccessToken]);
@@ -122,12 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (token && !isTokenExpired(token)) {
                 setAccessToken(token);
             } else {
-                await silentRefresh();
-            }
-            
-            // Final check after all attempts
-            if (!getAccessTokenClient()) {
-                setIsAuthenticated(false);
+                // If there's a refresh token, try to get a new access token
+                if (getCookie('refreshToken')) {
+                    await silentRefresh();
+                } else {
+                    // No access token and no refresh token
+                    setIsAuthenticated(false);
+                }
             }
         };
         initializeAuth();
@@ -142,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            await logout(); // Full logout with redirect if fetch is attempted without auth
+            await logout(true); // Full logout with redirect if fetch is attempted without auth
             throw new Error('Not authenticated');
         }
 
@@ -155,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await fetch(url, { ...options, headers });
 
         if (response.status === 401) {
-             await logout();
+             await logout(true);
         }
 
         return response;

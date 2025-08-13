@@ -3,6 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import { AdminLayoutContent } from '@/components/admin/AdminLayoutContent';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 export default function AdmLayout({
   children,
@@ -17,5 +18,9 @@ export default function AdmLayout({
   }
 
   // Otherwise, wrap with the sidebar and header
-  return <AdminLayoutContent>{children}</AdminLayoutContent>;
+  return (
+    <SidebarProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </SidebarProvider>
+  );
 }

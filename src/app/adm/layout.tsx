@@ -40,24 +40,24 @@ function AdminLayoutContent({
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/admin'}>
-                <Link href="/admin" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname === '/adm'}>
+                <Link href="/adm" onClick={handleLinkClick}>
                   <LayoutDashboard />
                   Dashboard
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/apps')}>
-                <Link href="/admin/apps" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/apps')}>
+                <Link href="/adm/apps" onClick={handleLinkClick}>
                   <AppWindow />
                   Kelola Aplikasi
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/assistant')}>
-                <Link href="/admin/assistant" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/assistant')}>
+                <Link href="/adm/assistant" onClick={handleLinkClick}>
                   <Bot />
                   Asisten AI
                 </Link>
@@ -69,8 +69,8 @@ function AdminLayoutContent({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/manager/referral')}>
-                        <Link href="/admin/manager/referral" onClick={handleLinkClick}>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/manager/referral')}>
+                        <Link href="/adm/manager/referral" onClick={handleLinkClick}>
                           Referral
                         </Link>
                       </SidebarMenuButton>
@@ -80,24 +80,24 @@ function AdminLayoutContent({
              </SidebarGroup>
 
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/pricing')}>
-                <Link href="/admin/pricing" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/pricing')}>
+                <Link href="/adm/pricing" onClick={handleLinkClick}>
                   <Gem />
                   Kelola Harga
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/pagination')}>
-                <Link href="/admin/pagination" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/pagination')}>
+                <Link href="/adm/pagination" onClick={handleLinkClick}>
                   <ChevronsLeftRight />
                   Paginasi
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/seo')}>
-                <Link href="/admin/seo" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/seo')}>
+                <Link href="/adm/seo" onClick={handleLinkClick}>
                   <Settings />
                   Pengaturan SEO
                 </Link>

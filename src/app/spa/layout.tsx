@@ -42,16 +42,16 @@ function SuperAdminLayoutContent({
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/superadmin'}>
-                <Link href="/superadmin" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname === '/spa'}>
+                <Link href="/spa" onClick={handleLinkClick}>
                   <LayoutDashboard />
                   Dashboard
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/superadmin/settings')}>
-                <Link href="/superadmin/settings" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/spa/settings')}>
+                <Link href="/spa/settings" onClick={handleLinkClick}>
                   <Settings />
                   Kelola API & SMTP
                 </Link>

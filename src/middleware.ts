@@ -4,10 +4,11 @@ import { jwtDecode } from 'jwt-decode';
 import type { UserForToken } from '@/lib/jwt';
 import { getRefreshTokenName } from '@/lib/jwt';
 
+// Define paths for different areas of the application
 const publicPaths = [
     '/', '/explore', '/pricing', '/converter', '/calculator', 
     '/color-generator', '/stopwatch', '/unit-converter', '/scanner', 
-    '/surat', '/surat/share', '/surat/shared-template'
+    '/surat', '/surat/share', '/surat/shared-template', '/surat/share-fallback'
 ];
 
 const authPaths = [
@@ -17,18 +18,23 @@ const authPaths = [
 ];
 
 const userLoginPath = '/login';
-const adminLoginPath = '/admin/login';
-const superAdminLoginPath = '/superadmin/login';
+const adminLoginPath = '/adm/login';
+const superAdminLoginPath = '/spa/login';
 
-const isAdminPath = (pathname: string) => pathname.startsWith('/admin');
-const isSuperAdminPath = (pathname: string) => pathname.startsWith('/superadmin');
+const isAdminPath = (pathname: string) => pathname.startsWith('/adm');
+const isSuperAdminPath = (pathname: string) => pathname.startsWith('/spa');
 
 const getTokenPayload = (req: NextRequest, role: number): UserForToken | null => {
     const tokenName = getRefreshTokenName(role);
     const token = req.cookies.get(tokenName)?.value;
     if (!token) return null;
     try {
-        return jwtDecode(token);
+        const decoded: UserForToken = jwtDecode(token);
+        // Simple validation of expiry
+        if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+            return null;
+        }
+        return decoded;
     } catch {
         return null;
     }
@@ -44,32 +50,25 @@ export function middleware(request: NextRequest) {
 
     // --- Super Admin Area Protection ---
     if (isSuperAdminPath(pathname)) {
-        if (pathname === superAdminLoginPath) {
-            if (superAdminToken) {
-                return NextResponse.redirect(new URL('/superadmin', request.url));
-            }
-            return NextResponse.next();
+        // If trying to access login page with a valid super admin token, redirect to dashboard
+        if (pathname === superAdminLoginPath && superAdminToken) {
+            return NextResponse.redirect(new URL('/spa', request.url));
         }
-        if (!superAdminToken) {
-            const url = new URL(superAdminLoginPath, request.url);
-            url.searchParams.set('lock', '0');
-            return NextResponse.redirect(url);
+        // If trying to access any other super admin page without a valid token, redirect to login
+        if (!superAdminToken && pathname !== superAdminLoginPath) {
+            return NextResponse.redirect(new URL(superAdminLoginPath, request.url));
         }
         return NextResponse.next();
     }
 
     // --- Admin Area Protection ---
     if (isAdminPath(pathname)) {
-        if (pathname === adminLoginPath) {
-            if (adminToken || superAdminToken) {
-                return NextResponse.redirect(new URL('/admin', request.url));
-            }
-            return NextResponse.next();
+        const hasAdminAccess = adminToken || superAdminToken;
+        if (pathname === adminLoginPath && hasAdminAccess) {
+            return NextResponse.redirect(new URL('/adm', request.url));
         }
-        if (!adminToken && !superAdminToken) {
-            const url = new URL(adminLoginPath, request.url);
-            url.searchParams.set('lock', '0');
-            return NextResponse.redirect(url);
+        if (!hasAdminAccess && pathname !== adminLoginPath) {
+            return NextResponse.redirect(new URL(adminLoginPath, request.url));
         }
         return NextResponse.next();
     }
@@ -77,7 +76,7 @@ export function middleware(request: NextRequest) {
     // --- Public & User Area Logic ---
 
     // Redirect logged-in users away from the main login page
-    if (pathname === userLoginPath && hasAnyValidToken) {
+    if (pathname === userLoginPath && userToken) {
         return NextResponse.redirect(new URL('/', request.url));
     }
 

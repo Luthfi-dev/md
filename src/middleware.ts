@@ -12,6 +12,9 @@ const publicPaths = [
     '/explore',
     '/pricing',
     '/converter',
+    '/converter/image-to-pdf',
+    '/converter/pdf-to-word',
+    '/converter/word-to-pdf',
     '/scanner',
     '/calculator',
     '/unit-converter',
@@ -21,22 +24,24 @@ const publicPaths = [
     '/surat/shared-template',
 ];
 
-// Define protected paths that require authentication
+// Define protected paths that require authentication at a minimum
 const protectedPaths = [
-    '/account',
+    '/account', // Includes /account/profile, /account/edit-profile etc.
     '/messages',
     '/notebook',
-    '/wallet'
+    '/wallet',
 ];
 
 const adminPaths = ['/admin'];
 const superAdminPaths = ['/superadmin'];
 
-const isPathPrefixOf = (path: string, prefixes: string[]): boolean => {
-    for (const prefix of prefixes) {
-        if (path.startsWith(prefix)) return true;
-    }
-    return false;
+const isPathMatch = (path: string, patterns: string[]): boolean => {
+    return patterns.some(pattern => {
+        if (pattern.endsWith('/')) {
+            return path.startsWith(pattern);
+        }
+        return path === pattern;
+    });
 };
 
 export function middleware(request: NextRequest) {
@@ -47,49 +52,54 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.')) {
         return NextResponse.next();
     }
-
+    
+    // Handle authenticated users
     if (refreshToken) {
         let decoded: UserForToken;
         try {
-            decoded = jwtDecode(refreshToken) as UserForToken;
+            decoded = jwtDecode(refreshToken);
         } catch (err) {
-            // Invalid refresh token, clear it and redirect to login
             const response = NextResponse.redirect(new URL('/login', request.url));
             response.cookies.delete('refreshToken');
             return response;
         }
-        
+
         const userRole = decoded.role;
 
-        // If user is authenticated and tries to access login page, redirect them away.
+        // If a logged-in user tries to access the login page, redirect them to the home page.
+        // This is a key step in preventing redirect loops.
         if (pathname === '/login') {
-             return NextResponse.redirect(new URL('/', request.url));
-        }
-
-        // Check authorization for superadmin routes
-        if (isPathPrefixOf(pathname, superAdminPaths) && userRole !== 1) {
             return NextResponse.redirect(new URL('/', request.url));
         }
 
-        // Check authorization for admin routes
-        if (isPathPrefixOf(pathname, adminPaths) && userRole !== 1 && userRole !== 2) {
-            return NextResponse.redirect(new URL('/', request.url));
+        // --- Role-based access control for admin pages ---
+        if (isPathMatch(pathname, superAdminPaths) && userRole !== 1) {
+            return NextResponse.redirect(new URL('/', request.url)); // Redirect non-superadmins away
         }
 
+        if (isPathMatch(pathname, adminPaths) && userRole !== 1 && userRole !== 2) {
+            return NextResponse.redirect(new URL('/', request.url)); // Redirect non-admins away
+        }
+        
     } else {
-        // User is not authenticated
-        const isProtectedRoute = isPathPrefixOf(pathname, protectedPaths) || isPathPrefixOf(pathname, adminPaths) || isPathPrefixOf(pathname, superAdminPaths);
+        // --- Handle unauthenticated users ---
+        
+        // Combine all protected path patterns for the check
+        const allProtectedPaths = [...protectedPaths, ...adminPaths, ...superAdminPaths];
 
-        // If trying to access a protected route without a token, redirect to login
-        if (isProtectedRoute) {
+        // If the user is trying to access any protected path, redirect to login.
+        if (isPathMatch(pathname, allProtectedPaths)) {
             return NextResponse.redirect(new URL('/login', request.url));
         }
     }
 
-    // Allow the request to proceed if no other conditions were met
+    // If no rules were matched, allow the request to proceed.
     return NextResponse.next();
 }
 
 export const config = {
-  matcher: '/((?!_next/static|_next/image|favicon.ico).*)',
-};
+  // This matcher ensures the middleware runs on all paths except for static assets.
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|sounds|icon-).*)',
+  ],
+}

@@ -3,7 +3,8 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useRouter } from 'next/navigation';
-import { getCookie } from '@/lib/utils'; 
+import { getRefreshTokenName } from '@/lib/jwt';
+import { getCookie } from '@/lib/utils';
 
 export interface User {
     id: number;
@@ -22,7 +23,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (email: string, password: string) => Promise<{success: boolean, message: string, user?: User}>;
     register: (data: any) => Promise<{success: boolean, message: string}>;
-    logout: (options?: { redirect?: boolean, route?: string }) => Promise<void>;
+    logout: () => Promise<void>;
     fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
     updateUser: (newUser: Partial<User>) => void;
     setAccessToken: (token: string | null) => void;
@@ -76,32 +77,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    const logout = useCallback(async (options: { redirect?: boolean, route?: string } = { redirect: true, route: '/login' }) => {
+    const logout = useCallback(async () => {
         setIsLoading(true);
-        setAccessToken(null);
+        const currentRole = user?.role;
+        setAccessToken(null); // Clear client-side state
         try {
-            await fetch('/api/auth/logout', { method: 'POST' });
+            // Tell server which tokens to clear
+            await fetch('/api/auth/logout', { 
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ role: currentRole })
+            });
         } catch (error) {
             console.error("Logout fetch failed:", error);
         } finally {
             setIsLoading(false);
-            if (options.redirect) {
-                window.location.href = options.route || '/login';
-            } else {
-                // If not redirecting, still ensure client state is fully cleared
-                setUser(null);
-                setIsAuthenticated(false);
-            }
+            window.location.href = '/login'; // Force a full page refresh to clear all state
         }
-    }, [setAccessToken]);
+    }, [user, setAccessToken]);
 
     const silentRefresh = useCallback(async () => {
-        const refreshToken = getCookie('refreshToken');
-        if (!refreshToken) {
-            setIsAuthenticated(false);
-            return null;
-        }
-
         try {
             const res = await fetch('/api/auth/refresh', { method: 'POST' });
             if (!res.ok) throw new Error('Refresh failed');
@@ -114,10 +109,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Refresh token invalid');
         } catch (error) {
             console.error('Silent refresh failed:', error);
-            await logout({ redirect: false });
+            setIsAuthenticated(false);
+            setUser(null);
             return null;
         }
-    }, [logout, setAccessToken]);
+    }, [setAccessToken]);
     
     // Auth Check Effect
     useEffect(() => {
@@ -126,11 +122,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (token && !isTokenExpired(token)) {
                 setAccessToken(token);
             } else {
-                if (getCookie('refreshToken')) {
+                 const hasAnyRefreshToken = getCookie(getRefreshTokenName(1)) || getCookie(getRefreshTokenName(2)) || getCookie(getRefreshTokenName(3));
+                 if(hasAnyRefreshToken) {
                     await silentRefresh();
-                } else {
+                 } else {
                     setIsAuthenticated(false);
-                }
+                 }
             }
         };
         initializeAuth();
@@ -145,8 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            await logout({ redirect: true }); // Default redirect to /login
-            throw new Error('Not authenticated');
+            await logout();
+            throw new Error('Sesi berakhir. Silakan login kembali.');
         }
 
         const headers = new Headers(options.headers || {});
@@ -158,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await fetch(url, { ...options, headers });
 
         if (response.status === 401) {
-             await logout({ redirect: true });
+             await logout();
         }
 
         return response;

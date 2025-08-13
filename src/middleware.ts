@@ -18,7 +18,6 @@ const publicPaths = [
     '/unit-converter',
     '/color-generator',
     '/stopwatch',
-    '/surat/share',
     '/surat/shared-template',
 ];
 

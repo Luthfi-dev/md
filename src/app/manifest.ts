@@ -3,9 +3,9 @@ import { MetadataRoute } from 'next'
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'All-in-One Toolkit',
-    short_name: 'Toolkit',
-    description: 'A versatile utility app with daily tools.',
+    name: 'Maudigi',
+    short_name: 'Maudigi',
+    description: 'Satu aplikasi untuk semua kebutuhan produktivitas Anda.',
     start_url: '/',
     display: 'standalone',
     background_color: '#FFFFFF',

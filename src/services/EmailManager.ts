@@ -100,7 +100,6 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
             },
         };
         
-        // Let nodemailer use its optimized settings for Gmail
         if (isGmail) {
             transportOptions.service = 'gmail';
         }
@@ -110,7 +109,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         try {
             console.log(`Attempting to send email via ${config.host} (Config ID: ${config.id})...`);
             const info = await transporter.sendMail({
-                from: `"${process.env.APP_NAME || 'All-in-One Toolkit'}" <${config.user}>`,
+                from: `"${process.env.APP_NAME || 'Maudigi'}" <${config.user}>`,
                 ...options,
             });
             console.log("Message sent successfully using config %s: %s", config.id, info.messageId);
@@ -120,11 +119,9 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
             console.error(`Failed to send email with config ${config.id}. Error:`, error);
             lastError = error as Error;
             await EmailManager.handleConfigFailure(config.id);
-            // Continue to the next config
         }
     }
     
-    // If the loop completes without returning, it means all configs failed.
     console.error("All available SMTP configurations failed.", { lastError });
     throw lastError || new Error("All SMTP configurations failed to send the email.");
 }

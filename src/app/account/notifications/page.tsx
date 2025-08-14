@@ -1,4 +1,3 @@
-
 'use client';
 import { Button } from "@/components/ui/button";
 import { Bell, ArrowLeft, BellRing } from "lucide-react";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 
 // Placeholder data for notifications
 const notifications = [
-    { id: 1, title: "Selamat datang di All-in-One Toolkit!", description: "Jelajahi semua fitur canggih yang kami sediakan untuk Anda.", time: "2 jam yang lalu", read: false },
+    { id: 1, title: "Selamat datang di Maudigi!", description: "Jelajahi semua fitur canggih yang kami sediakan untuk Anda.", time: "2 jam yang lalu", read: false },
     { id: 2, title: "Hadiah Harian Tersedia", description: "Jangan lupa klaim 50 Poin Coin gratis Anda hari ini!", time: "1 hari yang lalu", read: false },
     { id: 3, title: "Profil Anda Diperbarui", description: "Informasi profil Anda telah berhasil disimpan.", time: "3 hari yang lalu", read: true },
 ];

@@ -32,7 +32,7 @@ export default function SeoSettingsPage() {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="site-title">Judul Situs Global</Label>
-            <Input id="site-title" placeholder="Contoh: All-in-One Toolkit" defaultValue="All-in-One Toolkit: Aplikasi Cerdas untuk Kebutuhan Harian Anda" />
+            <Input id="site-title" placeholder="Contoh: Maudigi" defaultValue="Maudigi: Uplevel Your Life" />
             <p className="text-xs text-muted-foreground">Judul utama yang muncul di tab browser dan hasil pencarian.</p>
           </div>
           
@@ -44,7 +44,7 @@ export default function SeoSettingsPage() {
 
           <div className="space-y-2">
             <Label htmlFor="meta-keywords">Kata Kunci Meta</Label>
-            <Input id="meta-keywords" placeholder="toolkit, converter, scanner, calculator" defaultValue="toolkit, converter, scanner, calculator, alat produktivitas, aplikasi all-in-one" />
+            <Input id="meta-keywords" placeholder="toolkit, converter, scanner, calculator" defaultValue="maudigi, toolkit, produktivitas, converter, scanner, calculator, alat produktivitas, aplikasi all-in-one" />
             <p className="text-xs text-muted-foreground">Pisahkan kata kunci dengan koma.</p>
           </div>
           
@@ -56,7 +56,7 @@ export default function SeoSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="og-title">Judul Open Graph</Label>
-                <Input id="og-title" placeholder="Judul saat dibagikan" defaultValue="All-in-One Toolkit: Aplikasi Cerdas untuk Kebutuhan Harian Anda" />
+                <Input id="og-title" placeholder="Judul saat dibagikan" defaultValue="Maudigi: Uplevel Your Life" />
               </div>
                <div className="space-y-2">
                 <Label htmlFor="og-description">Deskripsi Open Graph</Label>
@@ -64,7 +64,7 @@ export default function SeoSettingsPage() {
               </div>
                <div className="space-y-2">
                 <Label htmlFor="og-image-url">URL Gambar Open Graph</Label>
-                <Input id="og-image-url" placeholder="https://example.com/image.png" defaultValue="https://placehold.co/1200x630.png" />
+                <Input id="og-image-url" placeholder="https://example.com/image.png" defaultValue="/og-image.png" />
                 <p className="text-xs text-muted-foreground">Gunakan gambar dengan rasio 1.91:1 (misalnya 1200x630 piksel).</p>
               </div>
             </CardContent>

@@ -1,8 +1,7 @@
-
 'use client';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Gem, LogOut, Edit, Shield, Bell, Users, Settings } from "lucide-react";
+import { ChevronRight, Gem, LogOut, Edit, Shield, Bell, Users, Settings, Download } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +20,8 @@ const menuItems = [
 
 const engagementItems = [
     { label: "Kelola Langganan", icon: Gem, href: "/pricing" },
-    { label: "Undang Teman", icon: Users, href: "/account/invite" }
+    { label: "Undang Teman", icon: Users, href: "/account/invite" },
+    { label: "Instal Aplikasi", icon: Download, href: "/account/install" },
 ]
 
 export default function ProfilePage() {

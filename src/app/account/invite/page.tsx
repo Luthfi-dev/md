@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
@@ -49,7 +48,7 @@ export default function InvitePage() {
     const handleShare = () => {
         if (navigator.share) {
             navigator.share({
-                title: 'Gabung di All-in-One Toolkit!',
+                title: 'Gabung di Maudigi!',
                 text: `Gunakan kode referral saya: ${user?.referralCode} atau klik link untuk mendaftar dan dapatkan bonus!`,
                 url: referralLink,
             }).catch((error) => console.log('Error sharing', error));

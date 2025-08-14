@@ -55,17 +55,17 @@ export async function POST(request: NextRequest) {
     
     await sendEmail({
         to: email,
-        subject: 'Atur Ulang Kata Sandi Akun Anda',
+        subject: 'Atur Ulang Kata Sandi Akun Maudigi Anda',
         html: `<div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Reset Kata Sandi</h2>
                 <p>Halo ${user.name},</p>
-                <p>Anda menerima email ini karena ada permintaan untuk mereset kata sandi akun Anda. Jika Anda tidak merasa meminta ini, abaikan saja email ini.</p>
+                <p>Anda menerima email ini karena ada permintaan untuk mereset kata sandi akun Anda di Maudigi. Jika Anda tidak merasa meminta ini, abaikan saja email ini.</p>
                 <p>Klik tombol di bawah ini untuk mengatur ulang kata sandi Anda:</p>
                 <p style="margin: 20px 0;">
                   <a href="${resetLink}" style="background-color: #1D88FE; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Atur Ulang Kata Sandi</a>
                 </p>
                 <p>Link ini akan kedaluwarsa dalam 1 jam.</p>
-                <p>Terima kasih,<br>Tim Aplikasi</p>
+                <p>Terima kasih,<br>Tim Maudigi</p>
                </div>`,
     });
 

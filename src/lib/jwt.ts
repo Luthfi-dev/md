@@ -9,7 +9,6 @@ const REFRESH_TOKEN_SECRET_ADMIN = process.env.REFRESH_TOKEN_SECRET_ADMIN || 'yo
 const REFRESH_TOKEN_SECRET_SUPERADMIN = process.env.REFRESH_TOKEN_SECRET_SUPERADMIN || 'your_super_secret_refresh_key_superadmin';
 
 const ACCESS_TOKEN_EXPIRATION = '15m';
-const REFRESH_TOKEN_EXPIRATION = '30d';
 
 export interface UserForToken {
     id: number;
@@ -38,10 +37,26 @@ function getRefreshTokenSecret(role: number): string {
     }
 }
 
+function getRefreshTokenExpiration(role: number): string {
+    switch (role) {
+        case 1: // Super Admin
+        case 2: // Admin
+            return '6h';
+        case 3: // User
+        default:
+            return '30d';
+    }
+}
+
+
 export function generateTokens(payload: UserForToken) {
     const accessToken = jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRATION });
+    
     const refreshTokenSecret = getRefreshTokenSecret(payload.role);
-    const refreshToken = jwt.sign(payload, refreshTokenSecret, { expiresIn: REFRESH_TOKEN_EXPIRATION });
+    const refreshTokenExpiration = getRefreshTokenExpiration(payload.role);
+    
+    const refreshToken = jwt.sign(payload, refreshTokenSecret, { expiresIn: refreshTokenExpiration });
+
     return { accessToken, refreshToken };
 }
 
@@ -64,12 +79,16 @@ export function verifyRefreshToken(token: string, role: number): JwtPayload | nu
 
 export function setTokenCookie(res: NextResponse, role: number, refreshToken: string) {
     const cookieName = getRefreshTokenName(role);
+    const expirationInSeconds = (role === 1 || role === 2) 
+        ? 6 * 60 * 60 // 6 hours
+        : 30 * 24 * 60 * 60; // 30 days
+
     const cookie = serialize(cookieName, refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         path: '/',
-        maxAge: 30 * 24 * 60 * 60 // 30 days in seconds
+        maxAge: expirationInSeconds
     });
     res.headers.append('Set-Cookie', cookie);
 }

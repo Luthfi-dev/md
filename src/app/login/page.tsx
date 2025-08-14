@@ -115,7 +115,7 @@ export default function LoginPage() {
                     <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
                   </div>
                   {isLoginView && (
-                      <div className="text-right mt-1.5">
+                      <div className="text-right mt-1">
                           <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs">
                               <Link href="/account/forgot-password">Lupa kata sandi?</Link>
                           </Button>

@@ -81,35 +81,43 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
     const configs = await EmailManager.fetchConfigs();
 
     if (configs.length === 0) {
+        console.error("Email sending failed: No active SMTP configuration available in the database.");
         throw new Error("No active SMTP configuration available.");
     }
 
     let lastError: Error | null = null;
 
     for (const config of configs) {
-        const transporter = nodemailer.createTransport({
+        const isGmail = config.host.toLowerCase() === 'smtp.gmail.com';
+        
+        const transportOptions: any = {
             host: config.host,
             port: config.port,
-            secure: config.secure,
+            secure: config.port === 465, // `secure:true` is required for port 465, `false` for others.
             auth: {
                 user: config.user,
                 pass: config.pass,
             },
-            tls: {
-                rejectUnauthorized: false // Often needed for local or self-signed certs
-            }
-        });
+        };
+        
+        // Let nodemailer use its optimized settings for Gmail
+        if (isGmail) {
+            transportOptions.service = 'gmail';
+        }
+
+        const transporter = nodemailer.createTransport(transportOptions);
 
         try {
+            console.log(`Attempting to send email via ${config.host} (Config ID: ${config.id})...`);
             const info = await transporter.sendMail({
-                from: config.user, // Using the authenticated user as sender for better deliverability
+                from: `"${process.env.APP_NAME || 'Your App Name'}" <${config.user}>`,
                 ...options,
             });
             console.log("Message sent successfully using config %s: %s", config.id, info.messageId);
             await EmailManager.updateLastUsed(config.id);
             return info; // Success, exit the loop
         } catch (error) {
-            console.error(`Failed to send email with config ${config.id}:`, error);
+            console.error(`Failed to send email with config ${config.id}. Error:`, error);
             lastError = error as Error;
             await EmailManager.handleConfigFailure(config.id);
             // Continue to the next config
@@ -117,5 +125,6 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
     }
     
     // If the loop completes without returning, it means all configs failed.
+    console.error("All available SMTP configurations failed.", { lastError });
     throw lastError || new Error("All SMTP configurations failed to send the email.");
 }

@@ -30,12 +30,12 @@ export function AdminLayoutContent({
     <>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 p-2">
              <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
                 <User/>
             </div>
             <div>
-                 <p className="font-semibold text-lg truncate">{user?.name || 'Admin'}</p>
+                 <p className="font-semibold text-base truncate">{user?.name || 'Admin'}</p>
                  <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
           </div>
@@ -106,14 +106,18 @@ export function AdminLayoutContent({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogout}>
-                <LogOut />
-                Keluar
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
+        <SidebarFooter className='p-2 mt-auto border-t'>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleLogout}>
+                        <LogOut />
+                        Keluar
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b bg-card md:bg-transparent">

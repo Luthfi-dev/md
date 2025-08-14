@@ -34,10 +34,11 @@ export default function ForgotPasswordPage() {
           description: 'Jika email terdaftar, Anda akan menerima link untuk reset kata sandi.',
         });
       } else {
+        // To prevent user enumeration, we still show a success-like message on failure.
+        // The specific error is logged on the server.
         toast({
-          variant: 'destructive',
-          title: 'Gagal',
-          description: result.message || 'Terjadi kesalahan.',
+          title: 'Email Terkirim!',
+          description: 'Jika email terdaftar, Anda akan menerima link untuk reset kata sandi.',
         });
       }
     } catch (error) {

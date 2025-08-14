@@ -10,6 +10,12 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8, "Kata sandi baru harus minimal 8 karakter."),
 });
 
+async function hashToken(token: string): Promise<string> {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+    return Buffer.from(digest).toString('hex');
+}
+
+
 export async function POST(request: NextRequest) {
   let connection;
   try {
@@ -19,13 +25,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: validation.error.errors.map(e => e.message).join(', ') }, { status: 400 });
     }
     const { token, password } = validation.data;
+    const hashedToken = await hashToken(token);
 
     connection = await db.getConnection();
     
-    // In a real app, you would hash the incoming token and compare it to the hashed token in the DB
+    // Find the user associated with the hashed token
     const [resetRows]: [RowDataPacket[], any] = await connection.execute(
-      'SELECT user_id, expires_at FROM password_resets WHERE token = ?', // This should check the hashed token
-      [token] // Placeholder for hashed token
+      'SELECT user_id, expires_at FROM password_resets WHERE token = ?',
+      [hashedToken]
     );
 
     if (resetRows.length === 0) {
@@ -34,20 +41,22 @@ export async function POST(request: NextRequest) {
     
     const resetRequest = resetRows[0];
     if (new Date() > new Date(resetRequest.expires_at)) {
+      // Clean up expired token
+      await connection.execute('DELETE FROM password_resets WHERE token = ?', [hashedToken]);
       return NextResponse.json({ success: false, message: 'Token telah kedaluwarsa.' }, { status: 400 });
     }
 
-    const hashedPassword = await hashPassword(password);
+    const newHashedPassword = await hashPassword(password);
     
     await connection.beginTransaction();
 
     // Update user's password
     await connection.execute<ResultSetHeader>(
       'UPDATE users SET password = ? WHERE id = ?',
-      [hashedPassword, resetRequest.user_id]
+      [newHashedPassword, resetRequest.user_id]
     );
 
-    // Invalidate the token
+    // Invalidate the token by deleting it
     await connection.execute(
       'DELETE FROM password_resets WHERE user_id = ?',
       [resetRequest.user_id]

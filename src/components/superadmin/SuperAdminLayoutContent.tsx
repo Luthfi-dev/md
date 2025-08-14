@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar } from '@/components/ui/sidebar';
+import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
 import { LayoutDashboard, Settings, LogOut, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -30,12 +30,12 @@ export function SuperAdminLayoutContent({
     <>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 p-2">
             <div className="w-8 h-8 rounded-lg bg-destructive text-destructive-foreground flex items-center justify-center">
                 <ShieldAlert className="w-5 h-5"/>
             </div>
              <div>
-                 <p className="font-semibold text-lg truncate">{user?.name || 'Super Admin'}</p>
+                 <p className="font-semibold text-base truncate">{user?.name || 'Super Admin'}</p>
                  <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
           </div>
@@ -58,14 +58,18 @@ export function SuperAdminLayoutContent({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogout}>
-                <LogOut />
-                Keluar
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
+         <SidebarFooter className='p-2 mt-auto border-t'>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleLogout}>
+                        <LogOut />
+                        Keluar
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b bg-card md:bg-transparent">

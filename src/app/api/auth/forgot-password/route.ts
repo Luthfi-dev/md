@@ -5,10 +5,21 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { sendEmail } from '@/services/EmailManager';
+import { hash } from 'bcryptjs';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Format email tidak valid."),
 });
+
+// Using a more secure hashing algorithm for the token
+async function hashToken(token: string): Promise<string> {
+    const saltRounds = 10;
+    // Note: It's generally fine to use bcrypt for this, but SHA256 is also a common choice for tokens.
+    // For simplicity and consistency with password hashing, we can use a similar approach.
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+    return Buffer.from(digest).toString('hex');
+}
+
 
 export async function POST(request: NextRequest) {
   let connection;
@@ -22,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     connection = await db.getConnection();
     const [users]: [RowDataPacket[], any] = await connection.execute(
-      'SELECT id FROM users WHERE email = ?',
+      'SELECT id, name FROM users WHERE email = ?',
       [email]
     );
 
@@ -35,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Generate a secure token
     const token = randomBytes(32).toString('hex');
-    const hashedToken = randomBytes(32).toString('hex'); // In a real app, hash this token before storing
+    const hashedToken = await hashToken(token);
     const expiresAt = new Date(Date.now() + 3600000); // 1 hour expiry
 
     await connection.execute<ResultSetHeader>(
@@ -47,11 +58,18 @@ export async function POST(request: NextRequest) {
     
     await sendEmail({
         to: email,
-        subject: 'Reset Kata Sandi Anda',
-        html: `<p>Anda menerima email ini karena ada permintaan untuk mereset kata sandi akun Anda.</p>
-               <p>Klik link di bawah ini untuk mengatur ulang kata sandi Anda:</p>
-               <a href="${resetLink}">Reset Kata Sandi</a>
-               <p>Link ini akan kedaluwarsa dalam 1 jam. Jika Anda tidak merasa meminta ini, abaikan saja email ini.</p>`,
+        subject: 'Atur Ulang Kata Sandi Akun Anda',
+        html: `<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                <h2>Reset Kata Sandi</h2>
+                <p>Halo ${user.name},</p>
+                <p>Anda menerima email ini karena ada permintaan untuk mereset kata sandi akun Anda. Jika Anda tidak merasa meminta ini, abaikan saja email ini.</p>
+                <p>Klik tombol di bawah ini untuk mengatur ulang kata sandi Anda:</p>
+                <p style="margin: 20px 0;">
+                  <a href="${resetLink}" style="background-color: #1D88FE; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Atur Ulang Kata Sandi</a>
+                </p>
+                <p>Link ini akan kedaluwarsa dalam 1 jam.</p>
+                <p>Terima kasih,<br>Tim Aplikasi</p>
+               </div>`,
     });
 
     return NextResponse.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });

@@ -109,17 +109,19 @@ export default function LoginPage() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input id="email" name="email" type="email" placeholder="m@example.com" required className="pl-10 h-12 rounded-full" />
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
+                <div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
+                  </div>
+                  {isLoginView && (
+                      <div className="text-right mt-1.5">
+                          <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs">
+                              <Link href="/account/forgot-password">Lupa kata sandi?</Link>
+                          </Button>
+                      </div>
+                  )}
                 </div>
-                 {isLoginView && (
-                    <div className="text-right -mt-2">
-                        <Button variant="link" size="sm" asChild className="p-0 h-auto">
-                            <Link href="/account/forgot-password">Lupa kata sandi?</Link>
-                        </Button>
-                    </div>
-                )}
                 {!isLoginView && (
                   <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

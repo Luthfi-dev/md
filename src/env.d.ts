@@ -9,5 +9,8 @@ declare namespace NodeJS {
     APP_PORT?: string;
     ACCESS_TOKEN_SECRET?: string;
     REFRESH_TOKEN_SECRET?: string;
+    ENCRYPTION_KEY?: string;
+    GEMINI_API_KEY?: string;
+    APP_URL?: string;
   }
 }

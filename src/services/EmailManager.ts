@@ -93,14 +93,13 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         const transportOptions: any = {
             host: config.host,
             port: config.port,
-            secure: config.port === 465, // `secure:true` is required for port 465, false for others (like 587 which use STARTTLS)
+            secure: config.secure, 
             auth: {
                 user: config.user,
                 pass: config.pass,
             },
         };
         
-        // Use optimized service settings for known providers
         if (isGmail) {
             transportOptions.service = 'gmail';
         }
@@ -110,7 +109,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         try {
             console.log(`Attempting to send email via ${config.host} (Config ID: ${config.id})...`);
             const info = await transporter.sendMail({
-                from: `"${process.env.APP_NAME || 'Maudigi'}" <${config.user}>`,
+                from: `"${'Tim Aplikasi'}" <${config.user}>`,
                 ...options,
             });
             console.log("Message sent successfully using config %s: %s", config.id, info.messageId);

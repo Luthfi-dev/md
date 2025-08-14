@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
                   <a href="${resetLink}" style="background-color: #1D88FE; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Atur Ulang Kata Sandi</a>
                 </p>
                 <p>Link ini akan kedaluwarsa dalam 1 jam.</p>
-                <p>Terima kasih,<br>Tim Maudigi</p>
+                <p>Terima kasih,<br>Tim Aplikasi</p>
                </div>`,
     });
 

@@ -51,12 +51,9 @@ export async function POST(request: NextRequest) {
       [user.id, hashedToken, expiresAt]
     );
 
-    const appUrl = process.env.APP_URL; // Using the .env variable
-    if (!appUrl) {
-      console.error("APP_URL environment variable is not set.");
-      throw new Error("Konfigurasi server tidak lengkap, tidak dapat membuat link reset.");
-    }
-    const resetLink = `${appUrl}/account/reset-password?token=${token}`;
+    const host = request.headers.get('host');
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const resetLink = `${protocol}://${host}/account/reset-password?token=${token}`;
     
     // Try sending the email. This function will throw an error if all SMTP servers fail.
     await sendEmail({
@@ -71,7 +68,7 @@ export async function POST(request: NextRequest) {
                   <a href="${resetLink}" style="background-color: #1D88FE; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Atur Ulang Kata Sandi</a>
                 </p>
                 <p>Link ini akan kedaluwarsa dalam 1 jam.</p>
-                <p>Terima kasih,<br>Tim Aplikasi</p>
+                <p>Terima kasih,<br>Tim Maudigi</p>
                </div>`,
     });
 

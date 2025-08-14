@@ -109,7 +109,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         try {
             console.log(`Attempting to send email via ${config.host} (Config ID: ${config.id})...`);
             const info = await transporter.sendMail({
-                from: `"${'Tim Aplikasi'}" <${config.user}>`,
+                from: `"${'Maudigi'}" <${config.user}>`,
                 ...options,
             });
             console.log("Message sent successfully using config %s: %s", config.id, info.messageId);

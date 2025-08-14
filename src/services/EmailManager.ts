@@ -16,7 +16,6 @@ interface SmtpRecord {
 let activeSmtpConfigs: SmtpRecord[] = [];
 let lastFetchedTime: number = 0;
 const CACHE_DURATION_MS = 300000; // 5 minutes
-let currentConfigIndex = -1;
 
 const EmailManager = {
   async fetchConfigs(): Promise<SmtpRecord[]> {
@@ -38,27 +37,18 @@ const EmailManager = {
         port: row.port,
         secure: !!row.secure,
         user: row.user,
-        pass: decrypt(row.pass), // Decrypt password
+        pass: decrypt(row.pass),
       }));
 
       lastFetchedTime = now;
-      currentConfigIndex = -1; // Reset index on new fetch
       return activeSmtpConfigs;
     } catch (error) {
       console.error('Failed to fetch SMTP configurations:', error);
+      activeSmtpConfigs = []; // Clear cache on error
       return [];
     } finally {
       if (connection) connection.release();
     }
-  },
-
-  async getConfig(): Promise<SmtpRecord | null> {
-    const configs = await this.fetchConfigs();
-    if (configs.length === 0) {
-      return null;
-    }
-    currentConfigIndex = (currentConfigIndex + 1) % configs.length;
-    return configs[currentConfigIndex];
   },
 
   async updateLastUsed(configId: number): Promise<void> {
@@ -78,7 +68,7 @@ const EmailManager = {
       try {
           connection = await db.getConnection();
           await connection.execute("UPDATE smtp_configurations SET failure_count = failure_count + 1 WHERE id = ?", [configId]);
-          // Add logic to deactivate if failure_count exceeds a threshold
+          // Optional: Add logic to deactivate if failure_count exceeds a threshold
       } catch (error) {
           console.error(`Failed to handle failure for SMTP config ${configId}:`, error);
       } finally {
@@ -88,34 +78,44 @@ const EmailManager = {
 };
 
 export async function sendEmail(options: { to: string, subject: string, text?: string, html: string }) {
-    const config = await EmailManager.getConfig();
+    const configs = await EmailManager.fetchConfigs();
 
-    if (!config) {
+    if (configs.length === 0) {
         throw new Error("No active SMTP configuration available.");
     }
 
-    const transporter = nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: {
-            user: config.user,
-            pass: config.pass,
-        },
-    });
+    let lastError: Error | null = null;
 
-    try {
-        const info = await transporter.sendMail({
-            from: `"${process.env.APP_NAME || 'Your App'}" <${config.user}>`,
-            ...options,
+    for (const config of configs) {
+        const transporter = nodemailer.createTransport({
+            host: config.host,
+            port: config.port,
+            secure: config.secure,
+            auth: {
+                user: config.user,
+                pass: config.pass,
+            },
+            tls: {
+                rejectUnauthorized: false // Often needed for local or self-signed certs
+            }
         });
-        console.log("Message sent: %s", info.messageId);
-        await EmailManager.updateLastUsed(config.id);
-        return info;
-    } catch (error) {
-        console.error("Failed to send email with config:", config.id, error);
-        await EmailManager.handleConfigFailure(config.id);
-        // Optionally, retry with the next config
-        throw error;
+
+        try {
+            const info = await transporter.sendMail({
+                from: config.user, // Using the authenticated user as sender for better deliverability
+                ...options,
+            });
+            console.log("Message sent successfully using config %s: %s", config.id, info.messageId);
+            await EmailManager.updateLastUsed(config.id);
+            return info; // Success, exit the loop
+        } catch (error) {
+            console.error(`Failed to send email with config ${config.id}:`, error);
+            lastError = error as Error;
+            await EmailManager.handleConfigFailure(config.id);
+            // Continue to the next config
+        }
     }
+    
+    // If the loop completes without returning, it means all configs failed.
+    throw lastError || new Error("All SMTP configurations failed to send the email.");
 }

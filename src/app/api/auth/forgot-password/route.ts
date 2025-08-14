@@ -51,9 +51,8 @@ export async function POST(request: NextRequest) {
       [user.id, hashedToken, expiresAt]
     );
 
-    const host = request.headers.get('host');
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-    const resetLink = `${protocol}://${host}/account/reset-password?token=${token}`;
+    // Use APP_URL from .env file to construct the reset link
+    const resetLink = `${process.env.APP_URL}/account/reset-password?token=${token}`;
     
     // Try sending the email. This function will throw an error if all SMTP servers fail.
     await sendEmail({

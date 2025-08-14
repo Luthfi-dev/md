@@ -1,4 +1,5 @@
 
+'use server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
@@ -34,10 +35,8 @@ export async function POST(request: NextRequest) {
       [email]
     );
 
-    // Always return a success-like message to prevent user enumeration attacks
     if (users.length === 0) {
-      console.log(`Password reset attempt for non-existent email: ${email}`);
-      return NextResponse.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });
+      return NextResponse.json({ success: false, message: 'Email tidak terdaftar di sistem kami.' }, { status: 404 });
     }
     const user = users[0];
 
@@ -66,16 +65,16 @@ export async function POST(request: NextRequest) {
                   <a href="${resetLink}" style="background-color: #1D88FE; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Atur Ulang Kata Sandi</a>
                 </p>
                 <p>Link ini akan kedaluwarsa dalam 1 jam.</p>
-                <p>Terima kasih,<br>Tim Aplikasi</p>
+                <p>Terima kasih,<br>Tim Maudigi</p>
                </div>`,
     });
 
-    return NextResponse.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });
+    return NextResponse.json({ success: true, message: 'Link reset kata sandi telah dikirim ke email Anda.' });
 
   } catch (error) {
     console.error('FORGOT PASSWORD ERROR:', error);
     // Do not expose detailed errors to the client
-    return NextResponse.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });
+    return NextResponse.json({ success: false, message: 'Terjadi kesalahan pada server. Silakan coba lagi nanti.' }, { status: 500 });
   } finally {
     if (connection) connection.release();
   }

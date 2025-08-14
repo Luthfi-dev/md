@@ -85,17 +85,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await fetch('/api/auth/logout', { 
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ role: currentRole }) // Send role to clear specific tokens
+              body: JSON.stringify({ role: currentRole })
             });
         } catch (error) {
             console.error("Logout fetch failed:", error);
         } finally {
             setIsLoading(false);
-            window.location.href = '/login'; // Force a full page refresh to clear all state and redirect
+            window.location.href = '/login'; 
         }
     }, [user, setAccessToken]);
 
-    const silentRefresh = useCallback(async () => {
+    const silentRefresh = useCallback(async (): Promise<string | null> => {
         try {
             const res = await fetch('/api/auth/refresh', { method: 'POST' });
             if (!res.ok) throw new Error('Refresh failed');
@@ -105,9 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setAccessToken(data.accessToken);
                 return data.accessToken;
             }
-            throw new Error('Refresh token invalid');
+            throw new Error('Refresh token invalid or expired');
         } catch (error) {
             console.warn('Silent refresh failed:', error);
+            // If refresh fails, it means no valid session exists. Clear everything.
             setAccessToken(null);
             return null;
         }
@@ -118,13 +119,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const initializeAuth = async () => {
             const token = getAccessTokenClient();
             if (token && !isTokenExpired(token)) {
+                // If we have a valid access token, we are authenticated.
                 setAccessToken(token);
-                setIsAuthenticated(true);
             } else {
+                 // If no valid access token, check for a refresh token and try to refresh.
                  const hasAnyRefreshToken = getCookie(getRefreshTokenName(1)) || getCookie(getRefreshTokenName(2)) || getCookie(getRefreshTokenName(3));
                  if(hasAnyRefreshToken) {
                     await silentRefresh();
                  } else {
+                    // No access token, no refresh token. Definitely not authenticated.
                     setIsAuthenticated(false);
                     setUser(null);
                  }

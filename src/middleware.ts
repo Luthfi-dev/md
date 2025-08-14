@@ -8,13 +8,14 @@ import { getRefreshTokenName } from '@/lib/jwt';
 const publicPaths = [
     '/', '/explore', '/pricing', '/converter', '/calculator', 
     '/color-generator', '/stopwatch', '/unit-converter', '/scanner', 
-    '/surat', '/surat/share', '/surat/shared-template', '/surat/share-fallback', '/surat-generator',
-    '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf'
+    '/surat', '/surat/share', '/surat/shared-template', '/surat-generator',
+    '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf',
+    '/account/forgot-password', '/account/reset-password' // Moved from authPaths
 ];
 
 const userLoginPath = '/login';
 const authPaths = [
-    '/account', '/account/profile', '/account/edit-profile', '/account/security', 
+    '/account/profile', '/account/edit-profile', '/account/security', 
     '/account/notifications', '/account/settings', '/account/invite', 
     '/messages', '/notebook', '/wallet', '/notebook/groups',
 ];
@@ -51,7 +52,6 @@ export function middleware(request: NextRequest) {
     if (isSpaPath(pathname)) {
         if (!superAdminToken && pathname !== spaLoginPath) {
             const url = new URL(spaLoginPath, request.url);
-            // Don't add lock=0 automatically
             return NextResponse.redirect(url);
         }
         if (superAdminToken && pathname === spaLoginPath) {
@@ -65,7 +65,6 @@ export function middleware(request: NextRequest) {
         const hasAdminAccess = adminToken || superAdminToken;
         if (!hasAdminAccess && pathname !== admLoginPath) {
              const url = new URL(admLoginPath, request.url);
-             // Don't add lock=0 automatically
             return NextResponse.redirect(url);
         }
         if (hasAdminAccess && pathname === admLoginPath) {
@@ -74,7 +73,7 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
     
-    // --- Public & User Area Logic ---
+    // Allow public paths to be accessed by anyone
     if (publicPaths.some(p => pathname === p || (p !== '/' && pathname.startsWith(p+'/')))) {
         return NextResponse.next();
     }
@@ -91,7 +90,7 @@ export function middleware(request: NextRequest) {
          return NextResponse.redirect(url);
     }
     
-    // Allow access to all other paths (including public ones)
+    // Default case: allow access to all other paths (including root)
     return NextResponse.next();
 }
 

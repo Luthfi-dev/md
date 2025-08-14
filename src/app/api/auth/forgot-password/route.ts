@@ -28,18 +28,20 @@ export async function POST(request: NextRequest) {
     const { email } = validation.data;
 
     connection = await db.getConnection();
+    
+    // STEP 1: Validate if the email exists in the database first.
     const [users]: [RowDataPacket[], any] = await connection.execute(
       'SELECT id, name FROM users WHERE email = ?',
       [email]
     );
 
     if (users.length === 0) {
-      // Return a specific error if the email is not found.
+      // STEP 2: If not found, return a clear error message.
       return NextResponse.json({ success: false, message: 'Email tidak terdaftar di sistem kami.' }, { status: 404 });
     }
     const user = users[0];
 
-    // Generate a secure token
+    // STEP 3: Only if the user exists, proceed to generate token and send email.
     const token = randomBytes(32).toString('hex');
     const hashedToken = await hashToken(token);
     const expiresAt = new Date(Date.now() + 3600000); // 1 hour expiry
@@ -49,7 +51,11 @@ export async function POST(request: NextRequest) {
       [user.id, hashedToken, expiresAt]
     );
 
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL; // Using the .env variable
+    if (!appUrl) {
+      console.error("APP_URL environment variable is not set.");
+      throw new Error("Konfigurasi server tidak lengkap, tidak dapat membuat link reset.");
+    }
     const resetLink = `${appUrl}/account/reset-password?token=${token}`;
     
     // Try sending the email. This function will throw an error if all SMTP servers fail.

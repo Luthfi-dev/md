@@ -13,9 +13,6 @@ const forgotPasswordSchema = z.object({
 
 // Using a more secure hashing algorithm for the token
 async function hashToken(token: string): Promise<string> {
-    const saltRounds = 10;
-    // Note: It's generally fine to use bcrypt for this, but SHA256 is also a common choice for tokens.
-    // For simplicity and consistency with password hashing, we can use a similar approach.
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
     return Buffer.from(digest).toString('hex');
 }

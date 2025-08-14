@@ -88,7 +88,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
     let lastError: Error | null = null;
 
     for (const config of configs) {
-        const isGmail = config.host.toLowerCase() === 'smtp.gmail.com';
+        const isGmail = config.host.toLowerCase().includes('gmail');
         
         const transportOptions: any = {
             host: config.host,
@@ -110,7 +110,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         try {
             console.log(`Attempting to send email via ${config.host} (Config ID: ${config.id})...`);
             const info = await transporter.sendMail({
-                from: `"${process.env.APP_NAME || 'Your App Name'}" <${config.user}>`,
+                from: `"${process.env.APP_NAME || 'All-in-One Toolkit'}" <${config.user}>`,
                 ...options,
             });
             console.log("Message sent successfully using config %s: %s", config.id, info.messageId);

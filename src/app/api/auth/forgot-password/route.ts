@@ -6,7 +6,6 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { sendEmail } from '@/services/EmailManager';
-import { hash } from 'bcryptjs';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -17,7 +16,6 @@ async function hashToken(token: string): Promise<string> {
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
     return Buffer.from(digest).toString('hex');
 }
-
 
 export async function POST(request: NextRequest) {
   let connection;
@@ -36,6 +34,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (users.length === 0) {
+      // Return a specific error if the email is not found.
       return NextResponse.json({ success: false, message: 'Email tidak terdaftar di sistem kami.' }, { status: 404 });
     }
     const user = users[0];
@@ -53,6 +52,7 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
     const resetLink = `${appUrl}/account/reset-password?token=${token}`;
     
+    // Try sending the email. This function will throw an error if all SMTP servers fail.
     await sendEmail({
         to: email,
         subject: 'Atur Ulang Kata Sandi Akun Anda',
@@ -69,12 +69,14 @@ export async function POST(request: NextRequest) {
                </div>`,
     });
 
+    // If we reach here, the email was sent successfully.
     return NextResponse.json({ success: true, message: 'Link reset kata sandi telah dikirim ke email Anda.' });
 
   } catch (error) {
     console.error('FORGOT PASSWORD ERROR:', error);
-    // Do not expose detailed errors to the client
-    return NextResponse.json({ success: false, message: 'Terjadi kesalahan pada server. Silakan coba lagi nanti.' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
+    // Return a generic server error to the client
+    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   } finally {
     if (connection) connection.release();
   }

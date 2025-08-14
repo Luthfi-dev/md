@@ -82,7 +82,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
 
     if (configs.length === 0) {
         console.error("Email sending failed: No active SMTP configuration available in the database.");
-        throw new Error("No active SMTP configuration available.");
+        throw new Error("Tidak ada server email yang aktif untuk mengirim permintaan Anda.");
     }
 
     let lastError: Error | null = null;
@@ -93,7 +93,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         const transportOptions: any = {
             host: config.host,
             port: config.port,
-            secure: config.secure, 
+            secure: config.secure, // Use the secure flag directly from DB
             auth: {
                 user: config.user,
                 pass: config.pass,
@@ -118,10 +118,12 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         } catch (error) {
             console.error(`Failed to send email with config ${config.id}. Error:`, error);
             lastError = error as Error;
+            // IMPORTANT: Record the failure for this specific config
             await EmailManager.handleConfigFailure(config.id);
         }
     }
     
+    // If the loop finishes, it means all configs failed.
     console.error("All available SMTP configurations failed.", { lastError });
-    throw lastError || new Error("All SMTP configurations failed to send the email.");
+    throw lastError || new Error("Semua server email sedang sibuk atau mengalami gangguan. Coba lagi nanti.");
 }

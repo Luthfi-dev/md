@@ -36,11 +36,11 @@ export default function InstallPage() {
                 <div className="text-center mb-10">
                     <Image 
                         data-ai-hint="rocket app logo"
-                        src="/logo_maudigi_512.png" 
+                        src="/logo.jpg" 
                         alt="Maudigi Logo" 
                         width={120} 
                         height={120} 
-                        className="mx-auto mb-4" 
+                        className="mx-auto mb-4 rounded-2xl" 
                     />
                     <h1 className="text-4xl font-bold font-headline">Instal Aplikasi Maudigi</h1>
                     <p className="text-muted-foreground mt-2 text-lg">Dapatkan pengalaman terbaik di perangkat Anda.</p>

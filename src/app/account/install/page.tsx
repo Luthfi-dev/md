@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { ArrowLeft, CheckCircle, Download, Smartphone, Star } from "lucide-react
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import appMetadata from '@/data/app-metadata.json';
 
 const benefits = [
     { icon: Smartphone, title: "Akses Cepat", description: "Buka Maudigi langsung dari layar utama Anda, sama seperti aplikasi native." },
@@ -24,6 +26,8 @@ export default function InstallPage() {
             // Bisa tambahkan toast atau pesan di sini
         }
     }, [isInstalled]);
+    
+    const logoSrc = appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/logo.jpg';
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-primary/10 to-background">
@@ -36,7 +40,7 @@ export default function InstallPage() {
                 <div className="text-center mb-10">
                     <Image 
                         data-ai-hint="rocket app logo"
-                        src="/logo.jpg" 
+                        src={logoSrc} 
                         alt="Maudigi Logo" 
                         width={120} 
                         height={120} 

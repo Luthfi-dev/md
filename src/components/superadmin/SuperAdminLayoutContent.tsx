@@ -2,7 +2,7 @@
 'use client';
 
 import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, ShieldAlert, AppWindow } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -47,6 +47,14 @@ export function SuperAdminLayoutContent({
                 <Link href="/spa" onClick={handleLinkClick}>
                   <LayoutDashboard />
                   Dashboard
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/spa/app-settings')}>
+                <Link href="/spa/app-settings" onClick={handleLinkClick}>
+                  <AppWindow />
+                  Pengaturan Aplikasi
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

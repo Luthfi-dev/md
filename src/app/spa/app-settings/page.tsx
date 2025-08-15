@@ -10,59 +10,60 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Loader2, AppWindow, Upload } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { optimizeImage } from '@/lib/utils';
 import { saveAppSettings, type AppMetadata } from './actions';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
 // Simulate fetching data from a file
 import appMetadata from '@/data/app-metadata.json';
 
 export default function AppSettingsPage() {
   const [settings, setSettings] = useState<AppMetadata>({ name: '', description: '', logoUrl: '' });
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setSettings(appMetadata);
-    if (appMetadata.logoUrl) {
-      setPreviewImage(appMetadata.logoUrl);
-    }
     setIsLoading(false);
   }, []);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast({
-          variant: 'destructive',
-          title: 'File Tidak Valid',
-          description: 'Hanya file gambar yang diizinkan.'
-        });
-        return;
-      }
+    if (!file) return;
 
-      try {
-        const optimizedFile = await optimizeImage(file, 256); // Optimize for logo size
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
-          setPreviewImage(dataUrl);
-          setSettings(s => ({ ...s, logoUrl: dataUrl }));
-        };
-        reader.readAsDataURL(optimizedFile);
-      } catch (error) {
-        console.error("Image optimization failed:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Gagal Mengoptimalkan Gambar',
-          description: 'Terjadi kesalahan saat memproses gambar Anda.',
+    if (!file.type.startsWith('image/')) {
+        toast({ variant: 'destructive', title: 'File Tidak Valid', description: 'Hanya file gambar yang diizinkan.' });
+        return;
+    }
+    
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('subfolder', 'app'); // Specify subfolder for app assets
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
         });
-      }
+        const result = await response.json();
+        if (result.success) {
+            // Update settings state with the new file path
+            setSettings(s => ({ ...s, logoUrl: result.filePath }));
+            toast({ title: 'Logo Berhasil Diunggah' });
+        } else {
+            toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: result.message });
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Tidak dapat terhubung ke server.';
+        toast({ variant: 'destructive', title: 'Error Unggah', description: message });
+    } finally {
+        setIsUploading(false);
     }
   };
+
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -93,7 +94,12 @@ export default function AppSettingsPage() {
     );
   }
 
+  // Construct the image URL from the stored path
+  const logoDisplayUrl = settings.logoUrl ? `/api/images/${settings.logoUrl}` : '';
+
   return (
+    <>
+    <LoadingOverlay isLoading={isSaving || isUploading} message={isUploading ? 'Mengunggah logo...' : 'Menyimpan pengaturan...'} />
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
@@ -108,7 +114,7 @@ export default function AppSettingsPage() {
 
           <div className='flex flex-col items-center gap-4'>
             <Avatar className='w-24 h-24 text-4xl ring-2 ring-primary/20 p-1'>
-              <AvatarImage src={previewImage || settings.logoUrl} />
+              <AvatarImage src={logoDisplayUrl} />
               <AvatarFallback>M</AvatarFallback>
             </Avatar>
             <Input 
@@ -118,7 +124,7 @@ export default function AppSettingsPage() {
               onChange={handleImageUpload} 
               accept="image/*"
             />
-            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
               <Upload className='mr-2' /> Unggah Logo
             </Button>
           </div>
@@ -148,12 +154,13 @@ export default function AppSettingsPage() {
             </p>
           </div>
           
-          <Button type="submit" disabled={isSaving}>
+          <Button type="submit" disabled={isSaving || isUploading}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Simpan Pengaturan
           </Button>
         </CardContent>
       </Card>
     </form>
+    </>
   );
 }

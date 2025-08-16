@@ -1,22 +1,43 @@
 
--- Skema untuk tabel Artikel
--- Tabel ini akan menyimpan semua konten artikel, metadata, dan status publikasi.
+-- Skema Database untuk Modul CMS Artikel
 
-CREATE TABLE IF NOT EXISTS `articles` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `uuid` VARCHAR(36) NOT NULL UNIQUE,
-  `title` VARCHAR(255) NOT NULL,
-  `slug` VARCHAR(255) NOT NULL UNIQUE,
-  `content` LONGTEXT,
-  `featured_image_url` VARCHAR(255),
-  `author_id` INT NOT NULL,
-  `status` ENUM('draft', 'pending_review', 'published') NOT NULL DEFAULT 'draft',
-  `meta_title` VARCHAR(255),
-  `meta_description` TEXT,
-  `tags` JSON,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `published_at` TIMESTAMP NULL,
-  FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Tabel utama untuk menyimpan semua artikel
+CREATE TABLE `articles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(36) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `content` longtext DEFAULT NULL,
+  `featured_image_url` varchar(255) DEFAULT NULL,
+  `author_id` int(11) NOT NULL,
+  `status` enum('draft','pending_review','published') NOT NULL DEFAULT 'draft',
+  `meta_title` varchar(255) DEFAULT NULL,
+  `meta_description` text DEFAULT NULL,
+  `published_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uuid` (`uuid`),
+  UNIQUE KEY `slug` (`slug`),
+  KEY `author_id` (`author_id`),
+  CONSTRAINT `articles_ibfk_1` FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Tabel untuk menyimpan semua tag yang tersedia
+CREATE TABLE `tags` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Tabel pivot untuk menghubungkan artikel dengan tag (relasi Many-to-Many)
+CREATE TABLE `article_tags` (
+  `article_id` int(11) NOT NULL,
+  `tag_id` int(11) NOT NULL,
+  PRIMARY KEY (`article_id`,`tag_id`),
+  KEY `tag_id` (`tag_id`),
+  CONSTRAINT `article_tags_ibfk_1` FOREIGN KEY (`article_id`) REFERENCES `articles` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `article_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

@@ -14,7 +14,7 @@ import { useDailyReward } from "@/hooks/use-daily-reward";
 import { DailyRewardDialog } from "@/components/DailyRewardDialog";
 import { CountUp } from "@/components/CountUp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { AppDefinition } from "@/app/admin/apps/page";
+import type { AppDefinition } from "@/types/app";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
@@ -293,7 +293,7 @@ export default function HomePageContent() {
             <section id="recommendations" className="pb-28">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold flex items-center gap-2">Rekomendasi untuk Anda</h2>
-                    <Link href="#" className="text-sm text-primary font-semibold">Lihat Semua</Link>
+                    <Link href="/blog" className="text-sm text-primary font-semibold">Lihat Semua</Link>
                 </div>
                 <div className="space-y-4">
                     <Card className="shadow-sm border-0 bg-card">

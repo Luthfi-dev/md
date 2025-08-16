@@ -2,7 +2,7 @@
 'use client';
 
 import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Bot, LogOut, AppWindow, ChevronsLeftRight, Gem, FolderGit2, User } from 'lucide-react';
+import { LayoutDashboard, Settings, Bot, LogOut, AppWindow, ChevronsLeftRight, Gem, FolderGit2, User, Newspaper, GalleryHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -50,6 +50,29 @@ export function AdminLayoutContent({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+
+             <SidebarGroup>
+                <SidebarGroupLabel className='flex items-center gap-2'><FolderGit2 /> Manajemen Konten</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/articles')}>
+                        <Link href="/adm/cms/articles" onClick={handleLinkClick}>
+                          <Newspaper className="w-4 h-4"/> Artikel
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                     <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/carousel')}>
+                        <Link href="/adm/cms/carousel" onClick={handleLinkClick}>
+                           <GalleryHorizontal className="w-4 h-4"/> Carousel
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+             </SidebarGroup>
+
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/apps')}>
                 <Link href="/adm/apps" onClick={handleLinkClick}>
@@ -66,22 +89,6 @@ export function AdminLayoutContent({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
-             <SidebarGroup>
-                <SidebarGroupLabel className='flex items-center gap-2'><FolderGit2 /> Manajemen</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/manager/referral')}>
-                        <Link href="/adm/manager/referral" onClick={handleLinkClick}>
-                          Referral
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-             </SidebarGroup>
-
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/pricing')}>
                 <Link href="/adm/pricing" onClick={handleLinkClick}>

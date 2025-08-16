@@ -10,7 +10,8 @@ const publicPaths = [
     '/color-generator', '/stopwatch', '/unit-converter', '/scanner', 
     '/surat', '/surat/share', '/surat/shared-template', '/surat-generator',
     '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf',
-    '/account/forgot-password', '/account/reset-password' // Moved from authPaths
+    '/account/forgot-password', '/account/reset-password',
+    '/blog',
 ];
 
 const userLoginPath = '/login';
@@ -74,6 +75,7 @@ export function middleware(request: NextRequest) {
     }
     
     // Allow public paths to be accessed by anyone
+    // Including dynamic blog post pages like /blog/some-slug
     if (publicPaths.some(p => pathname === p || (p !== '/' && pathname.startsWith(p+'/')))) {
         return NextResponse.next();
     }

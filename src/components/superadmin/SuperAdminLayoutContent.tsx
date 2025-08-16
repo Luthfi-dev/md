@@ -1,8 +1,8 @@
 
 'use client';
 
-import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, ShieldAlert, AppWindow } from 'lucide-react';
+import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from '@/components/ui/sidebar';
+import { LayoutDashboard, Settings, LogOut, ShieldAlert, AppWindow, Newspaper, GalleryHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -50,6 +50,27 @@ export function SuperAdminLayoutContent({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             <SidebarGroup>
+                <SidebarGroupLabel className='flex items-center gap-2'>Manajemen Konten</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/articles')}>
+                        <Link href="/adm/cms/articles" onClick={handleLinkClick}>
+                          <Newspaper className="w-4 h-4"/> Artikel
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                     <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/carousel')}>
+                        <Link href="/adm/cms/carousel" onClick={handleLinkClick}>
+                           <GalleryHorizontal className="w-4 h-4"/> Carousel
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+             </SidebarGroup>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith('/spa/app-settings')}>
                 <Link href="/spa/app-settings" onClick={handleLinkClick}>

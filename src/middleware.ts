@@ -8,7 +8,7 @@ import { getRefreshTokenName } from '@/lib/jwt';
 const publicPaths = [
     '/', '/explore', '/pricing', '/converter', '/calculator', 
     '/color-generator', '/stopwatch', '/unit-converter', '/scanner', 
-    '/surat', '/surat/share', '/surat/shared-template', '/surat-generator',
+    '/surat', '/surat/share-fallback', '/surat/shared-template', '/surat-generator',
     '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf',
     '/account/forgot-password', '/account/reset-password',
     '/blog',
@@ -18,11 +18,11 @@ const userLoginPath = '/login';
 const authPaths = [
     '/account/profile', '/account/edit-profile', '/account/security', 
     '/account/notifications', '/account/settings', '/account/invite', 
-    '/messages', '/notebook', '/wallet', '/notebook/groups',
+    '/messages', '/notebook', '/wallet', '/notebook/groups', '/account/install'
 ];
 
-const admLoginPath = '/adm/login';
-const isAdmPath = (pathname: string) => pathname.startsWith('/adm');
+const adminLoginPath = '/admin/login';
+const isAdminPath = (pathname: string) => pathname.startsWith('/admin');
 
 const spaLoginPath = '/spa/login';
 const isSpaPath = (pathname: string) => pathname.startsWith('/spa');
@@ -62,14 +62,14 @@ export function middleware(request: NextRequest) {
     }
 
     // --- Admin Area Protection ---
-    if (isAdmPath(pathname)) {
+    if (isAdminPath(pathname)) {
         const hasAdminAccess = adminToken || superAdminToken;
-        if (!hasAdminAccess && pathname !== admLoginPath) {
-             const url = new URL(admLoginPath, request.url);
+        if (!hasAdminAccess && pathname !== adminLoginPath) {
+             const url = new URL(adminLoginPath, request.url);
             return NextResponse.redirect(url);
         }
-        if (hasAdminAccess && pathname === admLoginPath) {
-            return NextResponse.redirect(new URL('/adm', request.url));
+        if (hasAdminAccess && pathname === adminLoginPath) {
+            return NextResponse.redirect(new URL('/admin', request.url));
         }
         return NextResponse.next();
     }

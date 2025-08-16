@@ -43,8 +43,8 @@ export function AdminLayoutContent({
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/adm'}>
-                <Link href="/adm" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname === '/admin'}>
+                <Link href="/admin" onClick={handleLinkClick}>
                   <LayoutDashboard />
                   Dashboard
                 </Link>
@@ -56,15 +56,15 @@ export function AdminLayoutContent({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/articles')}>
-                        <Link href="/adm/cms/articles" onClick={handleLinkClick}>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/cms/articles')}>
+                        <Link href="/admin/cms/articles" onClick={handleLinkClick}>
                           <Newspaper className="w-4 h-4"/> Artikel
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                      <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/carousel')}>
-                        <Link href="/adm/cms/carousel" onClick={handleLinkClick}>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/cms/carousel')}>
+                        <Link href="/admin/cms/carousel" onClick={handleLinkClick}>
                            <GalleryHorizontal className="w-4 h-4"/> Carousel
                         </Link>
                       </SidebarMenuButton>
@@ -74,40 +74,40 @@ export function AdminLayoutContent({
              </SidebarGroup>
 
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/apps')}>
-                <Link href="/adm/apps" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/apps')}>
+                <Link href="/admin/apps" onClick={handleLinkClick}>
                   <AppWindow />
                   Kelola Aplikasi
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/assistant')}>
-                <Link href="/adm/assistant" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/assistant')}>
+                <Link href="/admin/assistant" onClick={handleLinkClick}>
                   <Bot />
                   Asisten AI
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/pricing')}>
-                <Link href="/adm/pricing" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/pricing')}>
+                <Link href="/admin/pricing" onClick={handleLinkClick}>
                   <Gem />
                   Kelola Harga
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/pagination')}>
-                <Link href="/adm/pagination" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/pagination')}>
+                <Link href="/admin/pagination" onClick={handleLinkClick}>
                   <ChevronsLeftRight />
                   Paginasi
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/seo')}>
-                <Link href="/adm/seo" onClick={handleLinkClick}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/seo')}>
+                <Link href="/admin/seo" onClick={handleLinkClick}>
                   <Settings />
                   Pengaturan SEO
                 </Link>

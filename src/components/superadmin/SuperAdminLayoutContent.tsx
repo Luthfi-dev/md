@@ -55,15 +55,15 @@ export function SuperAdminLayoutContent({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/articles')}>
-                        <Link href="/adm/cms/articles" onClick={handleLinkClick}>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/cms/articles')}>
+                        <Link href="/admin/cms/articles" onClick={handleLinkClick}>
                           <Newspaper className="w-4 h-4"/> Artikel
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                      <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith('/adm/cms/carousel')}>
-                        <Link href="/adm/cms/carousel" onClick={handleLinkClick}>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/cms/carousel')}>
+                        <Link href="/admin/cms/carousel" onClick={handleLinkClick}>
                            <GalleryHorizontal className="w-4 h-4"/> Carousel
                         </Link>
                       </SidebarMenuButton>

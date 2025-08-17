@@ -108,7 +108,8 @@ export async function saveArticle(payload: ArticlePayload) {
     try {
         const validation = ArticleSchema.safeParse(payload);
         if (!validation.success) {
-            throw new Error(validation.error.errors.map(e => e.message).join(', '));
+            // Throw the specific Zod error message
+            throw new Error(validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '));
         }
         
         const { tags, ...articleData } = validation.data;
@@ -189,7 +190,6 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
 // --- AI FLOWS ---
 
 export async function generateSeoMeta(input: z.infer<typeof SeoMetaInputSchema>): Promise<SeoMetaOutput> {
-    await configureAi();
     return generateSeoMetaFlow(input);
 }
 
@@ -200,6 +200,7 @@ const generateSeoMetaFlow = ai.defineFlow(
         outputSchema: SeoMetaOutputSchema,
     },
     async (input) => {
+        await configureAi(); // Moved configuration inside the flow
         const prompt = ai.definePrompt({
             name: 'seoMetaPrompt',
             input: { schema: SeoMetaInputSchema },

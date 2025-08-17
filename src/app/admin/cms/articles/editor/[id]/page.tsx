@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from '../actions';
+import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
 import { useParams, useRouter } from "next/navigation";
 
 // A simple Tag input component
@@ -162,7 +162,7 @@ export default function ArticleEditorPage() {
   const handleArticleGenerated = (content: string, title?: string) => {
     if(editorRef.current) {
         editorRef.current.innerHTML = content;
-        setArticle(prev => ({...prev, content}));
+        setArticle(p => ({...p, content}));
     }
     if (title) {
        handleTitleChange({ target: { value: title } } as React.ChangeEvent<HTMLInputElement>);
@@ -216,7 +216,7 @@ export default function ArticleEditorPage() {
           }
       } catch(error) {
            const errorMessage = (error as Error).message;
-           const userFriendlyMessage = errorMessage.includes("Field 'title' doesn't have a default value")
+           const userFriendlyMessage = errorMessage.includes("title: Judul tidak boleh kosong")
             ? "Judul artikel wajib diisi."
             : errorMessage;
            toast({ variant: "destructive", title: "Gagal Menyimpan", description: userFriendlyMessage });
@@ -295,7 +295,7 @@ export default function ArticleEditorPage() {
                     <Input 
                         id="slug" 
                         placeholder="contoh: tips-belajar-efektif" 
-                        value={article.slug}
+                        value={article.slug || ''}
                         onChange={(e) => setArticle(p => ({...p, slug: e.target.value}))}
                      />
                 </div>

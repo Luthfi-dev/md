@@ -39,7 +39,6 @@ export type ArticleFromOutlineOutput = z.infer<typeof ArticleFromOutlineOutputSc
 
 // --- Flow 1: Generate Outlines ---
 export async function generateArticleOutline(description: string): Promise<ArticleOutlineOutput> {
-  await configureAi();
   return generateArticleOutlineFlow({ description });
 }
 
@@ -50,6 +49,7 @@ const generateArticleOutlineFlow = ai.defineFlow(
     outputSchema: ArticleOutlineOutputSchema,
   },
   async (input) => {
+    await configureAi(); // Moved configuration inside the flow
     const prompt = ai.definePrompt({
         name: 'articleOutlinePrompt',
         input: { schema: ArticleOutlineInputSchema },
@@ -66,7 +66,6 @@ Deskripsi: {{{description}}}`,
 
 // --- Flow 2: Generate Full Article from Outline ---
 export async function generateArticleFromOutline(input: z.infer<typeof ArticleFromOutlineInputSchema>): Promise<ArticleFromOutlineOutput> {
-    await configureAi();
     return generateArticleFromOutlineFlow(input);
 }
 
@@ -77,6 +76,7 @@ const generateArticleFromOutlineFlow = ai.defineFlow(
         outputSchema: ArticleFromOutlineOutputSchema,
     },
     async (input) => {
+        await configureAi(); // Moved configuration inside the flow
         const prompt = ai.definePrompt({
             name: 'articleFromOutlinePrompt',
             input: { schema: ArticleFromOutlineInputSchema },
@@ -97,3 +97,4 @@ Poin-poin/Sub-judul:
         return output!;
     }
 );
+

@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags, generateArticleOutline, generateArticleFromOutline } from "../actions";
+import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags, generateArticleOutline, generateArticleFromOutline, deleteArticle } from "../actions";
 import { useParams, useRouter } from "next/navigation";
 
 // A simple Tag input component

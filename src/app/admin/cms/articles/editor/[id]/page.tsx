@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
+import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags, generateArticleOutline, generateArticleFromOutline } from "../actions";
 import { useParams, useRouter } from "next/navigation";
 
 // A simple Tag input component
@@ -63,17 +63,7 @@ export default function ArticleEditorPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>({
-    uuid: id === 'new' ? crypto.randomUUID() : id,
-    title: '',
-    slug: '',
-    content: '',
-    status: 'draft',
-    meta_title: '',
-    meta_description: '',
-    tags: [],
-    featured_image_url: null
-  });
+  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>({ status: 'draft', tags: [] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -102,33 +92,49 @@ export default function ArticleEditorPage() {
   };
 
   useEffect(() => {
-    const fetchArticleData = async () => {
-      if (id && id !== 'new') {
-        setIsLoading(true);
-        try {
-          const fetchedArticle = await getArticle(id);
-          if (fetchedArticle) {
-            setArticle({
-                ...fetchedArticle,
-                tags: fetchedArticle.tags.map(t => t.name)
-            });
-            if (editorRef.current) {
-                editorRef.current.innerHTML = fetchedArticle.content || '';
-            }
-          } else {
-             toast({ variant: 'destructive', title: 'Artikel tidak ditemukan' });
-             router.push('/admin/cms/articles');
+    const fetchArticleData = async (articleId: string) => {
+      setIsLoading(true);
+      try {
+        const fetchedArticle = await getArticle(articleId);
+        if (fetchedArticle) {
+          setArticle({
+              ...fetchedArticle,
+              tags: fetchedArticle.tags.map(t => t.name)
+          });
+          if (editorRef.current) {
+              editorRef.current.innerHTML = fetchedArticle.content || '';
           }
-        } catch (error) {
-           toast({ variant: 'destructive', title: 'Gagal memuat artikel', description: (error as Error).message });
-        } finally {
-            setIsLoading(false);
+        } else {
+           toast({ variant: 'destructive', title: 'Artikel tidak ditemukan' });
+           router.push('/admin/cms/articles');
         }
-      } else {
-        setIsLoading(false);
+      } catch (error) {
+         toast({ variant: 'destructive', title: 'Gagal memuat artikel', description: (error as Error).message });
+      } finally {
+          setIsLoading(false);
       }
     };
-    fetchArticleData();
+    
+    if (id) {
+        if (id === 'new') {
+            // This is a new article. Initialize with default values and a new UUID.
+            setArticle({
+                uuid: crypto.randomUUID(),
+                title: '',
+                slug: '',
+                content: '',
+                status: 'draft',
+                meta_title: '',
+                meta_description: '',
+                tags: [],
+                featured_image_url: null
+            });
+            setIsLoading(false);
+        } else {
+            // This is an existing article. Fetch its data.
+            fetchArticleData(id);
+        }
+    }
   }, [id, router, toast]);
   
 
@@ -284,6 +290,7 @@ export default function ArticleEditorPage() {
                     ref={editorRef}
                     contentEditable={true}
                     className="min-h-[400px] w-full rounded-b-md border border-input bg-background p-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: article.content || '' }}
                 >
                 </div>
             </div>

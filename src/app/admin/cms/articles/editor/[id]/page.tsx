@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, type ArticlePayload, type ArticleWithAuthorAndTags } from './actions';
+import { getArticle, saveArticle, type ArticlePayload, type ArticleWithAuthorAndTags } from '../actions';
 import { useParams, useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
@@ -322,9 +322,4 @@ export default function ArticleEditorPage() {
     </div>
     </>
   );
-}
-
-// Support for creating a new article without a specific ID in the URL
-export function NewArticlePageWrapper() {
-    return <ArticleEditorPage />;
 }

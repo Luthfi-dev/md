@@ -1,12 +1,12 @@
 
 'use client';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, Wand2, Lightbulb, Check } from "lucide-react";
+import { Loader2, Sparkles, Wand2, Lightbulb } from "lucide-react";
 import { Textarea } from '../ui/textarea';
 import { generateArticleOutline, generateArticleFromOutline } from '@/ai/flows/generate-article-flow';
 import type { ArticleOutlineOutput } from '@/ai/flows/generate-article-flow';
@@ -19,7 +19,7 @@ type Stage = 'description' | 'outline' | 'generating';
 interface GenerateArticleDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
-    onArticleGenerated: (content: string) => void;
+    onArticleGenerated: (content: string, title?: string) => void;
 }
 
 export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated }: GenerateArticleDialogProps) {
@@ -84,9 +84,7 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
             const result = await generateArticleFromOutline({ selectedOutline, wordCount });
 
             if (result && result.articleContent) {
-                 // Prepend title to the content
-                const fullHtmlContent = `<h1>${selectedOutline.title}</h1>${result.articleContent}`;
-                onArticleGenerated(fullHtmlContent);
+                onArticleGenerated(result.articleContent, selectedOutline.title);
             } else {
                 throw new Error("Gagal membuat artikel lengkap.");
             }

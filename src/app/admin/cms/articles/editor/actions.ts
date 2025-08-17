@@ -4,12 +4,13 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
-import { ai, configureAi } from "@/ai/genkit";
+import { generateArticleFromOutline as genArticle, generateArticleOutline as genOutline } from "@/ai/flows/generate-article-flow";
+import { generateSeoMetaFlow } from "@/ai/flows/generate-seo-meta-flow";
 
 // --- Schemas ---
 
 const ArticleSchema = z.object({
-    uuid: z.string().uuid(),
+    uuid: z.string().uuid('UUID tidak valid'),
     title: z.string().min(1, 'Judul tidak boleh kosong'),
     slug: z.string().min(1, 'Slug tidak boleh kosong'),
     content: z.string().optional().nullable(),
@@ -39,21 +40,11 @@ export type ArticleWithAuthorAndTags = {
     meta_title: string | null;
     meta_description: string | null;
     published_at: string | null;
+    author_id: number;
     authorName: string;
     authorEmail: string;
     tags: { id: number; name: string }[];
 };
-
-const SeoMetaInputSchema = z.object({
-    articleContent: z.string().describe('Konten utama artikel sebagai referensi.'),
-});
-
-const SeoMetaOutputSchema = z.object({
-  title: z.string().describe("Judul SEO yang menarik dan singkat (sekitar 60 karakter) untuk artikel."),
-  description: z.string().describe("Deskripsi meta yang ringkas dan mengundang klik (sekitar 160 karakter).")
-});
-
-export type SeoMetaOutput = z.infer<typeof SeoMetaOutputSchema>;
 
 // --- GETTERS ---
 export async function getArticle(uuid: string): Promise<ArticleWithAuthorAndTags | null> {
@@ -187,32 +178,21 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
     }
 }
 
-// --- AI FLOWS ---
+// --- AI FUNCTIONS ---
 
-export async function generateSeoMeta(input: z.infer<typeof SeoMetaInputSchema>): Promise<SeoMetaOutput> {
-    return generateSeoMetaFlow(input);
+export async function generateArticleOutline(description: string) {
+    return await genOutline({ description });
 }
 
-const generateSeoMetaFlow = ai.defineFlow(
-    {
-        name: 'generateSeoMetaFlow',
-        inputSchema: SeoMetaInputSchema,
-        outputSchema: SeoMetaOutputSchema,
-    },
-    async (input) => {
-        await configureAi(); // Moved configuration inside the flow
-        const prompt = ai.definePrompt({
-            name: 'seoMetaPrompt',
-            input: { schema: SeoMetaInputSchema },
-            output: { schema: SeoMetaOutputSchema },
-            prompt: `Anda adalah seorang spesialis SEO. Berdasarkan konten artikel berikut, buatkan judul meta yang menarik (sekitar 60 karakter) dan deskripsi meta yang ringkas dan persuasif (sekitar 160 karakter).
+export async function generateArticleFromOutline(input: {
+  selectedOutline: { title: string; points: string[] };
+  wordCount: number;
+}) {
+    return await genArticle(input);
+}
 
-Konten Artikel:
-{{{articleContent}}}
-`,
-        });
+export async function generateSeoMeta(input: { articleContent: string }) {
+    return await generateSeoMetaFlow(input);
+}
 
-        const { output } = await prompt(input);
-        return output!;
-    }
-);
+    

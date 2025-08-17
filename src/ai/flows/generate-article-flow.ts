@@ -2,9 +2,6 @@
 'use server';
 /**
  * @fileOverview An AI flow to generate an article based on a description.
- *
- * - generateArticleOutline: Creates several outline options for an article.
- * - generateArticleFromOutline: Writes a full article from a selected outline.
  */
 
 import { ai, configureAi } from '@/ai/genkit';
@@ -21,7 +18,6 @@ const ArticleOutlineOutputSchema = z.object({
       points: z.array(z.string()).describe("Poin-poin utama atau sub-judul dalam kerangka artikel.")
   })).describe('Tiga opsi kerangka artikel yang berbeda.'),
 });
-export type ArticleOutlineOutput = z.infer<typeof ArticleOutlineOutputSchema>;
 
 // --- Schema for Full Article Generation ---
 const ArticleFromOutlineInputSchema = z.object({
@@ -35,7 +31,6 @@ const ArticleFromOutlineInputSchema = z.object({
 const ArticleFromOutlineOutputSchema = z.object({
   articleContent: z.string().describe('Konten artikel lengkap dalam format HTML.'),
 });
-export type ArticleFromOutlineOutput = z.infer<typeof ArticleFromOutlineOutputSchema>;
 
 
 // --- Prompt Definitions (defined once at the top level) ---
@@ -66,9 +61,9 @@ Poin-poin/Sub-judul:
 });
 
 
-// --- Flow 1: Generate Outlines ---
+// --- Flow Definitions ---
 
-const generateArticleOutlineFlow = ai.defineFlow(
+export const generateArticleOutline = ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
     inputSchema: ArticleOutlineInputSchema,
@@ -81,9 +76,7 @@ const generateArticleOutlineFlow = ai.defineFlow(
   }
 );
 
-// --- Flow 2: Generate Full Article from Outline ---
-
-const generateArticleFromOutlineFlow = ai.defineFlow(
+export const generateArticleFromOutline = ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
         inputSchema: ArticleFromOutlineInputSchema,
@@ -95,16 +88,3 @@ const generateArticleFromOutlineFlow = ai.defineFlow(
         return output!;
     }
 );
-
-
-// --- Exported Server Actions ---
-
-export async function generateArticleOutline(description: string): Promise<ArticleOutlineOutput> {
-  return generateArticleOutlineFlow({ description });
-}
-
-export async function generateArticleFromOutline(input: z.infer<typeof ArticleFromOutlineInputSchema>): Promise<ArticleFromOutlineOutput> {
-    return generateArticleFromOutlineFlow(input);
-}
-
-    

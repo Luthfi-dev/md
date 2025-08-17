@@ -63,19 +63,16 @@ export default function ArticleEditorPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>(() => {
-    // Initialize state with a UUID for new articles
-    const isNew = id === 'new';
-    return {
-      uuid: isNew ? crypto.randomUUID() : id,
-      title: '',
-      slug: '',
-      content: '',
-      status: 'draft',
-      meta_title: '',
-      meta_description: '',
-      tags: [],
-    };
+  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>({
+    uuid: id === 'new' ? crypto.randomUUID() : id,
+    title: '',
+    slug: '',
+    content: '',
+    status: 'draft',
+    meta_title: '',
+    meta_description: '',
+    tags: [],
+    featured_image_url: null
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -206,10 +203,16 @@ export default function ArticleEditorPage() {
       setIsSaving(true);
       
       const payload: ArticlePayload = {
-          ...article,
+          uuid: article.uuid!,
+          title: article.title || '',
+          slug: article.slug || '',
           content: editorRef.current?.innerHTML || '',
+          featured_image_url: article.featured_image_url,
           status: status,
-          author_id: user.id,
+          author_id: article.author_id || user.id,
+          meta_title: article.meta_title,
+          meta_description: article.meta_description,
+          tags: article.tags || [],
       };
 
       try {
@@ -281,8 +284,6 @@ export default function ArticleEditorPage() {
                     ref={editorRef}
                     contentEditable={true}
                     className="min-h-[400px] w-full rounded-b-md border border-input bg-background p-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 prose dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: article.content || '' }}
-                    suppressContentEditableWarning={true}
                 >
                 </div>
             </div>
@@ -377,5 +378,3 @@ export default function ArticleEditorPage() {
     </>
   );
 }
-
-    

@@ -55,6 +55,19 @@ const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[])
     );
 };
 
+const createNewArticleState = (): Partial<ArticleWithAuthorAndTags> => ({
+    uuid: crypto.randomUUID(),
+    title: '',
+    slug: '',
+    content: '',
+    status: 'draft',
+    meta_title: '',
+    meta_description: '',
+    tags: [],
+    featured_image_url: null
+});
+
+
 // Main Component
 export default function ArticleEditorPage() {
   const { user } = useAuth();
@@ -63,7 +76,12 @@ export default function ArticleEditorPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>({ status: 'draft', tags: [] });
+  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>(() => {
+    if (id === 'new') {
+        return createNewArticleState();
+    }
+    return {}; // Empty object for existing articles, to be populated by useEffect
+  });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +111,6 @@ export default function ArticleEditorPage() {
 
   useEffect(() => {
     const fetchArticleData = async (articleId: string) => {
-      setIsLoading(true);
       try {
         const fetchedArticle = await getArticle(articleId);
         if (fetchedArticle) {
@@ -115,27 +132,14 @@ export default function ArticleEditorPage() {
       }
     };
     
-    if (id) {
-        if (id === 'new') {
-            // This is a new article. Initialize with default values and a new UUID.
-            setArticle({
-                uuid: crypto.randomUUID(),
-                title: '',
-                slug: '',
-                content: '',
-                status: 'draft',
-                meta_title: '',
-                meta_description: '',
-                tags: [],
-                featured_image_url: null
-            });
-            setIsLoading(false);
-        } else {
-            // This is an existing article. Fetch its data.
-            fetchArticleData(id);
-        }
+    // Only fetch data if it's an existing article.
+    // New articles are handled by the initial state.
+    if (id !== 'new') {
+      fetchArticleData(id);
+    } else {
+      setIsLoading(false);
     }
-  }, [id, router, toast]);
+  }, [id, toast, router]);
   
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

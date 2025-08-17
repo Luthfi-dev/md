@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
 import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags, deleteArticle } from "../actions";
 import { useParams, useRouter } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -56,33 +55,15 @@ const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[])
     );
 };
 
-const createNewArticleState = (): Partial<ArticleWithAuthorAndTags> => ({
-    uuid: uuidv4(),
-    title: '',
-    slug: '',
-    content: '',
-    status: 'draft',
-    meta_title: '',
-    meta_description: '',
-    tags: [],
-    featured_image_url: null
-});
 
-
-// Main Component
-export default function ArticleEditorPage() {
+// Main Component for EDITING an existing article
+export default function ArticleEditorPage({ params }: { params: { id: string } }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const params = useParams();
-  const id = params.id as string;
+  const id = params.id;
 
-  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags> | null>(() => {
-      if (id === 'new') {
-          return createNewArticleState();
-      }
-      return null;
-  });
+  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags> | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -111,6 +92,10 @@ export default function ArticleEditorPage() {
   };
 
   useEffect(() => {
+    // This effect now ONLY runs for existing articles.
+    // The "new" case is handled by its own page.
+    if (!id) return;
+
     const fetchArticleData = async (articleId: string) => {
       setIsLoading(true);
       try {
@@ -134,13 +119,8 @@ export default function ArticleEditorPage() {
       }
     };
     
-    // Only fetch data if it's an existing article.
-    // The "new" case is handled by the initial state.
-    if (id !== 'new') {
-      fetchArticleData(id);
-    } else {
-      setIsLoading(false);
-    }
+    fetchArticleData(id);
+
   }, [id, toast, router]);
   
 
@@ -238,9 +218,7 @@ export default function ArticleEditorPage() {
       try {
           const savedArticle = await saveArticle(payload);
           toast({ title: 'Artikel Disimpan!', description: `Status artikel sekarang: ${status}`});
-          if (id === 'new') {
-            router.replace(`/admin/cms/articles/editor/${savedArticle.uuid}`);
-          }
+          // No need to redirect, we are already on the correct page
       } catch(error) {
            const errorMessage = (error as Error).message;
            toast({ variant: "destructive", title: "Gagal Menyimpan", description: errorMessage, duration: 8000 });

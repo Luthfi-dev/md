@@ -63,8 +63,11 @@ export default function ArticleEditorPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>({
-      uuid: id === 'new' ? crypto.randomUUID() : id,
+  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>(() => {
+    // Initialize state with a UUID for new articles
+    const isNew = id === 'new';
+    return {
+      uuid: isNew ? crypto.randomUUID() : id,
       title: '',
       slug: '',
       content: '',
@@ -72,6 +75,7 @@ export default function ArticleEditorPage() {
       meta_title: '',
       meta_description: '',
       tags: [],
+    };
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -216,10 +220,7 @@ export default function ArticleEditorPage() {
           }
       } catch(error) {
            const errorMessage = (error as Error).message;
-           const userFriendlyMessage = errorMessage.includes("title: Judul tidak boleh kosong")
-            ? "Judul artikel wajib diisi."
-            : errorMessage;
-           toast({ variant: "destructive", title: "Gagal Menyimpan", description: userFriendlyMessage });
+           toast({ variant: "destructive", title: "Gagal Menyimpan", description: errorMessage, duration: 8000 });
       } finally {
           setIsSaving(false);
       }
@@ -376,3 +377,5 @@ export default function ArticleEditorPage() {
     </>
   );
 }
+
+    

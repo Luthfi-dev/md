@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags, deleteArticle } from "../actions";
+import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
 import { useParams, useRouter } from "next/navigation";
 
 // A simple Tag input component
@@ -61,7 +61,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const id = params.id;
+  const id = params.id; // This is the article's UUID
 
   const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags> | null>(null);
 
@@ -92,8 +92,8 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
   };
 
   useEffect(() => {
-    // This effect now ONLY runs for existing articles.
-    // The "new" case is handled by its own page.
+    // This effect is ONLY for fetching existing articles.
+    // The "new" case is handled by its own dedicated page.
     if (!id) return;
 
     const fetchArticleData = async (articleId: string) => {
@@ -216,9 +216,9 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       };
 
       try {
-          const savedArticle = await saveArticle(payload);
+          await saveArticle(payload);
           toast({ title: 'Artikel Disimpan!', description: `Status artikel sekarang: ${status}`});
-          // No need to redirect, we are already on the correct page
+          setArticle(p => ({ ...p, status })); // Update status in local state
       } catch(error) {
            const errorMessage = (error as Error).message;
            toast({ variant: "destructive", title: "Gagal Menyimpan", description: errorMessage, duration: 8000 });

@@ -38,37 +38,9 @@ const ArticleFromOutlineOutputSchema = z.object({
 export type ArticleFromOutlineOutput = z.infer<typeof ArticleFromOutlineOutputSchema>;
 
 
-// --- Prompt Definitions (defined once at the top level) ---
-
-const articleOutlinePrompt = ai.definePrompt({
-    name: 'articleOutlinePrompt',
-    input: { schema: ArticleOutlineInputSchema },
-    output: { schema: ArticleOutlineOutputSchema },
-    prompt: `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan deskripsi berikut, buatkan 3 opsi kerangka (outline) yang menarik dan terstruktur untuk sebuah artikel blog. Setiap outline harus memiliki judul yang SEO-friendly dan beberapa poin utama (sub-judul).
-
-Deskripsi: {{{description}}}`,
-});
-
-const articleFromOutlinePrompt = ai.definePrompt({
-    name: 'articleFromOutlinePrompt',
-    input: { schema: ArticleFromOutlineInputSchema },
-    output: { schema: ArticleFromOutlineOutputSchema },
-    prompt: `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan kerangka (outline) berikut, tulis sebuah artikel blog yang lengkap, menarik, dan informatif dengan target sekitar {{{wordCount}}} kata.
-Gunakan format HTML dengan tag paragraf <p>, sub-judul <h2>, dan daftar <ul><li>. Pastikan gaya bahasanya engaging dan mudah dibaca.
-
-Judul: {{{selectedOutline.title}}}
-
-Poin-poin/Sub-judul:
-{{#each selectedOutline.points}}
-- {{{this}}}
-{{/each}}
-`,
-});
-
-
 // --- Flow Definitions ---
 
-export const generateArticleOutline = ai.defineFlow(
+export const generateArticleOutlineFlow = ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
     inputSchema: ArticleOutlineInputSchema,
@@ -76,12 +48,24 @@ export const generateArticleOutline = ai.defineFlow(
   },
   async (input) => {
     await configureAi();
-    const { output } = await articleOutlinePrompt(input);
+    
+    const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan deskripsi berikut, buatkan 3 opsi kerangka (outline) yang menarik dan terstruktur untuk sebuah artikel blog. Setiap outline harus memiliki judul yang SEO-friendly dan beberapa poin utama (sub-judul).
+
+Deskripsi: ${input.description}`;
+
+    const { output } = await ai.generate({
+        prompt: prompt,
+        model: 'googleai/gemini-2.0-flash',
+        output: {
+            schema: ArticleOutlineOutputSchema
+        }
+    });
+    
     return output!;
   }
 );
 
-export const generateArticleFromOutline = ai.defineFlow(
+export const generateArticleFromOutlineFlow = ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
         inputSchema: ArticleFromOutlineInputSchema,
@@ -89,7 +73,23 @@ export const generateArticleFromOutline = ai.defineFlow(
     },
     async (input) => {
         await configureAi();
-        const { output } = await articleFromOutlinePrompt(input);
+        
+        const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan kerangka (outline) berikut, tulis sebuah artikel blog yang lengkap, menarik, dan informatif dengan target sekitar ${input.wordCount} kata.
+Gunakan format HTML dengan tag paragraf <p>, sub-judul <h2>, dan daftar <ul><li>. Pastikan gaya bahasanya engaging dan mudah dibaca.
+
+Judul: ${input.selectedOutline.title}
+
+Poin-poin/Sub-judul:
+${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
+`;
+
+        const { output } = await ai.generate({
+            prompt: prompt,
+            model: 'googleai/gemini-2.0-flash',
+            output: {
+                schema: ArticleFromOutlineOutputSchema,
+            }
+        });
         return output!;
     }
 );

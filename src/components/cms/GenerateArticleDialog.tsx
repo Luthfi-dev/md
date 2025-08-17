@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Sparkles, Wand2, Lightbulb } from "lucide-react";
 import { Textarea } from '../ui/textarea';
-import { generateArticleOutline, generateArticleFromOutline } from '@/ai/flows/generate-article-flow';
+import { generateArticleOutline, generateArticleFromOutline } from '@/app/admin/cms/articles/editor/actions';
 import type { ArticleOutlineOutput } from '@/ai/flows/generate-article-flow';
 import { Card, CardContent } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
@@ -58,7 +58,8 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
         }
         setIsLoading(true);
         try {
-            const result = await generateArticleOutline(description);
+            // Correctly wrap the description in an object
+            const result = await generateArticleOutline({ description });
             if (result && result.outlines.length > 0) {
                 setOutlines(result.outlines);
                 setStage('outline');

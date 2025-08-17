@@ -11,6 +11,7 @@ import { z } from 'genkit';
 const ArticleOutlineInputSchema = z.object({
   description: z.string().describe('Deskripsi singkat atau ide utama artikel.'),
 });
+export type ArticleOutlineInput = z.infer<typeof ArticleOutlineInputSchema>;
 
 const ArticleOutlineOutputSchema = z.object({
   outlines: z.array(z.object({
@@ -18,6 +19,8 @@ const ArticleOutlineOutputSchema = z.object({
       points: z.array(z.string()).describe("Poin-poin utama atau sub-judul dalam kerangka artikel.")
   })).describe('Tiga opsi kerangka artikel yang berbeda.'),
 });
+export type ArticleOutlineOutput = z.infer<typeof ArticleOutlineOutputSchema>;
+
 
 // --- Schema for Full Article Generation ---
 const ArticleFromOutlineInputSchema = z.object({
@@ -27,10 +30,12 @@ const ArticleFromOutlineInputSchema = z.object({
   }),
   wordCount: z.number().describe('Target jumlah kata untuk artikel.'),
 });
+export type ArticleFromOutlineInput = z.infer<typeof ArticleFromOutlineInputSchema>;
 
 const ArticleFromOutlineOutputSchema = z.object({
   articleContent: z.string().describe('Konten artikel lengkap dalam format HTML.'),
 });
+export type ArticleFromOutlineOutput = z.infer<typeof ArticleFromOutlineOutputSchema>;
 
 
 // --- Prompt Definitions (defined once at the top level) ---

@@ -11,8 +11,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags, generateArticleOutline, generateArticleFromOutline, deleteArticle } from "../actions";
+import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags, deleteArticle } from "../actions";
 import { useParams, useRouter } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -56,7 +57,7 @@ const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[])
 };
 
 const createNewArticleState = (): Partial<ArticleWithAuthorAndTags> => ({
-    uuid: crypto.randomUUID(),
+    uuid: uuidv4(),
     title: '',
     slug: '',
     content: '',
@@ -76,11 +77,11 @@ export default function ArticleEditorPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>(() => {
-    if (id === 'new') {
-        return createNewArticleState();
-    }
-    return {}; // Empty object for existing articles, to be populated by useEffect
+  const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags> | null>(() => {
+      if (id === 'new') {
+          return createNewArticleState();
+      }
+      return null;
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -111,6 +112,7 @@ export default function ArticleEditorPage() {
 
   useEffect(() => {
     const fetchArticleData = async (articleId: string) => {
+      setIsLoading(true);
       try {
         const fetchedArticle = await getArticle(articleId);
         if (fetchedArticle) {
@@ -133,7 +135,7 @@ export default function ArticleEditorPage() {
     };
     
     // Only fetch data if it's an existing article.
-    // New articles are handled by the initial state.
+    // The "new" case is handled by the initial state.
     if (id !== 'new') {
       fetchArticleData(id);
     } else {
@@ -206,16 +208,24 @@ export default function ArticleEditorPage() {
   }
 
   const handleSave = async (status: 'draft' | 'pending_review' | 'published') => {
-      if (!user) {
-          toast({ variant: "destructive", title: "Anda harus login untuk menyimpan." });
+      if (!user || !article?.uuid) {
+          toast({ variant: "destructive", title: "Data tidak valid atau Anda belum login." });
           return;
+      }
+       if (!article.title || article.title.trim() === '') {
+        toast({
+            variant: "destructive",
+            title: "Gagal Menyimpan",
+            description: "Judul artikel tidak boleh kosong.",
+        });
+        return;
       }
       setIsSaving(true);
       
       const payload: ArticlePayload = {
           uuid: article.uuid!,
           title: article.title || '',
-          slug: article.slug || '',
+          slug: article.slug || generateSlug(article.title || ''),
           content: editorRef.current?.innerHTML || '',
           featured_image_url: article.featured_image_url,
           status: status,
@@ -248,7 +258,7 @@ export default function ArticleEditorPage() {
 
   const isSuperAdmin = user?.role === 1;
 
-  if (isLoading) {
+  if (isLoading || !article) {
     return <div className="flex justify-center items-center h-96"><Loader2 className="w-12 h-12 animate-spin text-primary"/></div>;
   }
 
@@ -275,7 +285,7 @@ export default function ArticleEditorPage() {
                   id="title" 
                   placeholder="Judul yang menarik..." 
                   className="text-lg h-12" 
-                  value={article.title}
+                  value={article.title || ''}
                   onChange={handleTitleChange}
               />
             </div>

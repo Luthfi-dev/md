@@ -4,8 +4,8 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
-import { generateArticleFromOutline as genArticle, generateArticleOutline as genOutline } from "@/ai/flows/generate-article-flow";
-import { generateSeoMetaFlow } from "@/ai/flows/generate-seo-meta-flow";
+import { generateArticleFromOutline as genArticleFlow, generateArticleOutline as genOutlineFlow } from "@/ai/flows/generate-article-flow";
+import { generateSeoMetaFlow as genSeoFlow } from "@/ai/flows/generate-seo-meta-flow";
 
 // --- Schemas ---
 
@@ -181,16 +181,16 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
 // --- AI FUNCTIONS ---
 
 export async function generateArticleOutline(description: string) {
-    return await genOutline({ description });
+    return await genOutlineFlow({ description });
 }
 
 export async function generateArticleFromOutline(input: {
   selectedOutline: { title: string; points: string[] };
   wordCount: number;
 }) {
-    return await genArticle(input);
+    return await genArticleFlow(input);
 }
 
 export async function generateSeoMeta(input: { articleContent: string }) {
-    return await generateSeoMetaFlow(input);
+    return await genSeoFlow(input);
 }

@@ -1,27 +1,16 @@
-
+// This file is intentionally left blank. 
+// The route /admin/cms/articles/editor will now be handled by the editor/new/page.tsx for creating new articles,
+// or by editor/[id]/page.tsx for editing existing ones.
+// This prevents direct access to a generic editor page without context.
 'use client';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import ArticleEditorPage from './[id]/page';
+import { useEffect } from 'react';
 
-// This is a wrapper to allow the editor to be accessed without an ID for new articles.
-// It effectively redirects to the dynamic route with a "new" slug.
-export default function NewArticlePageWrapper() {
+export default function EditorRootPage() {
     const router = useRouter();
-
-    const handleCreateNew = () => {
-        router.push('/admin/cms/articles/editor/new');
-    }
-
-    // This page should ideally not be rendered directly, but as a fallback,
-    // we can provide a button to go to the correct page.
-    // The main entry point should be the button on the article list page.
-    return (
-        <div className="flex justify-center items-center h-full">
-             <Button onClick={handleCreateNew}>
-                <Plus className="mr-2 h-4 w-4" /> Tulis Artikel Baru
-            </Button>
-        </div>
-    );
+    useEffect(() => {
+        // Redirect to the article list if someone lands here directly.
+        router.replace('/admin/cms/articles');
+    }, [router]);
+    return null;
 }

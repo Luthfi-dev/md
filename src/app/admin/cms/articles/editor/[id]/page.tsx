@@ -1,4 +1,3 @@
-
 'use client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,10 +91,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
   };
 
   useEffect(() => {
-    // This effect is ONLY for fetching existing articles.
-    // The "new" case is handled by its own dedicated page.
-    if (!id) return;
-
     const fetchArticleData = async (articleId: string) => {
       setIsLoading(true);
       try {
@@ -118,6 +113,13 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
           setIsLoading(false);
       }
     };
+    
+    // This page is ONLY for editing. The "new" page handles creation.
+    // If somehow landed here with "new", redirect.
+    if (id === 'new') {
+        router.replace('/admin/cms/articles/editor/new');
+        return;
+    }
     
     fetchArticleData(id);
 

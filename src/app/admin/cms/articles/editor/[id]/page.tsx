@@ -5,15 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Send, Eye, Upload, Trash2, Tag, Loader2, Sparkles, FileEdit, Settings, RotateCcw } from "lucide-react";
+import { Save, Send, Eye, Upload, Trash2, Tag, Loader2, Sparkles, FileEdit, Settings, RotateCcw, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, type ArticlePayload, type ArticleWithAuthorAndTags } from '../actions';
+import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from '../actions';
 import { useParams, useRouter } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -65,10 +64,10 @@ export default function ArticleEditorPage() {
   const id = params.id as string;
 
   const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags>>({
-      uuid: id === 'new' ? uuidv4() : id,
+      uuid: id === 'new' ? crypto.randomUUID() : id,
       title: '',
       slug: '',
-      content: '<p>Tulis konten artikel Anda di sini...</p>',
+      content: '',
       status: 'draft',
       meta_title: '',
       meta_description: '',
@@ -78,6 +77,7 @@ export default function ArticleEditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingMeta, setIsGeneratingMeta] = useState(false);
   
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +169,30 @@ export default function ArticleEditorPage() {
     }
     setIsAiDialogOpen(false);
   };
+  
+  const handleGenerateMeta = async () => {
+      const content = editorRef.current?.innerText || '';
+      if (content.length < 50) {
+        toast({variant: 'destructive', title: 'Konten Tidak Cukup', description: 'Tulis setidaknya 50 karakter di editor untuk menghasilkan meta.'});
+        return;
+      }
+      setIsGeneratingMeta(true);
+      try {
+        const result = await generateSeoMeta({ articleContent: content });
+        if (result && result.title && result.description) {
+            setArticle(p => ({
+                ...p,
+                meta_title: result.title,
+                meta_description: result.description,
+            }));
+            toast({ title: 'Meta SEO Dibuat!'});
+        }
+      } catch(error) {
+        toast({variant: 'destructive', title: 'Gagal Membuat Meta', description: (error as Error).message});
+      } finally {
+        setIsGeneratingMeta(false);
+      }
+  }
 
   const handleSave = async (status: 'draft' | 'pending_review' | 'published') => {
       if (!user) {
@@ -187,15 +211,25 @@ export default function ArticleEditorPage() {
       try {
           const savedArticle = await saveArticle(payload);
           toast({ title: 'Artikel Disimpan!', description: `Status artikel sekarang: ${status}`});
-          // If it was a new article, redirect to its edit page with the new UUID
           if (id === 'new') {
             router.replace(`/admin/cms/articles/editor/${savedArticle.uuid}`);
           }
       } catch(error) {
-           toast({ variant: "destructive", title: "Gagal Menyimpan", description: (error as Error).message });
+           const errorMessage = (error as Error).message;
+           const userFriendlyMessage = errorMessage.includes("Field 'title' doesn't have a default value")
+            ? "Judul artikel wajib diisi."
+            : errorMessage;
+           toast({ variant: "destructive", title: "Gagal Menyimpan", description: userFriendlyMessage });
       } finally {
           setIsSaving(false);
       }
+  };
+  
+  const executeCommand = (command: 'bold' | 'italic' | 'underline' | 'justifyLeft' | 'justifyCenter' | 'justifyRight') => {
+    if (editorRef.current) {
+        editorRef.current.focus();
+        document.execCommand(command, false);
+    }
   };
 
   const isSuperAdmin = user?.role === 1;
@@ -233,10 +267,19 @@ export default function ArticleEditorPage() {
             </div>
              <div className="space-y-2">
                 <Label>Editor Konten</Label>
+                 <div className="border rounded-t-md p-2 flex items-center gap-2 bg-secondary/50 flex-wrap">
+                    <Button variant="outline" size="icon" onMouseDown={(e) => { e.preventDefault(); executeCommand('bold'); }}><Bold /></Button>
+                    <Button variant="outline" size="icon" onMouseDown={(e) => { e.preventDefault(); executeCommand('italic'); }}><Italic /></Button>
+                    <Button variant="outline" size="icon" onMouseDown={(e) => { e.preventDefault(); executeCommand('underline'); }}><Underline /></Button>
+                    <div className="border-l h-6 mx-1"></div>
+                    <Button variant="outline" size="icon" onMouseDown={(e) => { e.preventDefault(); executeCommand('justifyLeft'); }}><AlignLeft /></Button>
+                    <Button variant="outline" size="icon" onMouseDown={(e) => { e.preventDefault(); executeCommand('justifyCenter'); }}><AlignCenter /></Button>
+                    <Button variant="outline" size="icon" onMouseDown={(e) => { e.preventDefault(); executeCommand('justifyRight'); }}><AlignRight /></Button>
+                </div>
                 <div 
                     ref={editorRef}
                     contentEditable={true}
-                    className="min-h-[400px] w-full rounded-md border border-input bg-background p-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 prose dark:prose-invert max-w-none"
+                    className="min-h-[400px] w-full rounded-b-md border border-input bg-background p-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 prose dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{ __html: article.content || '' }}
                     suppressContentEditableWarning={true}
                 >
@@ -257,18 +300,28 @@ export default function ArticleEditorPage() {
                      />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="meta-title">Judul Meta (Optimal 60 karakter)</Label>
+                    <div className="flex justify-between items-center">
+                        <Label htmlFor="meta-title">Judul Meta (Optimal 60 karakter)</Label>
+                        <Button variant="ghost" size="icon" onClick={handleGenerateMeta} disabled={isGeneratingMeta}>
+                           {isGeneratingMeta ? <Loader2 className="animate-spin" /> : <Sparkles className="text-primary"/>}
+                        </Button>
+                    </div>
                     <Input 
                         id="meta-title"
-                        value={article.meta_title}
+                        value={article.meta_title || ''}
                         onChange={(e) => setArticle(p => ({...p, meta_title: e.target.value}))}
                      />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="meta-description">Deskripsi Meta (Optimal 160 karakter)</Label>
+                    <div className="flex justify-between items-center">
+                        <Label htmlFor="meta-description">Deskripsi Meta (Optimal 160 karakter)</Label>
+                        <Button variant="ghost" size="icon" onClick={handleGenerateMeta} disabled={isGeneratingMeta}>
+                           {isGeneratingMeta ? <Loader2 className="animate-spin" /> : <Sparkles className="text-primary"/>}
+                        </Button>
+                    </div>
                     <Textarea 
                         id="meta-description"
-                        value={article.meta_description}
+                        value={article.meta_description || ''}
                         onChange={(e) => setArticle(p => ({...p, meta_description: e.target.value}))}
                     />
                 </div>

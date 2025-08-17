@@ -4,6 +4,9 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+import { ai, configureAi } from "@/ai/genkit";
+
+// --- Schemas ---
 
 const ArticleSchema = z.object({
     uuid: z.string().uuid(),
@@ -41,6 +44,16 @@ export type ArticleWithAuthorAndTags = {
     tags: { id: number; name: string }[];
 };
 
+const SeoMetaInputSchema = z.object({
+    articleContent: z.string().describe('Konten utama artikel sebagai referensi.'),
+});
+
+const SeoMetaOutputSchema = z.object({
+  title: z.string().describe("Judul SEO yang menarik dan singkat (sekitar 60 karakter) untuk artikel."),
+  description: z.string().describe("Deskripsi meta yang ringkas dan mengundang klik (sekitar 160 karakter).")
+});
+
+export type SeoMetaOutput = z.infer<typeof SeoMetaOutputSchema>;
 
 // --- GETTERS ---
 export async function getArticle(uuid: string): Promise<ArticleWithAuthorAndTags | null> {
@@ -104,12 +117,10 @@ export async function saveArticle(payload: ArticlePayload) {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // 1. Check if article exists by UUID
         const [existing]: [any[], any] = await connection.execute('SELECT id FROM articles WHERE uuid = ?', [articleData.uuid]);
         let articleId: number;
         
         if (existing.length > 0) {
-            // --- UPDATE ---
             articleId = existing[0].id;
             const publishedAtUpdate = isPublished ? ', published_at = COALESCE(published_at, CURRENT_TIMESTAMP)' : '';
             const sql = `UPDATE articles SET title=?, slug=?, content=?, featured_image_url=?, status=?, meta_title=?, meta_description=? ${publishedAtUpdate} WHERE id=?`;
@@ -118,7 +129,6 @@ export async function saveArticle(payload: ArticlePayload) {
                 articleData.status, articleData.meta_title, articleData.meta_description, articleId
             ]);
         } else {
-            // --- INSERT ---
             const publishedAtValue = isPublished ? 'CURRENT_TIMESTAMP' : 'NULL';
             const sql = `INSERT INTO articles (uuid, title, slug, content, featured_image_url, author_id, status, meta_title, meta_description, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${publishedAtValue})`;
             const [result] = await connection.execute<ResultSetHeader>(sql, [
@@ -129,9 +139,7 @@ export async function saveArticle(payload: ArticlePayload) {
             articleId = result.insertId;
         }
 
-        // 2. Handle Tags
         if (tags && tags.length > 0) {
-            // Upsert tags and get their IDs
             const tagIds: number[] = [];
             for (const tagName of tags) {
                 const [tagResult] = await connection.execute<ResultSetHeader>(
@@ -140,12 +148,10 @@ export async function saveArticle(payload: ArticlePayload) {
                 tagIds.push(tagResult.insertId);
             }
             
-            // Sync article_tags junction table
             await connection.execute('DELETE FROM article_tags WHERE article_id = ?', [articleId]);
             const articleTagValues = tagIds.map(tagId => [articleId, tagId]);
             await connection.query('INSERT INTO article_tags (article_id, tag_id) VALUES ?', [articleTagValues]);
         } else {
-            // If no tags are provided, remove all existing associations
             await connection.execute('DELETE FROM article_tags WHERE article_id = ?', [articleId]);
         }
 
@@ -160,7 +166,6 @@ export async function saveArticle(payload: ArticlePayload) {
         if (connection) connection.release();
     }
 }
-
 
 export async function deleteArticle(uuid: string): Promise<{ success: boolean }> {
     let connection;
@@ -180,3 +185,33 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
         if (connection) connection.release();
     }
 }
+
+// --- AI FLOWS ---
+
+export async function generateSeoMeta(input: z.infer<typeof SeoMetaInputSchema>): Promise<SeoMetaOutput> {
+    await configureAi();
+    return generateSeoMetaFlow(input);
+}
+
+const generateSeoMetaFlow = ai.defineFlow(
+    {
+        name: 'generateSeoMetaFlow',
+        inputSchema: SeoMetaInputSchema,
+        outputSchema: SeoMetaOutputSchema,
+    },
+    async (input) => {
+        const prompt = ai.definePrompt({
+            name: 'seoMetaPrompt',
+            input: { schema: SeoMetaInputSchema },
+            output: { schema: SeoMetaOutputSchema },
+            prompt: `Anda adalah seorang spesialis SEO. Berdasarkan konten artikel berikut, buatkan judul meta yang menarik (sekitar 60 karakter) dan deskripsi meta yang ringkas dan persuasif (sekitar 160 karakter).
+
+Konten Artikel:
+{{{articleContent}}}
+`,
+        });
+
+        const { output } = await prompt(input);
+        return output!;
+    }
+);

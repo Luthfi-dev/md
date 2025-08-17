@@ -14,3 +14,4 @@ import '@/services/ApiKeyManager.ts';
 import '@/ai/flows/file-converter.ts';
 import '@/ai/flows/chat.ts';
 import '@/ai/flows/generate-article-flow.ts';
+import '@/app/admin/cms/articles/editor/actions.ts'; // Import the new flow

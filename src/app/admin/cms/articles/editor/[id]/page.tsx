@@ -11,7 +11,7 @@ import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
 import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -56,11 +56,12 @@ const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[])
 
 
 // Main Component for EDITING an existing article
-export default function ArticleEditorPage({ params }: { params: { id: string } }) {
+export default function ArticleEditorPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const id = params.id;
+  const params = useParams();
+  const id = params.id as string;
 
   const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags> | null>(null);
 
@@ -114,9 +115,10 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       }
     };
     
-    // This is now only for editing existing articles.
-    // The 'new' case is handled by its own dedicated page.
-    fetchArticleData(id);
+    // This component is only for editing existing articles now.
+    if (id) {
+        fetchArticleData(id);
+    }
 
   }, [id, toast, router]);
   

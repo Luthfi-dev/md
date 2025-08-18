@@ -1,18 +1,21 @@
-
 'use client';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Sparkles, Wand2, Lightbulb } from "lucide-react";
 import { Textarea } from '../ui/textarea';
 import { generateArticleOutline, generateArticleFromOutline } from '@/app/admin/cms/articles/editor/actions';
-import type { ArticleOutlineOutput } from '@/ai/flows/generate-article-flow';
 import { Card, CardContent } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Slider } from '../ui/slider';
+
+// Define the type directly here for clarity
+type Outline = {
+    title: string;
+    points: string[];
+};
 
 type Stage = 'description' | 'outline' | 'generating';
 
@@ -31,7 +34,7 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
     const [description, setDescription] = useState('');
     
     // Stage 2 state
-    const [outlines, setOutlines] = useState<ArticleOutlineOutput['outlines']>([]);
+    const [outlines, setOutlines] = useState<Outline[]>([]);
     const [selectedOutlineIndex, setSelectedOutlineIndex] = useState<number | null>(null);
     const [wordCount, setWordCount] = useState(500);
 
@@ -64,7 +67,7 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
                 setOutlines(result.outlines);
                 setStage('outline');
             } else {
-                throw new Error("Gagal membuat kerangka artikel.");
+                throw new Error("Gagal membuat kerangka artikel. AI mungkin tidak memberikan respons yang valid.");
             }
         } catch (error) {
             toast({ variant: 'destructive', title: "Error AI", description: (error as Error).message });
@@ -86,6 +89,7 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
 
             if (result && result.articleContent) {
                 onArticleGenerated(result.articleContent, selectedOutline.title);
+                handleOpenChange(false); // Close dialog on success
             } else {
                 throw new Error("Gagal membuat artikel lengkap.");
             }

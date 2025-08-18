@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview All AI flows related to article generation.
@@ -123,17 +122,3 @@ const generateSeoMetaFlow = ai.defineFlow(
     return output!;
   }
 );
-
-// --- Exported Functions to be called by Server Actions ---
-
-export async function generateArticleOutline(input: z.infer<typeof ArticleOutlineInputSchema>) {
-    return await generateArticleOutlineFlow(input);
-}
-
-export async function generateArticleFromOutline(input: z.infer<typeof ArticleFromOutlineInputSchema>) {
-    return await generateArticleFromOutlineFlow(input);
-}
-
-export async function generateSeoMeta(input: z.infer<typeof SeoMetaInputSchema>) {
-    return await generateSeoMetaFlow(input);
-}

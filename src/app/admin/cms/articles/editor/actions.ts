@@ -1,10 +1,10 @@
 'use server';
 
+import { ai } from "@/ai/genkit";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import crypto from 'crypto';
-import { generateArticleFromOutline as runGenerateArticle, generateArticleOutline as runGenerateOutline, generateSeoMeta as runGenerateSeo } from "@/ai/flows/article-flows";
 
 
 // --- Schemas ---
@@ -59,7 +59,7 @@ export type ArticleWithAuthorAndTags = {
 
 // --- GETTERS ---
 export async function getArticle(uuid: string): Promise<ArticleWithAuthorAndTags | null> {
-    if (uuid === 'new') return null; // Prevent DB query for new articles
+    if (!uuid || uuid === 'new') return null; // Prevent DB query for invalid or new states
     let connection;
     try {
         connection = await db.getConnection();
@@ -131,7 +131,7 @@ export async function createArticle(payload: Omit<CreateArticlePayload, 'slug' |
         const sql = `INSERT INTO articles (uuid, title, slug, content, author_id, status) VALUES (?, ?, ?, ?, ?, 'draft')`;
         await connection.execute<ResultSetHeader>(sql, [uuid, title, slug, content, author_id]);
 
-        return { success: true, uuid };
+        return { success: true, uuid, message: "Artikel berhasil dibuat." };
 
     } catch (error) {
         console.error("Error creating article:", error);
@@ -218,19 +218,20 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
 }
 
 
-// --- AI WRAPPERS ---
+// --- AI WRAPPERS (SAFE FOR CLIENT IMPORT) ---
 
 export async function generateArticleOutline(input: { description: string }) {
-    return await runGenerateOutline(input);
+    // This now calls the flow by its registered name, which is safe.
+    return await ai.runFlow('generateArticleOutlineFlow', input);
 }
 
 export async function generateArticleFromOutline(input: {
   selectedOutline: { title: string; points: string[] };
   wordCount: number;
 }) {
-    return await runGenerateArticle(input);
+    return await ai.runFlow('generateArticleFromOutlineFlow', input);
 }
 
 export async function generateSeoMeta(input: { articleContent: string }) {
-    return await runGenerateSeo(input);
+    return await ai.runFlow('generateSeoMetaFlow', input);
 }

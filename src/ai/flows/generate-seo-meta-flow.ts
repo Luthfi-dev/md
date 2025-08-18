@@ -17,20 +17,8 @@ const SeoMetaOutputSchema = z.object({
   description: z.string().describe('A compelling meta description, around 155-160 characters.'),
 });
 
-// --- Prompt Definition ---
-const seoMetaPrompt = ai.definePrompt({
-    name: 'seoMetaPrompt',
-    input: { schema: SeoMetaInputSchema },
-    output: { schema: SeoMetaOutputSchema },
-    prompt: `You are an SEO expert. Based on the following article content, generate an optimized meta title (around 60 characters) and meta description (around 160 characters).
-
-Article Content:
-{{{articleContent}}}
-`,
-});
-
 // --- Flow Definition ---
-export const generateSeoMetaFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'generateSeoMetaFlow',
     inputSchema: SeoMetaInputSchema,
@@ -38,9 +26,19 @@ export const generateSeoMetaFlow = ai.defineFlow(
   },
   async (input) => {
     await configureAi();
-    const { output } = await seoMetaPrompt(input);
+    
+    const { output } = await ai.generate({
+        model: 'googleai/gemini-2.0-flash',
+        prompt: `You are an SEO expert. Based on the following article content, generate an optimized meta title (around 60 characters) and meta description (around 160 characters).
+
+        Article Content:
+        ${input.articleContent}
+        `,
+        output: {
+            schema: SeoMetaOutputSchema
+        }
+    });
+
     return output!;
   }
 );
-
-    

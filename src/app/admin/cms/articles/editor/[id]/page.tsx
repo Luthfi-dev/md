@@ -114,14 +114,13 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       }
     };
     
-    // This page is ONLY for editing. The "new" page handles creation.
-    // If somehow landed here with "new", redirect.
-    if (id === 'new') {
-        router.replace('/admin/cms/articles/editor/new');
-        return;
+    if (id && id !== 'new') {
+        fetchArticleData(id);
+    } else {
+        // This case should be handled by the `new` page, but as a fallback:
+        setIsLoading(false);
+        router.push('/admin/cms/articles/editor/new');
     }
-    
-    fetchArticleData(id);
 
   }, [id, toast, router]);
   

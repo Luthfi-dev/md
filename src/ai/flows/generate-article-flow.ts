@@ -40,7 +40,7 @@ export type ArticleFromOutlineOutput = z.infer<typeof ArticleFromOutlineOutputSc
 
 // --- Flow Definitions ---
 
-export const generateArticleOutlineFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
     inputSchema: ArticleOutlineInputSchema,
@@ -65,7 +65,7 @@ Deskripsi: ${input.description}`;
   }
 );
 
-export const generateArticleFromOutlineFlow = ai.defineFlow(
+ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
         inputSchema: ArticleFromOutlineInputSchema,

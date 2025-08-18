@@ -3,9 +3,8 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
-import { generateArticleFromOutline as genArticle, generateArticleOutline as genOutline } from "@/ai/flows/generate-article-flow";
-import { generateSeoMeta as genSeo } from "@/ai/flows/generate-seo-meta-flow";
 import crypto from 'crypto';
+import { ai } from "@/ai/genkit";
 
 
 // --- Schemas ---
@@ -25,7 +24,9 @@ const ArticlePayloadSchema = z.object({
 export type ArticlePayload = z.infer<typeof ArticlePayloadSchema>;
 
 const CreateArticlePayloadSchema = ArticlePayloadSchema.pick({
+    uuid: true,
     title: true,
+    slug: true,
     content: true,
     author_id: true,
 });
@@ -106,25 +107,26 @@ export async function getArticles(): Promise<ArticleWithAuthor[]> {
 
 // --- MUTATIONS ---
 
-const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/ /g, '-')
-      .replace(/[^\w-]+/g, '');
-};
-
-export async function createArticle(payload: CreateArticlePayload) {
+export async function createArticle(payload: Omit<CreateArticlePayload, 'slug' | 'content'> & { content?: string }) {
     let connection;
     try {
-        const validation = CreateArticlePayloadSchema.safeParse(payload);
+        const uuid = crypto.randomUUID();
+        const slug = payload.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+
+        const finalPayload: CreateArticlePayload = {
+            ...payload,
+            uuid,
+            slug,
+            content: payload.content || '',
+        };
+
+        const validation = CreateArticlePayloadSchema.safeParse(finalPayload);
         if (!validation.success) {
             throw new Error(validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '));
         }
 
         const { title, content, author_id } = validation.data;
-        const uuid = crypto.randomUUID();
-        const slug = generateSlug(title);
-
+        
         connection = await db.getConnection();
         const sql = `INSERT INTO articles (uuid, title, slug, content, author_id, status) VALUES (?, ?, ?, ?, ?, 'draft')`;
         await connection.execute<ResultSetHeader>(sql, [uuid, title, slug, content, author_id]);
@@ -144,7 +146,8 @@ export async function saveArticle(payload: ArticlePayload) {
     try {
         const validation = ArticlePayloadSchema.safeParse(payload);
         if (!validation.success) {
-            throw new Error(validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '));
+            const errorDetails = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+            throw new Error(`Validasi gagal: ${errorDetails}`);
         }
         
         const { tags, ...articleData } = validation.data;
@@ -218,16 +221,19 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
 // --- AI FUNCTIONS ---
 
 export async function generateArticleOutline(input: { description: string }) {
-    return await genOutline(input);
+    const result = await ai.runFlow('generateArticleOutlineFlow', input);
+    return result;
 }
 
 export async function generateArticleFromOutline(input: {
   selectedOutline: { title: string; points: string[] };
   wordCount: number;
 }) {
-    return await genArticle(input);
+    const result = await ai.runFlow('generateArticleFromOutlineFlow', input);
+    return result;
 }
 
 export async function generateSeoMeta(input: { articleContent: string }) {
-    return await genSeo(input);
+    const result = await ai.runFlow('generateSeoMetaFlow', input);
+    return result;
 }

@@ -10,11 +10,9 @@ if (!process.env.GEMINI_API_KEY) {
   );
 }
 
+// Import all flow definition files here to register them with Genkit
 import '@/services/ApiKeyManager.ts';
 import '@/ai/flows/file-converter.ts';
 import '@/ai/flows/chat.ts';
-// Import the flows directly
 import '@/ai/flows/generate-article-flow.ts';
 import '@/ai/flows/generate-seo-meta-flow.ts';
-
-    

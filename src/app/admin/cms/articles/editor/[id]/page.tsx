@@ -11,7 +11,7 @@ import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
 import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -60,7 +60,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const id = params.id; // This is the article's UUID
+  const id = params.id;
 
   const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags> | null>(null);
 
@@ -114,13 +114,9 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       }
     };
     
-    if (id && id !== 'new') {
-        fetchArticleData(id);
-    } else {
-        // This case should be handled by the `new` page, but as a fallback:
-        setIsLoading(false);
-        router.push('/admin/cms/articles/editor/new');
-    }
+    // This is now only for editing existing articles.
+    // The 'new' case is handled by its own dedicated page.
+    fetchArticleData(id);
 
   }, [id, toast, router]);
   

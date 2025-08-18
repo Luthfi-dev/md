@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import crypto from 'crypto';
-import { ai } from "@/ai/genkit";
+import { generateArticleFromOutline as runGenerateArticle, generateArticleOutline as runGenerateOutline, generateSeoMeta as runGenerateSeo } from "@/ai/flows/article-flows";
 
 
 // --- Schemas ---
@@ -107,7 +107,7 @@ export async function getArticles(): Promise<ArticleWithAuthor[]> {
 
 // --- MUTATIONS ---
 
-export async function createArticle(payload: Omit<CreateArticlePayload, 'slug' | 'content'> & { content?: string }) {
+export async function createArticle(payload: Omit<CreateArticlePayload, 'slug' | 'content' | 'uuid'> & { content?: string }) {
     let connection;
     try {
         const uuid = crypto.randomUUID();
@@ -218,22 +218,19 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
 }
 
 
-// --- AI FUNCTIONS ---
+// --- AI WRAPPERS ---
 
 export async function generateArticleOutline(input: { description: string }) {
-    const result = await ai.runFlow('generateArticleOutlineFlow', input);
-    return result;
+    return await runGenerateOutline(input);
 }
 
 export async function generateArticleFromOutline(input: {
   selectedOutline: { title: string; points: string[] };
   wordCount: number;
 }) {
-    const result = await ai.runFlow('generateArticleFromOutlineFlow', input);
-    return result;
+    return await runGenerateArticle(input);
 }
 
 export async function generateSeoMeta(input: { articleContent: string }) {
-    const result = await ai.runFlow('generateSeoMetaFlow', input);
-    return result;
+    return await runGenerateSeo(input);
 }

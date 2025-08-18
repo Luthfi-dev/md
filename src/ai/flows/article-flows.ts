@@ -1,7 +1,8 @@
 
 'use server';
 /**
- * @fileOverview An AI flow to generate an article based on a description.
+ * @fileOverview All AI flows related to article generation.
+ * This file should NOT be imported by any client components.
  */
 
 import { ai, configureAi } from '@/ai/genkit';
@@ -11,7 +12,6 @@ import { z } from 'genkit';
 const ArticleOutlineInputSchema = z.object({
   description: z.string().describe('Deskripsi singkat atau ide utama artikel.'),
 });
-export type ArticleOutlineInput = z.infer<typeof ArticleOutlineInputSchema>;
 
 const ArticleOutlineOutputSchema = z.object({
   outlines: z.array(z.object({
@@ -19,8 +19,6 @@ const ArticleOutlineOutputSchema = z.object({
       points: z.array(z.string()).describe("Poin-poin utama atau sub-judul dalam kerangka artikel.")
   })).describe('Tiga opsi kerangka artikel yang berbeda.'),
 });
-export type ArticleOutlineOutput = z.infer<typeof ArticleOutlineOutputSchema>;
-
 
 // --- Schema for Full Article Generation ---
 const ArticleFromOutlineInputSchema = z.object({
@@ -30,17 +28,24 @@ const ArticleFromOutlineInputSchema = z.object({
   }),
   wordCount: z.number().describe('Target jumlah kata untuk artikel.'),
 });
-export type ArticleFromOutlineInput = z.infer<typeof ArticleFromOutlineInputSchema>;
 
 const ArticleFromOutlineOutputSchema = z.object({
   articleContent: z.string().describe('Konten artikel lengkap dalam format HTML.'),
 });
-export type ArticleFromOutlineOutput = z.infer<typeof ArticleFromOutlineOutputSchema>;
 
+// --- Schema for SEO Meta Generation ---
+const SeoMetaInputSchema = z.object({
+  articleContent: z.string().describe('The full content of the blog article.'),
+});
+
+const SeoMetaOutputSchema = z.object({
+  title: z.string().describe('A catchy, SEO-friendly meta title, around 60 characters.'),
+  description: z.string().describe('A compelling meta description, around 155-160 characters.'),
+});
 
 // --- Flow Definitions ---
 
-ai.defineFlow(
+const generateArticleOutlineFlow = ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
     inputSchema: ArticleOutlineInputSchema,
@@ -65,7 +70,7 @@ Deskripsi: ${input.description}`;
   }
 );
 
-ai.defineFlow(
+const generateArticleFromOutlineFlow = ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
         inputSchema: ArticleFromOutlineInputSchema,
@@ -93,3 +98,42 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
         return output!;
     }
 );
+
+const generateSeoMetaFlow = ai.defineFlow(
+  {
+    name: 'generateSeoMetaFlow',
+    inputSchema: SeoMetaInputSchema,
+    outputSchema: SeoMetaOutputSchema,
+  },
+  async (input) => {
+    await configureAi();
+    
+    const { output } = await ai.generate({
+        model: 'googleai/gemini-2.0-flash',
+        prompt: `You are an SEO expert. Based on the following article content, generate an optimized meta title (around 60 characters) and meta description (around 160 characters).
+
+        Article Content:
+        ${input.articleContent}
+        `,
+        output: {
+            schema: SeoMetaOutputSchema
+        }
+    });
+
+    return output!;
+  }
+);
+
+// --- Exported Functions to be called by Server Actions ---
+
+export async function generateArticleOutline(input: z.infer<typeof ArticleOutlineInputSchema>) {
+    return await generateArticleOutlineFlow(input);
+}
+
+export async function generateArticleFromOutline(input: z.infer<typeof ArticleFromOutlineInputSchema>) {
+    return await generateArticleFromOutlineFlow(input);
+}
+
+export async function generateSeoMeta(input: z.infer<typeof SeoMetaInputSchema>) {
+    return await generateSeoMetaFlow(input);
+}

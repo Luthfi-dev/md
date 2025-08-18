@@ -1,4 +1,3 @@
-
 import { config } from 'dotenv';
 config();
 
@@ -14,5 +13,4 @@ if (!process.env.GEMINI_API_KEY) {
 import '@/services/ApiKeyManager.ts';
 import '@/ai/flows/file-converter.ts';
 import '@/ai/flows/chat.ts';
-import '@/ai/flows/generate-article-flow.ts';
-import '@/ai/flows/generate-seo-meta-flow.ts';
+import '@/ai/flows/article-flows.ts';

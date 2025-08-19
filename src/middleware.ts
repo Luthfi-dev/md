@@ -11,14 +11,14 @@ const publicPaths = [
     '/surat', '/surat/share-fallback', '/surat/shared-template', '/surat-generator',
     '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf',
     '/account/forgot-password', '/account/reset-password',
-    '/blog',
+    '/blog', '/messages' // <-- Moved from authPaths to publicPaths
 ];
 
 const userLoginPath = '/login';
 const authPaths = [
     '/account/profile', '/account/edit-profile', '/account/security', 
     '/account/notifications', '/account/settings', '/account/invite', 
-    '/messages', '/notebook', '/wallet', '/notebook/groups', '/account/install'
+    '/notebook', '/wallet', '/notebook/groups', '/account/install'
 ];
 
 const adminLoginPath = '/admin/login';

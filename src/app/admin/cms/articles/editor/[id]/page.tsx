@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
 import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
 import { useRouter, useParams } from "next/navigation";
+import crypto from 'crypto';
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -55,13 +56,13 @@ const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[])
 };
 
 
-// Main Component for EDITING an existing article
+// Main Component for EDITING an existing article or new one.
 export default function ArticleEditorPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
-  const id = params.id as string;
+  const id = params.id as string; // This can be UUID or "new"
 
   const [article, setArticle] = useState<Partial<ArticleWithAuthorAndTags> | null>(null);
 
@@ -115,11 +116,20 @@ export default function ArticleEditorPage() {
       }
     };
     
-    // This component is only for editing existing articles now.
-    if (id) {
+    if (id === 'new') {
+        // This is a new article, initialize with default values
+        setArticle({
+            uuid: crypto.randomUUID(),
+            title: '',
+            slug: '',
+            content: '',
+            status: 'draft',
+            tags: [],
+        });
+        setIsLoading(false);
+    } else {
         fetchArticleData(id);
     }
-
   }, [id, toast, router]);
   
 
@@ -218,6 +228,10 @@ export default function ArticleEditorPage() {
           await saveArticle(payload);
           toast({ title: 'Artikel Disimpan!', description: `Status artikel sekarang: ${status}`});
           setArticle(p => ({ ...p, status })); // Update status in local state
+          // If it was a new article, update the URL
+          if (id === 'new') {
+              router.replace(`/admin/cms/articles/editor/${payload.uuid}`);
+          }
       } catch(error) {
            const errorMessage = (error as Error).message;
            toast({ variant: "destructive", title: "Gagal Menyimpan", description: errorMessage, duration: 8000 });
@@ -250,7 +264,7 @@ export default function ArticleEditorPage() {
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2"><FileEdit/> Konten Artikel</CardTitle>
+            <CardTitle className="flex items-center gap-2"><FileEdit/> {id === 'new' ? 'Tulis Artikel Baru' : 'Edit Artikel'}</CardTitle>
              <Button variant="outline" onClick={() => setIsAiDialogOpen(true)}>
                 <Sparkles className="mr-2 text-primary"/> Buat dengan AI
             </Button>

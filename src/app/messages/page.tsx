@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -160,7 +159,7 @@ export default function MessagesPage() {
                 </CardHeader>
              </header>
 
-            <ScrollArea className="h-full pt-20 pb-28 md:pb-28" viewportRef={viewportRef}>
+            <ScrollArea className="h-full pt-28 pb-28 md:pb-28" viewportRef={viewportRef}>
                 <div className="space-y-6 p-4">
                     {messages.map((message, index) => (
                         <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>

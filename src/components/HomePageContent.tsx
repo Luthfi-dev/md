@@ -1,9 +1,8 @@
-
 'use client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { ArrowRight, BrainCircuit, Edit, Grid3x3, Moon, Search, Sun, Gift, Star, Info, Package, Loader2 } from "lucide-react";
+import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Autoplay from "embla-carousel-autoplay"
 import React, { useEffect, useState } from "react";
@@ -14,11 +13,12 @@ import { useDailyReward } from "@/hooks/use-daily-reward";
 import { DailyRewardDialog } from "@/components/DailyRewardDialog";
 import { CountUp } from "@/components/CountUp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { AppDefinition } from "@/types/app";
+import type { AppDefinition, CarouselItem as CarouselItemType } from "@/types/app";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions";
 
 // Simulate fetching data
 import appsData from '@/data/apps.json';
@@ -31,6 +31,22 @@ const getIcon = (iconName: string): React.ReactNode => {
     return <Package className="text-primary" />; // Fallback icon
 };
 
+const CarouselCard = ({ item }: { item: CarouselItemType }) => (
+    <Card className="w-full h-full bg-primary text-primary-foreground shadow-lg rounded-2xl overflow-hidden">
+        <Link href={item.href}>
+             <CardContent className="p-5 flex flex-col justify-between h-full relative">
+                <div className="z-10">
+                    <h3 className="text-lg font-bold">{item.title}</h3>
+                    <p className="text-sm opacity-90 mt-1 max-w-[150px] line-clamp-2">{item.description}</p>
+                </div>
+                <div className="absolute bottom-4 right-4 w-16 h-16 rounded-full bg-white/20 flex items-center justify-center z-0">
+                    {getIcon(item.icon)}
+                </div>
+            </CardContent>
+        </Link>
+    </Card>
+);
+
 const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: string, href: string }) => (
   <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 text-center">
     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-white shadow-md`}>
@@ -38,34 +54,6 @@ const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: str
     </div>
     <span className="text-xs font-medium text-foreground leading-tight">{label}</span>
   </Link>
-)
-
-const DailyQuizCard = () => (
-    <Card className="w-full h-full bg-primary text-primary-foreground shadow-lg rounded-2xl overflow-hidden">
-        <CardContent className="p-5 flex flex-col justify-between h-full relative">
-            <div className="z-10">
-                <h3 className="text-lg font-bold">Kuis Harian</h3>
-                <p className="text-sm opacity-90 mt-1 max-w-[150px]">Asah kemampuanmu dengan kuis interaktif</p>
-            </div>
-            <div className="absolute bottom-4 right-4 w-16 h-16 rounded-full bg-white/20 flex items-center justify-center z-0">
-                 <BrainCircuit className="text-primary-foreground w-8 h-8"/>
-            </div>
-        </CardContent>
-    </Card>
-);
-
-const LatihanSoalCard = () => (
-    <Card className="w-full h-full bg-primary text-primary-foreground shadow-lg rounded-2xl overflow-hidden">
-        <CardContent className="p-5 flex flex-col justify-between h-full relative">
-             <div className="z-10">
-                <h3 className="text-lg font-bold">Latihan Soal</h3>
-                <p className="text-sm opacity-90 mt-1 max-w-[150px]">Perbanyak latihan untuk persiapan ujian.</p>
-            </div>
-             <div className="absolute bottom-4 right-4 w-16 h-16 rounded-full bg-white/20 flex items-center justify-center z-0">
-                 <Edit className="text-primary-foreground w-8 h-8"/>
-            </div>
-        </CardContent>
-    </Card>
 )
 
 const FlyingPoints = ({ isVisible, startRect }: { isVisible: boolean, startRect: DOMRect | null }) => {
@@ -119,26 +107,50 @@ export default function HomePageContent() {
    const [startRect, setStartRect] = React.useState<DOMRect | null>(null);
 
    const [mainFeatures, setMainFeatures] = useState<AppDefinition[]>([]);
+   const [carouselItems, setCarouselItems] = useState<CarouselItemType[]>([]);
+   const [latestArticles, setLatestArticles] = useState<ArticleWithAuthor[]>([]);
    const [isLoading, setIsLoading] = useState(true);
 
    // Determine which points to display (user's or guest's)
    const displayPoints = isAuthenticated && user ? user.points : rewardPoints;
 
    useEffect(() => {
-        const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
-        // Get the "All Apps" definition and remove it from the list for now
-        const allAppsOption = sortedApps.find(app => app.id === 'app_all_apps');
-        const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps');
-        
-        // Take the first 5 other apps
-        const featuresToShow = otherApps.slice(0, 5);
-        if (allAppsOption) {
-            // Add "All Apps" as the 6th item
-            featuresToShow.push(allAppsOption);
-        }
+        const CAROUSEL_STORAGE_KEY = 'cms_carousel_items_v1';
 
-        setMainFeatures(featuresToShow);
-        setIsLoading(false);
+        const fetchInitialData = async () => {
+          setIsLoading(true);
+          try {
+            // Fetch Apps
+            const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
+            const allAppsOption = sortedApps.find(app => app.id === 'app_all_apps');
+            const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps');
+            const featuresToShow = otherApps.slice(0, 5);
+            if (allAppsOption) featuresToShow.push(allAppsOption);
+            setMainFeatures(featuresToShow);
+
+            // Fetch Carousel Items from localStorage
+            const storedCarousel = localStorage.getItem(CAROUSEL_STORAGE_KEY);
+            const initialCarouselItems: CarouselItemType[] = storedCarousel ? JSON.parse(storedCarousel) : [
+                { id: 'item_1', title: 'Kuis Harian', description: 'Asah kemampuanmu dengan kuis interaktif', href: '/quiz', icon: 'BrainCircuit', status: 'published' },
+                { id: 'item_2', title: 'Latihan Soal', description: 'Perbanyak latihan untuk persiapan ujian.', href: '/practice', icon: 'Edit', status: 'published' }
+            ];
+            setCarouselItems(initialCarouselItems.filter(item => item.status === 'published'));
+
+            // Fetch Latest Articles
+            const res = await fetch('/api/blog/articles');
+            if (res.ok) {
+                const articlesData = await res.json();
+                setLatestArticles(articlesData.articles.slice(0, 3));
+            } else {
+              console.error("Failed to fetch articles");
+            }
+          } catch (e) {
+            console.error("Error fetching initial data for homepage:", e);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        fetchInitialData();
     }, []);
 
    const handleClaimWithPosition = async (dayIndex: number, element: HTMLElement) => {
@@ -260,31 +272,20 @@ export default function HomePageContent() {
 
           <section id="interactive-cards" className="mb-4 w-full">
             <Carousel
-              opts={{
-                align: "center",
-                loop: true,
-              }}
+              opts={{ align: "center", loop: true }}
               plugins={[plugin.current]}
               className="w-full"
               onMouseEnter={plugin.current.stop}
               onMouseLeave={plugin.current.reset}
             >
               <CarouselContent className="-ml-2">
-                <CarouselItem className="basis-[90%] md:basis-1/2 pl-2">
-                  <div className="p-1 h-36">
-                    <DailyQuizCard />
-                  </div>
-                </CarouselItem>
-                <CarouselItem className="basis-[90%] md:basis-1/2 pl-2">
-                  <div className="p-1 h-36">
-                  <LatihanSoalCard />
-                  </div>
-                </CarouselItem>
-                <CarouselItem className="basis-[90%] md:basis-1/2 pl-2">
-                  <div className="p-1 h-36">
-                    <DailyQuizCard />
-                  </div>
-                </CarouselItem>
+                {carouselItems.map(item => (
+                  <CarouselItem key={item.id} className="basis-[90%] md:basis-1/2 pl-2">
+                    <div className="p-1 h-36">
+                      <CarouselCard item={item} />
+                    </div>
+                  </CarouselItem>
+                ))}
               </CarouselContent>
             </Carousel>
           </section>
@@ -296,34 +297,36 @@ export default function HomePageContent() {
                     <Link href="/blog" className="text-sm text-primary font-semibold">Lihat Semua</Link>
                 </div>
                 <div className="space-y-4">
-                    <Card className="shadow-sm border-0 bg-card">
-                        <CardContent className="p-4 flex gap-4 items-center">
-                            <Image data-ai-hint="education learning" src="https://placehold.co/100x100.png" alt="Edukasi" className="w-20 h-20 rounded-lg object-cover" width={100} height={100} />
-                            <div className="flex-1">
-                                <h3 className="font-bold leading-tight">Tips Belajar Efektif di Era Digital</h3>
-                                <p className="text-sm text-muted-foreground mt-1">Maksimalkan waktumu dengan metode yang terbukti.</p>
-                            </div>
-                            {!isMobile && (
-                              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                                  <ArrowRight className="w-4 h-4 text-muted-foreground"/>
-                              </Button>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <Card className="shadow-sm border-0 bg-card">
-                        <CardContent className="p-4 flex gap-4 items-center">
-                            <Image data-ai-hint="technology education" src="https://placehold.co/100x100.png" alt="Teknologi" className="w-20 h-20 rounded-lg object-cover" width={100} height={100}/>
-                            <div className="flex-1">
-                                <h3 className="font-bold leading-tight">Teknologi dalam Pendidikan</h3>
-                                <p className="text-sm text-muted-foreground mt-1">Peran AI dan teknologi dalam proses belajar.</p>
-                            </div>
-                            {!isMobile && (
-                              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                                  <ArrowRight className="w-4 h-4 text-muted-foreground"/>
-                              </Button>
-                            )}
-                        </CardContent>
-                    </Card>
+                   {isLoading ? (
+                      <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary"/></div>
+                   ) : latestArticles.length > 0 ? (
+                    latestArticles.map(article => (
+                      <Link href={`/blog/${article.slug}`} key={article.uuid} className="group">
+                        <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
+                            <CardContent className="p-4 flex gap-4 items-center">
+                                {article.featured_image_url ? (
+                                    <Image data-ai-hint="education learning" src={`/api/images/${article.featured_image_url}`} alt={article.title} className="w-20 h-20 rounded-lg object-cover" width={100} height={100} />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-lg bg-secondary flex items-center justify-center">
+                                        <Package className="w-8 h-8 text-muted-foreground"/>
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">{article.title}</h3>
+                                    <p className="text-sm text-muted-foreground mt-1">Oleh {article.authorName}</p>
+                                </div>
+                                {!isMobile && (
+                                  <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+                                      <ArrowRight className="w-4 h-4 text-muted-foreground"/>
+                                  </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                      </Link>
+                    ))
+                   ) : (
+                     <p className="text-sm text-muted-foreground text-center py-4">Belum ada artikel yang dipublikasikan.</p>
+                   )}
                 </div>
             </section>
           </div>

@@ -35,9 +35,11 @@ export type CreateArticlePayload = z.infer<typeof CreateArticlePayloadSchema>;
 export type ArticleWithAuthor = {
     uuid: string;
     title: string;
+    slug: string;
     status: 'draft' | 'pending_review' | 'published';
     published_at: string | null;
     authorName: string;
+    featured_image_url: string | null;
 }
 
 export type ArticleWithAuthorAndTags = {
@@ -58,16 +60,19 @@ export type ArticleWithAuthorAndTags = {
 
 
 // --- GETTERS ---
-export async function getArticle(uuid: string): Promise<ArticleWithAuthorAndTags | null> {
-    if (!uuid || uuid === 'new') return null; // Prevent DB query for invalid or new states
+export async function getArticle(slugOrUuid: string): Promise<ArticleWithAuthorAndTags | null> {
+    if (!slugOrUuid || slugOrUuid === 'new') return null; // Prevent DB query for invalid or new states
     let connection;
     try {
+        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(slugOrUuid);
+        const queryColumn = isUuid ? 'a.uuid' : 'a.slug';
+
         connection = await db.getConnection();
         const [articleRows]: [any[], any] = await connection.execute(
             `SELECT a.*, u.name as authorName, u.email as authorEmail 
              FROM articles a 
              JOIN users u ON a.author_id = u.id 
-             WHERE a.uuid = ?`, [uuid]
+             WHERE ${queryColumn} = ?`, [slugOrUuid]
         );
         if (articleRows.length === 0) return null;
         
@@ -91,10 +96,10 @@ export async function getArticles(): Promise<ArticleWithAuthor[]> {
     try {
         connection = await db.getConnection();
         const [rows]: [any[], any] = await connection.execute(
-            `SELECT a.uuid, a.title, a.status, a.published_at, u.name as authorName 
+            `SELECT a.uuid, a.title, a.slug, a.status, a.published_at, a.featured_image_url, u.name as authorName 
              FROM articles a 
              JOIN users u ON a.author_id = u.id 
-             ORDER BY a.updated_at DESC`
+             ORDER BY a.published_at DESC, a.updated_at DESC`
         );
         return rows;
     } catch (error) {

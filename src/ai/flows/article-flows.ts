@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview All AI flows related to article generation.
- * This file should NOT be imported by any client components.
+ * This file should NOT be imported by any client components. It defines flows that are run by the server.
  */
 
 import { ai, configureAi } from '@/ai/genkit';
@@ -44,7 +44,7 @@ const SeoMetaOutputSchema = z.object({
 
 // --- Flow Definitions ---
 
-const generateArticleOutlineFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
     inputSchema: ArticleOutlineInputSchema,
@@ -69,7 +69,7 @@ Deskripsi: ${input.description}`;
   }
 );
 
-const generateArticleFromOutlineFlow = ai.defineFlow(
+ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
         inputSchema: ArticleFromOutlineInputSchema,
@@ -98,7 +98,7 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
     }
 );
 
-const generateSeoMetaFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'generateSeoMetaFlow',
     inputSchema: SeoMetaInputSchema,

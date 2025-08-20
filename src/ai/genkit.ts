@@ -10,8 +10,9 @@ const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 /**
  * Defines the initial AI instance for the entire application, without a pre-configured API key.
  * The API key will be configured dynamically at runtime.
+ * This 'ai' object is NOT exported to prevent it from being bundled with client-side server actions.
  */
-export const ai = genkit({
+const ai = genkit({
   plugins: [googleAI()],
   // Define a custom error handler for when a request fails.
   errorHandler: async (err) => {
@@ -54,3 +55,6 @@ export async function configureAi() {
     ],
   });
 }
+
+// We export the main genkit object for use in server-only files that define flows.
+export { ai };

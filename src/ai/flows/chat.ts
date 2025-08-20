@@ -3,9 +3,11 @@
 /**
  * @fileOverview A simple chat flow for an AI assistant.
  */
-import { ai, configureAi } from '@/ai/genkit';
+import { generate, type GenerationCommonConfig } from 'genkit/generate';
+import { configureAi } from '@/ai/genkit';
 import { z } from 'zod';
 import assistant from '@/data/assistant.json';
+import { gemini15Flash } from '@genkit-ai/googleai';
 
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
@@ -15,67 +17,57 @@ export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
 const ChatHistorySchema = z.array(ChatMessageSchema);
 
-// The main function exported to the client. It directly calls the flow.
+// The main function exported to the client. It directly calls the flow logic.
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
-  return chatFlow(history);
-}
+  // IMPORTANT: Configure AI with a valid key before making a call.
+  await configureAi();
 
-// The Genkit flow definition. It's not exported directly to the client.
-const chatFlow = ai.defineFlow(
-  {
-    name: 'chatFlow',
-    inputSchema: ChatHistorySchema,
-    outputSchema: ChatMessageSchema,
-  },
-  async (history) => {
-    // IMPORTANT: Configure AI with a valid key before making a call.
-    await configureAi();
+  const modelHistory = history.reduce((acc, msg) => {
+    if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
+      acc.push({
+        role: msg.role,
+        parts: [{ text: msg.content }],
+      });
+    } else {
+      acc[acc.length - 1].parts.push({ text: msg.content });
+    }
+    return acc;
+  }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
 
-    const modelHistory = history.reduce((acc, msg) => {
-      if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
-        acc.push({
-          role: msg.role,
-          parts: [{ text: msg.content }],
-        });
-      } else {
-        acc[acc.length - 1].parts.push({ text: msg.content });
-      }
-      return acc;
-    }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
-    
-    const lastMessage = modelHistory.pop();
-    const prompt = lastMessage?.parts.map(p => p.text).join('\n') ?? '';
+  const lastMessage = modelHistory.pop();
+  const prompt = lastMessage?.parts.map(p => p.text).join('\n') ?? '';
 
-    try {
-        const response = await ai.generate({
-            model: 'googleai/gemini-1.5-flash-latest',
-            system: assistant.systemPrompt,
-            history: modelHistory,
-            prompt: prompt,
-            config: {
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-                ],
-            },
-        });
-    
-        const textResponse = response.text ?? "Maaf, aku lagi bingung nih. Boleh coba tanya lagi dengan cara lain?";
-    
-        return {
-            role: 'model',
-            content: textResponse,
-        };
+  try {
+    const safetySettings: GenerationCommonConfig['safetySettings'] = [
+        { category: 'DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+    ];
 
-    } catch (error) {
-        console.error("Error fetching from Generative AI:", error);
-        const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
-        return {
-            role: 'model',
-            content: `Maaf, terjadi masalah: ${errorMessage}`
-        }
+    const response = await generate({
+        model: gemini15Flash,
+        system: assistant.systemPrompt,
+        history: modelHistory,
+        prompt: prompt,
+        config: {
+            safetySettings,
+        },
+    });
+
+    const textResponse = response.text() ?? "Maaf, aku lagi bingung nih. Boleh coba tanya lagi dengan cara lain?";
+
+    return {
+        role: 'model',
+        content: textResponse,
+    };
+
+  } catch (error) {
+    console.error("Error fetching from Generative AI:", error);
+    const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
+    return {
+        role: 'model',
+        content: `Maaf, terjadi masalah: ${errorMessage}`
     }
   }
-);
+}

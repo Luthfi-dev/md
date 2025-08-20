@@ -4,7 +4,7 @@
  * @fileOverview A simple chat flow for an AI assistant.
  */
 import { generate, type GenerationCommonConfig } from 'genkit';
-import { configureAi } from '@/ai/genkit';
+import { configureAi } from '@/ai/dev';
 import { z } from 'zod';
 import assistant from '@/data/assistant.json';
 import { gemini15Flash } from '@genkit-ai/googleai';
@@ -15,11 +15,10 @@ const ChatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
-const ChatHistorySchema = z.array(ChatMessageSchema);
-
 // The main function exported to the client. It directly calls the flow logic.
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
   // IMPORTANT: Configure AI with a valid key before making a call.
+  // This function now resides in `dev.ts` to keep this file clean.
   await configureAi();
 
   const modelHistory = history.reduce((acc, msg) => {
@@ -65,6 +64,7 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
   } catch (error) {
     console.error("Error fetching from Generative AI:", error);
     const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
+    // Return the actual error message to the client for better debugging.
     return {
         role: 'model',
         content: `Maaf, terjadi masalah: ${errorMessage}`

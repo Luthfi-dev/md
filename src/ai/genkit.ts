@@ -11,8 +11,9 @@ import type { GenerationCommonConfig } from 'genkit';
 
 const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 
-// This function now dynamically provides the API key to the googleAI plugin.
-// It's called by Genkit internally for each operation.
+// This file now ONLY defines and registers flows. It is NOT imported by client-facing server actions.
+// It is imported by `dev.ts` to make Genkit aware of the flows.
+
 export const ai = genkit({
   plugins: [
     googleAI({
@@ -20,7 +21,6 @@ export const ai = genkit({
         const apiKeyRecord = await ApiKeyManager.getApiKey();
         if (apiKeyRecord.key === FALLBACK_KEY) {
           console.error('CRITICAL: No valid API key available for Genkit operation.');
-          // Throwing an error here is better as it clearly indicates a configuration problem.
           throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
         }
         return apiKeyRecord.key;
@@ -32,6 +32,7 @@ export const ai = genkit({
   },
   model: 'googleai/gemini-1.5-flash-latest',
 });
+
 
 // -- Define the chat flow --
 
@@ -49,8 +50,6 @@ ai.defineFlow(
     outputSchema: ChatMessageSchema,
   },
   async (history) => {
-    // The API key is now handled automatically by the plugin's apiKey provider.
-    
     const modelHistory = history.reduce((acc, msg) => {
       if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
         acc.push({
@@ -68,10 +67,10 @@ ai.defineFlow(
 
     try {
       const safetySettings: GenerationCommonConfig['safetySettings'] = [
-          { category: 'DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
       ];
 
       const response = await ai.generate({
@@ -94,10 +93,8 @@ ai.defineFlow(
     } catch (error) {
       console.error("Error fetching from Generative AI:", error);
       const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
-      return {
-          role: 'model',
-          content: `Maaf, terjadi masalah: ${errorMessage}`
-      }
+      // Throw the error to be caught by the runFlow caller
+      throw new Error(errorMessage);
     }
   }
 );

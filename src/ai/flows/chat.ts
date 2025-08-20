@@ -34,9 +34,10 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
     return response;
   } catch (error) {
     console.error("Error running chatFlow:", error);
+    // Return a more informative error message to the user
     return {
         role: 'model',
-        content: "Maaf, sepertinya asisten sedang sibuk. Mohon coba lagi sesaat lagi ya."
+        content: `Maaf, terjadi masalah: ${(error as Error).message}`
     };
   }
 }

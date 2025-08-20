@@ -3,7 +3,7 @@
 /**
  * @fileOverview A simple chat flow for an AI assistant.
  */
-import { ai } from '@/ai/genkit';
+import { ai, configureAi } from '@/ai/genkit';
 import { z } from 'zod';
 import assistant from '@/data/assistant.json';
 
@@ -28,24 +28,21 @@ const chatFlow = ai.defineFlow(
     outputSchema: ChatMessageSchema,
   },
   async (history) => {
-    // Transform the chat history into the format the model expects.
-    // The Gemini API requires roles to alternate between 'user' and 'model'.
+    // IMPORTANT: Configure AI with a valid key before making a call.
+    await configureAi();
+
     const modelHistory = history.reduce((acc, msg) => {
-      // Ensure the last message in accumulator is not the same role
       if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
         acc.push({
           role: msg.role,
           parts: [{ text: msg.content }],
         });
       } else {
-        // If the role is the same, append the content to the last message's parts.
-        // This handles cases of multiple consecutive user or model messages.
         acc[acc.length - 1].parts.push({ text: msg.content });
       }
       return acc;
     }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
     
-    // The last message is the prompt, the rest is history.
     const lastMessage = modelHistory.pop();
     const prompt = lastMessage?.parts.map(p => p.text).join('\n') ?? '';
 
@@ -74,7 +71,6 @@ const chatFlow = ai.defineFlow(
 
     } catch (error) {
         console.error("Error fetching from Generative AI:", error);
-        // This now returns the actual error message from genkit.ts or the AI service.
         const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
         return {
             role: 'model',

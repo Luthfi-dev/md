@@ -14,8 +14,6 @@ let lastFetchedTime: number = 0;
 const CACHE_DURATION_MS = 60000; // 1 minute
 let currentKeyIndex = -1;
 
-// A default, non-functional key to ensure the provider never returns an empty string,
-// which can cause cryptic errors. A proper error is thrown in genkit.ts if this is the case.
 const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 
 /**
@@ -37,7 +35,8 @@ export const ApiKeyManager = {
     try {
       connection = await db.getConnection();
       const [rows] = await connection.execute<RowDataPacket[]>(
-        "SELECT id, api_key FROM ai_api_keys WHERE service = 'gemini' AND status = 'active' ORDER BY last_used_at ASC"
+        "SELECT id, api_key FROM ai_api_keys WHERE service = 'gemini' AND status = 'active' AND failure_count < ? ORDER BY last_used_at ASC",
+        [MAX_FAILURE_COUNT]
       );
       
       activeKeys = rows.map(row => ({
@@ -46,8 +45,10 @@ export const ApiKeyManager = {
       }));
 
       lastFetchedTime = now;
-      currentKeyIndex = -1; // Reset index on new fetch
-      console.log(`Fetched ${activeKeys.length} active API keys from DB.`);
+      currentKeyIndex = -1; // Reset index on new fetch to start rotation over
+      if (activeKeys.length > 0) {
+        console.log(`Fetched ${activeKeys.length} active API keys from DB.`);
+      }
       return activeKeys;
     } catch (error) {
       console.error('Failed to fetch API keys from database:', error);
@@ -70,7 +71,7 @@ export const ApiKeyManager = {
         if (!peek) {
            currentKeyIndex = (currentKeyIndex + 1) % keys.length;
         } else if (currentKeyIndex === -1) {
-           currentKeyIndex = 0;
+           currentKeyIndex = 0; // Initialize index if peeking for the first time
         }
         const selectedKey = keys[currentKeyIndex];
         if (!peek) {
@@ -79,44 +80,31 @@ export const ApiKeyManager = {
         return selectedKey;
     }
     
-    // Fallback to environment variable if no keys are in the DB
     const envKey = process.env.GEMINI_API_KEY;
     if (envKey) {
       console.warn("No active keys in DB, falling back to GEMINI_API_KEY from .env");
-      return { id: 0, key: envKey }; // Use a dummy ID for env key
+      return { id: 0, key: envKey };
     }
     
-    // Ultimate fallback to prevent Genkit from crashing with an empty key
     console.error("CRITICAL: No API keys found in DB or .env file.");
     return { id: -1, key: FALLBACK_KEY };
   },
   
-  /**
-   * Gets the count of currently active keys.
-   */
-  async getActiveKeyCount(): Promise<number> {
-    const keys = await this.fetchKeys();
-    const hasEnvKey = !!process.env.GEMINI_API_KEY;
-    return keys.length + (hasEnvKey ? 1 : 0);
-  },
-
   /**
    * Handles the failure of an API key by incrementing its failure count
    * and deactivating it if the threshold is reached.
    * @param keyId The ID of the failed key.
    */
   async handleKeyFailure(keyId: number): Promise<void> {
-    if (keyId <= 0) { // Catch dummy IDs for env or fallback keys
-      console.warn(`Failure reported for non-DB API key (ID: ${keyId}). No action taken.`);
-      return;
-    }
+    if (keyId <= 0) return;
+
     let connection;
     try {
       connection = await db.getConnection();
       await connection.beginTransaction();
 
       await connection.execute(
-        'UPDATE ai_api_keys SET failure_count = failure_count + 1, last_used_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE ai_api_keys SET failure_count = failure_count + 1 WHERE id = ?',
         [keyId]
       );
 
@@ -131,7 +119,7 @@ export const ApiKeyManager = {
           [keyId]
         );
         console.warn(`API key ${keyId} has been deactivated due to repeated failures.`);
-        lastFetchedTime = 0; // Force cache refresh on next call
+        lastFetchedTime = 0; // Force cache refresh on next call to remove the failed key
       }
       await connection.commit();
     } catch (error) {
@@ -147,7 +135,7 @@ export const ApiKeyManager = {
    * @param keyId The ID of the key to update.
    */
    async updateLastUsed(keyId: number): Promise<void> {
-    if (keyId <= 0) return; // Don't try to update non-DB keys
+    if (keyId <= 0) return;
     let connection;
     try {
         connection = await db.getConnection();
@@ -163,7 +151,7 @@ export const ApiKeyManager = {
   },
 
   /**
-   * Resets the failure count for a key, e.g., after a successful use.
+   * Resets the failure count for a key.
    * @param keyId The ID of the key to reset.
    */
   async resetKeyFailureCount(keyId: number): Promise<void> {

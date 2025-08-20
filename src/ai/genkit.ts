@@ -1,55 +1,56 @@
 
-import { genkit } from 'genkit';
+'use server';
+
+import { genkit, configureGenkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { ApiKeyManager } from '@/services/ApiKeyManager';
 
 const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 
 /**
- * Defines the AI instance for the entire application.
- * It's configured with the googleAI plugin and uses a dynamic API key provider.
- * This provider fetches a key from the ApiKeyManager on-demand for each request,
- * enabling key rotation and resilient error handling.
+ * Defines the initial AI instance for the entire application, without a pre-configured API key.
+ * The API key will be configured dynamically at runtime.
  */
 export const ai = genkit({
-  plugins: [
-    googleAI({
-      apiKey: async () => {
-        const apiKeyRecord = await ApiKeyManager.getApiKey();
-        // If the key is the fallback, it means no valid keys are available.
-        if (apiKeyRecord.key === FALLBACK_KEY) {
-          console.error('CRITICAL: No valid API key available for Genkit operation.');
-          // Throwing an error here prevents the API call from even being attempted.
-          throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
-        }
-        return apiKeyRecord.key;
-      },
-      // Override the default retry logic to use our custom key rotation.
-      retry: {
-         shouldRetry: (err) => {
-            const errorMessage = (err as any)?.cause?.message || '';
-            // Only retry on rate limit errors (RESOURCE_EXHAUSTED) or server errors (UNAVAILABLE)
-            return errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('UNAVAILABLE');
-         },
-         // How many times to retry with a NEW key before giving up.
-         maxAttempts: 5, // A reasonable number of retries
-         backoff: {
-            start: 1000,
-            factor: 1.5,
-            max: 5000,
-         }
-      }
-    }),
-  ],
+  plugins: [googleAI()],
   // Define a custom error handler for when a request fails.
-  // This allows us to mark keys as failed.
   errorHandler: async (err) => {
       const currentKey = await ApiKeyManager.getApiKey(true); // Get the key that was just used (peek)
-      if (currentKey) {
+      if (currentKey && currentKey.id > 0) { // Only handle failures for DB keys
           console.warn(`API key ${currentKey.id} failed. Incrementing failure count.`);
           await ApiKeyManager.handleKeyFailure(currentKey.id);
       }
   },
-  // Set a default model to be used across the app unless specified otherwise.
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-1.5-flash-latest',
 });
+
+/**
+ * Asynchronously configures the global Genkit instance with a valid, rotated API key.
+ * This function MUST be called before running any flow that requires the AI model.
+ */
+export async function configureAi() {
+  const apiKeyRecord = await ApiKeyManager.getApiKey();
+  
+  if (apiKeyRecord.key === FALLBACK_KEY) {
+    console.error('CRITICAL: No valid API key available for Genkit operation.');
+    throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
+  }
+
+  // This reconfigures the global genkit instance with the provided API key.
+  configureGenkit({
+    plugins: [
+      googleAI({
+        apiKey: apiKeyRecord.key,
+        // Override the default retry logic to allow our custom key rotation to handle it.
+        retry: {
+           shouldRetry: (err) => {
+              const errorMessage = (err as any)?.cause?.message || '';
+              // Only retry on rate limit errors or server errors.
+              return errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('UNAVAILABLE');
+           },
+           maxAttempts: 1, // We let our ApiKeyManager handle retries with different keys.
+        }
+      }),
+    ],
+  });
+}

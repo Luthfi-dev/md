@@ -1,11 +1,12 @@
+
 'use server';
 
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
 import { ApiKeyManager } from '@/services/ApiKeyManager';
 import { z } from 'zod';
 import assistant from '@/data/assistant.json';
-import { gemini15Flash, type GenerationCommonConfig } from '@genkit-ai/googleai';
+import type { GenerationCommonConfig } from '@genkit-ai/googleai';
 
 const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 
@@ -72,7 +73,7 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
         config: { safetySettings },
     });
 
-    const textResponse = response.text() ?? "Maaf, aku lagi bingung nih. Boleh coba tanya lagi dengan cara lain?";
+    const textResponse = response.text ?? "Maaf, aku lagi bingung nih. Boleh coba tanya lagi dengan cara lain?";
 
     return { role: 'model', content: textResponse };
 
@@ -81,3 +82,89 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
     throw new Error((error as Error).message || "Terjadi kesalahan tidak dikenal saat menghubungi AI.");
   }
 }
+
+ai.defineFlow(
+  {
+    name: 'generateArticleOutlineFlow',
+    inputSchema: z.object({ description: z.string() }),
+    outputSchema: z.object({
+      outlines: z.array(z.object({
+        title: z.string(),
+        points: z.array(z.string())
+      }))
+    }),
+  },
+  async (input) => {
+    const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan deskripsi berikut, buatkan 3 opsi kerangka (outline) yang menarik dan terstruktur untuk sebuah artikel blog. Setiap outline harus memiliki judul yang SEO-friendly dan beberapa poin utama (sub-judul).
+
+Deskripsi: ${input.description}`;
+
+    const { output } = await ai.generate({
+        prompt: prompt,
+        model: 'googleai/gemini-1.5-flash-latest',
+        output: {
+            schema: z.object({
+              outlines: z.array(z.object({
+                title: z.string(),
+                points: z.array(z.string())
+              }))
+            }),
+        }
+    });
+    
+    return output!;
+  }
+);
+
+ai.defineFlow(
+    {
+        name: 'generateArticleFromOutlineFlow',
+        inputSchema: z.object({
+          selectedOutline: z.object({ title: z.string(), points: z.array(z.string()) }),
+          wordCount: z.number(),
+        }),
+        outputSchema: z.object({ articleContent: z.string() }),
+    },
+    async (input) => {
+        const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan kerangka (outline) berikut, tulis sebuah artikel blog yang lengkap, menarik, dan informatif dengan target sekitar ${input.wordCount} kata.
+Gunakan format HTML dengan tag paragraf <p>, sub-judul <h2>, dan daftar <ul><li>. Pastikan gaya bahasanya engaging dan mudah dibaca.
+
+Judul: ${input.selectedOutline.title}
+
+Poin-poin/Sub-judul:
+${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
+`;
+
+        const { output } = await ai.generate({
+            prompt: prompt,
+            model: 'googleai/gemini-1.5-flash-latest',
+            output: {
+                schema: z.object({ articleContent: z.string() }),
+            }
+        });
+        return output!;
+    }
+);
+
+ai.defineFlow(
+  {
+    name: 'generateSeoMetaFlow',
+    inputSchema: z.object({ articleContent: z.string() }),
+    outputSchema: z.object({ title: z.string(), description: z.string() }),
+  },
+  async (input) => {
+    const { output } = await ai.generate({
+        model: 'googleai/gemini-1.5-flash-latest',
+        prompt: `You are an SEO expert. Based on the following article content, generate an optimized meta title (around 60 characters) and meta description (around 160 characters).
+
+        Article Content:
+        ${input.articleContent}
+        `,
+        output: {
+            schema: z.object({ title: z.string(), description: z.string() })
+        }
+    });
+
+    return output!;
+  }
+);

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2 } from "lucide-react";
+import { ArrowRight, BrainCircuit, Edit, Grid3x3, Moon, Search, Sun, Gift, Star, Info, Package, Loader2, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Autoplay from "embla-carousel-autoplay"
 import React, { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { AppDefinition } from "@/app/admin/apps/page";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -66,13 +67,15 @@ const CategorySkeleton = () => (
 )
 
 const ArticleSkeleton = () => (
-    <div className="flex gap-4 items-center">
-        <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
-        <div className="flex-1 space-y-2">
-            <Skeleton className="h-5 w-3/4 rounded-md" />
-            <Skeleton className="h-4 w-1/2 rounded-md" />
-        </div>
-    </div>
+    <Card className="shadow-sm border-0 bg-card">
+        <CardContent className="p-4 flex gap-4 items-center">
+            <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-3/4 rounded-md" />
+                <Skeleton className="h-4 w-1/2 rounded-md" />
+            </div>
+        </CardContent>
+    </Card>
 );
 
 
@@ -127,22 +130,30 @@ export default function HomePageContent() {
    const [startRect, setStartRect] = React.useState<DOMRect | null>(null);
 
    const [mainFeatures, setMainFeatures] = useState<AppDefinition[]>([]);
+   const [latestArticles, setLatestArticles] = useState<any[]>([]);
    const [isLoading, setIsLoading] = useState(true);
    
     const carouselItems = [
         { title: 'Kuis Harian', description: 'Asah kemampuanmu dengan kuis interaktif', href: '/quiz', icon: 'BrainCircuit' },
-        { title: 'Latihan Soal', description: 'Perbanyak latihan untuk persiapan ujian.', href: '/practice', icon: 'Edit' }
+        { title: 'Latihan Soal', description: 'Perbanyak latihan untuk persiapan ujian.', href: '/practice', icon: 'Edit' },
+        { title: 'Generator Surat', description: 'Buat surat profesional dengan template dinamis.', href: '/surat', icon: 'FileSignature' }
     ];
 
    useEffect(() => {
         const fetchInitialData = async () => {
             setIsLoading(true);
             // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Fetch Apps
             const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
             setMainFeatures(sortedApps);
+
+            // Fetch articles
+            setLatestArticles([
+                { id: 1, title: "Tips Belajar Efektif di Era Digital", description: "Maksimalkan waktumu dengan metode yang terbukti.", image: "https://placehold.co/100x100.png" },
+                { id: 2, title: "Teknologi dalam Pendidikan", description: "Peran AI dan teknologi dalam proses belajar.", image: "https://placehold.co/100x100.png" }
+            ]);
 
             setIsLoading(false);
         };
@@ -256,9 +267,14 @@ export default function HomePageContent() {
                   Array.from({ length: 3 }).map((_, index) => <CategorySkeleton key={index} />)
               ) : (
                 <>
-                  {mainFeatures.slice(0, 3).map(feature => (
+                  {mainFeatures.slice(0, 2).map(feature => (
                       <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
                   ))}
+                   <CategoryCard 
+                    href="/explore" 
+                    icon={<Grid3x3 className="text-primary"/>} 
+                    label="Semua App" 
+                  />
                 </>
               )}
             </div>
@@ -267,15 +283,15 @@ export default function HomePageContent() {
           <section id="interactive-cards" className="mb-8 w-full">
             <Carousel
               opts={{
-                align: "start",
+                align: "center",
                 loop: true,
               }}
               plugins={[plugin.current]}
               className="w-full"
             >
-              <CarouselContent className="-ml-2">
+              <CarouselContent className="-ml-4">
                 {carouselItems.map((item, index) => (
-                  <CarouselItem key={index} className="basis-[85%] md:basis-1/2 pl-4">
+                  <CarouselItem key={index} className="basis-4/5 md:basis-1/2 pl-4">
                     <div className="p-1 h-36">
                       <CarouselCard item={item} />
                     </div>
@@ -289,31 +305,26 @@ export default function HomePageContent() {
             <section id="recommendations" className="pb-28">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold flex items-center gap-2">Rekomendasi untuk Anda</h2>
-                    <Link href="#" className="text-sm text-primary font-semibold">Lihat Semua</Link>
+                    <Link href="/blog" className="text-sm text-primary font-semibold">Lihat Semua</Link>
                 </div>
                 <div className="space-y-4">
                     {isLoading ? (
                       Array.from({ length: 2 }).map((_, index) => <ArticleSkeleton key={index} />)
                     ) : (
                        <>
-                        <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
-                            <CardContent className="p-4 flex gap-4 items-center">
-                                <Image data-ai-hint="education learning" src="https://placehold.co/100x100.png" alt="Edukasi" className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
-                                <div className="flex-1">
-                                    <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">Tips Belajar Efektif di Era Digital</h3>
-                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">Maksimalkan waktumu dengan metode yang terbukti dan relevan untuk pelajar modern.</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                         <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
-                            <CardContent className="p-4 flex gap-4 items-center">
-                                <Image data-ai-hint="technology education" src="https://placehold.co/100x100.png" alt="Teknologi" className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
-                                <div className="flex-1">
-                                    <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">Peran Teknologi dalam Pendidikan</h3>
-                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">Jelajahi bagaimana AI dan alat digital lainnya mengubah cara kita belajar dan mengajar.</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        {latestArticles.map(article => (
+                            <Link href="#" key={article.id} className="group">
+                                <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
+                                    <CardContent className="p-4 flex gap-4 items-center">
+                                        <Image data-ai-hint="education learning" src={article.image} alt="Edukasi" className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
+                                        <div className="flex-1">
+                                            <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">{article.title}</h3>
+                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{article.description}</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        ))}
                        </>
                     )}
                 </div>

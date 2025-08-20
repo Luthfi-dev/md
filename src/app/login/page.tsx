@@ -127,7 +127,6 @@ export default function HomePageContent() {
    const [startRect, setStartRect] = React.useState<DOMRect | null>(null);
 
    const [mainFeatures, setMainFeatures] = useState<AppDefinition[]>([]);
-   const [latestArticles, setLatestArticles] = useState<any[]>([]);
    const [isLoading, setIsLoading] = useState(true);
    
     const carouselItems = [
@@ -145,12 +144,6 @@ export default function HomePageContent() {
             const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
             setMainFeatures(sortedApps);
 
-            // Fetch Latest Articles (simulated)
-            const mockArticles = [
-                { id: 1, title: 'Tips Belajar Efektif di Era Digital', description: 'Maksimalkan waktumu dengan metode yang terbukti.', image: 'https://placehold.co/100x100.png', slug: 'tips-belajar-efektif', aiHint: 'education learning' },
-                { id: 2, title: 'Teknologi dalam Pendidikan', description: 'Peran AI dan teknologi dalam proses belajar.', image: 'https://placehold.co/100x100.png', slug: 'teknologi-pendidikan', aiHint: 'technology education' }
-            ];
-            setLatestArticles(mockArticles);
             setIsLoading(false);
         };
         fetchInitialData();
@@ -274,7 +267,7 @@ export default function HomePageContent() {
           <section id="interactive-cards" className="mb-8 w-full">
             <Carousel
               opts={{
-                align: "center",
+                align: "start",
                 loop: true,
               }}
               plugins={[plugin.current]}
@@ -302,19 +295,26 @@ export default function HomePageContent() {
                     {isLoading ? (
                       Array.from({ length: 2 }).map((_, index) => <ArticleSkeleton key={index} />)
                     ) : (
-                      latestArticles.map(article => (
-                        <Link href={`/blog/${article.slug}`} key={article.id} className="group">
-                           <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
+                       <>
+                        <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
                             <CardContent className="p-4 flex gap-4 items-center">
-                                <Image data-ai-hint={article.aiHint} src={article.image} alt={article.title} className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
+                                <Image data-ai-hint="education learning" src="https://placehold.co/100x100.png" alt="Edukasi" className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
                                 <div className="flex-1">
-                                    <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">{article.title}</h3>
-                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{article.description}</p>
+                                    <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">Tips Belajar Efektif di Era Digital</h3>
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">Maksimalkan waktumu dengan metode yang terbukti dan relevan untuk pelajar modern.</p>
                                 </div>
                             </CardContent>
-                          </Card>
-                        </Link>
-                      ))
+                        </Card>
+                         <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
+                            <CardContent className="p-4 flex gap-4 items-center">
+                                <Image data-ai-hint="technology education" src="https://placehold.co/100x100.png" alt="Teknologi" className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
+                                <div className="flex-1">
+                                    <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">Peran Teknologi dalam Pendidikan</h3>
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">Jelajahi bagaimana AI dan alat digital lainnya mengubah cara kita belajar dan mengajar.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                       </>
                     )}
                 </div>
             </section>

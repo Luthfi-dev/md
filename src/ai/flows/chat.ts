@@ -3,7 +3,7 @@
 /**
  * @fileOverview A simple chat flow for an AI assistant.
  */
-import { generate, type GenerationCommonConfig } from 'genkit/generate';
+import { generate, type GenerationCommonConfig } from 'genkit';
 import { configureAi } from '@/ai/genkit';
 import { z } from 'zod';
 import assistant from '@/data/assistant.json';

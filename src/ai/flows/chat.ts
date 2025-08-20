@@ -74,9 +74,11 @@ const chatFlow = ai.defineFlow(
 
     } catch (error) {
         console.error("Error fetching from Generative AI:", error);
+        // This now returns the actual error message from genkit.ts or the AI service.
+        const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
         return {
             role: 'model',
-            content: "Maaf, sepertinya asisten sedang sibuk. Mohon coba lagi sesaat lagi ya."
+            content: `Maaf, terjadi masalah: ${errorMessage}`
         }
     }
   }

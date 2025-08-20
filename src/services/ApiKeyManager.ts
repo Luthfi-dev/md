@@ -47,6 +47,7 @@ export const ApiKeyManager = {
 
       lastFetchedTime = now;
       currentKeyIndex = -1; // Reset index on new fetch
+      console.log(`Fetched ${activeKeys.length} active API keys from DB.`);
       return activeKeys;
     } catch (error) {
       console.error('Failed to fetch API keys from database:', error);
@@ -112,6 +113,8 @@ export const ApiKeyManager = {
     let connection;
     try {
       connection = await db.getConnection();
+      await connection.beginTransaction();
+
       await connection.execute(
         'UPDATE ai_api_keys SET failure_count = failure_count + 1, last_used_at = CURRENT_TIMESTAMP WHERE id = ?',
         [keyId]
@@ -130,7 +133,9 @@ export const ApiKeyManager = {
         console.warn(`API key ${keyId} has been deactivated due to repeated failures.`);
         lastFetchedTime = 0; // Force cache refresh on next call
       }
+      await connection.commit();
     } catch (error) {
+      if(connection) await connection.rollback();
       console.error(`Failed to handle failure for API key ${keyId}:`, error);
     } finally {
       if (connection) connection.release();

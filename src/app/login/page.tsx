@@ -1,152 +1,324 @@
 
 'use client';
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Lock, Mail, User } from "lucide-react";
-import React, { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import Autoplay from "embla-carousel-autoplay"
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { cn } from "@/lib/utils";
+import { useDailyReward } from "@/hooks/use-daily-reward";
+import { DailyRewardDialog } from "@/components/DailyRewardDialog";
+import { CountUp } from "@/components/CountUp";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { AppDefinition } from "@/app/admin/apps/page";
+import * as LucideIcons from 'lucide-react';
+import Image from 'next/image';
+import { Skeleton } from "@/components/ui/skeleton";
 
-// A simple function to generate a browser fingerprint
-const getBrowserFingerprint = () => {
-  if (typeof window === 'undefined') return 'server-side-render';
+
+// Simulate fetching data
+import appsData from '@/data/apps.json';
+
+const getIcon = (iconName: string): React.ReactNode => {
+    const IconComponent = (LucideIcons as any)[iconName];
+    if (IconComponent) {
+        return <IconComponent className="text-primary w-8 h-8" />;
+    }
+    return <Package className="text-primary w-8 h-8" />; // Fallback icon
+};
+
+const CarouselCard = ({ item }: { item: { title: string, description: string, href: string, icon: string } }) => (
+    <Card className="w-full h-full bg-primary text-primary-foreground shadow-lg rounded-2xl overflow-hidden">
+        <Link href={item.href} className="w-full h-full">
+             <CardContent className="p-5 flex flex-col justify-between h-full relative">
+                <div className="z-10">
+                    <h3 className="text-lg font-bold">{item.title}</h3>
+                    <p className="text-sm opacity-90 mt-1 max-w-[150px] line-clamp-2">{item.description}</p>
+                </div>
+                <div className="absolute bottom-4 right-4 w-16 h-16 rounded-full bg-white/20 flex items-center justify-center z-0">
+                    {getIcon(item.icon)}
+                </div>
+            </CardContent>
+        </Link>
+    </Card>
+);
+
+const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: string, href: string }) => (
+  <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 w-20 text-center">
+    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-white shadow-md`}>
+      {icon}
+    </div>
+    <span className="text-xs font-medium text-foreground leading-tight">{label}</span>
+  </Link>
+)
+
+const CategorySkeleton = () => (
+    <div className="flex flex-col items-center gap-2 flex-shrink-0 w-20">
+        <Skeleton className="w-16 h-16 rounded-2xl" />
+        <Skeleton className="h-4 w-12 rounded-md" />
+    </div>
+)
+
+const ArticleSkeleton = () => (
+    <div className="flex gap-4 items-center">
+        <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
+        <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-3/4 rounded-md" />
+            <Skeleton className="h-4 w-1/2 rounded-md" />
+        </div>
+    </div>
+);
+
+
+const FlyingPoints = ({ isVisible, startRect }: { isVisible: boolean, startRect: DOMRect | null }) => {
+  const pointsRef = React.useRef<HTMLDivElement>(null);
+
+  const style: React.CSSProperties = startRect ? {
+    position: 'fixed',
+    left: `${startRect.left + startRect.width / 2 - 15}px`,
+    top: `${startRect.top + startRect.height / 2 - 15}px`,
+    transition: 'top 0.8s cubic-bezier(0.5, 1.5, 0.8, 1), left 0.8s ease-in-out, opacity 0.8s ease-out',
+    opacity: 0,
+    zIndex: 9999,
+  } : { display: 'none' };
   
-  const { userAgent, language, platform, hardwareConcurrency, deviceMemory } = navigator;
-  const screenResolution = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-  const timezone = new Date().getTimezoneOffset();
-  
-  const data = `${userAgent}|${language}|${platform}|${hardwareConcurrency}|${deviceMemory}|${screenResolution}|${timezone}`;
-  
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return hash.toString();
+  React.useEffect(() => {
+    if (isVisible && pointsRef.current) {
+      setTimeout(() => {
+        if(pointsRef.current) {
+            pointsRef.current.style.opacity = '1';
+            pointsRef.current.style.top = '65px'; // Target Y
+            pointsRef.current.style.left = '100px'; // Target X
+        }
+      }, 50);
+       setTimeout(() => {
+        if(pointsRef.current) {
+          pointsRef.current.style.opacity = '0';
+        }
+      }, 800);
+    }
+  }, [isVisible]);
+
+  return (
+    <div ref={pointsRef} style={style} className="flex items-center justify-center font-bold text-lg text-primary bg-yellow-300 rounded-full w-14 h-14 shadow-lg border-2 border-white">
+      +50
+    </div>
+  );
 };
 
 
-export default function LoginPage() {
-  const [isLoginView, setIsLoginView] = useState(true);
-  const { isLoading, login, register } = useAuth();
-  const [loadingMessage, setLoadingMessage] = useState('');
-  const { toast } = useToast();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export default function HomePageContent() {
+   const plugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true, stopOnMouseEnter: true })
+   )
+   const router = useRouter();
+   const { theme, setTheme } = useTheme();
+   const isMobile = useIsMobile();
+   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+   const { points, claimState, claimReward, refreshClaimState } = useDailyReward();
+   
+   const [flyingPointsVisible, setFlyingPointsVisible] = React.useState(false);
+   const [startRect, setStartRect] = React.useState<DOMRect | null>(null);
 
-  // Middleware now handles redirecting logged-in users away from this page
+   const [mainFeatures, setMainFeatures] = useState<AppDefinition[]>([]);
+   const [latestArticles, setLatestArticles] = useState<any[]>([]);
+   const [isLoading, setIsLoading] = useState(true);
+   
+    const carouselItems = [
+        { title: 'Kuis Harian', description: 'Asah kemampuanmu dengan kuis interaktif', href: '/quiz', icon: 'BrainCircuit' },
+        { title: 'Latihan Soal', description: 'Perbanyak latihan untuk persiapan ujian.', href: '/practice', icon: 'Edit' }
+    ];
 
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+   useEffect(() => {
+        const fetchInitialData = async () => {
+            setIsLoading(true);
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Fetch Apps
+            const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
+            setMainFeatures(sortedApps);
+
+            // Fetch Latest Articles (simulated)
+            const mockArticles = [
+                { id: 1, title: 'Tips Belajar Efektif di Era Digital', description: 'Maksimalkan waktumu dengan metode yang terbukti.', image: 'https://placehold.co/100x100.png', slug: 'tips-belajar-efektif', aiHint: 'education learning' },
+                { id: 2, title: 'Teknologi dalam Pendidikan', description: 'Peran AI dan teknologi dalam proses belajar.', image: 'https://placehold.co/100x100.png', slug: 'teknologi-pendidikan', aiHint: 'technology education' }
+            ];
+            setLatestArticles(mockArticles);
+            setIsLoading(false);
+        };
+        fetchInitialData();
+    }, []);
+
+   const handleClaimWithPosition = async (dayIndex: number, element: HTMLElement) => {
+     const rect = element.getBoundingClientRect();
+     setStartRect(rect);
+     onOpenChange(false);
+     
+     const success = await claimReward(dayIndex);
+     if (success) {
+        setFlyingPointsVisible(true);
+        setTimeout(() => setFlyingPointsVisible(false), 1000);
+     }
+   }
+
+   const onOpenChange = (isOpen: boolean) => {
+       if (isOpen) {
+           refreshClaimState();
+       }
+       setIsDialogOpen(isOpen);
+   }
+
+   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoadingMessage(isLoginView ? "Mengecek kredensial Anda..." : "Mendaftarkan akun baru...");
-    
     const formData = new FormData(event.currentTarget);
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const repeatPassword = formData.get("repeatPassword") as string;
-    
-    try {
-        if (isLoginView) {
-            const result = await login(email, password);
-            if (result.success) {
-                const redirectUrl = searchParams.get('redirect') || '/';
-                router.push(redirectUrl);
-            } else {
-                toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
-            }
-        } else {
-            const fingerprint = getBrowserFingerprint();
-            const guestData = localStorage.getItem('guestRewardState_v3');
-            const result = await register({name, email, password, repeatPassword, fingerprint, guestData});
-
-            if (result.success) {
-                toast({ title: 'Registrasi Berhasil!', description: 'Silakan masuk dengan akun baru Anda.' });
-                setIsLoginView(true);
-            } else {
-                 toast({ variant: 'destructive', title: 'Registrasi Gagal', description: result.message || 'Terjadi kesalahan.' });
-            }
-        }
-    } catch(error) {
-         toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Tidak dapat terhubung ke server.',
-        });
-    } finally {
-        setLoadingMessage('');
+    const searchQuery = formData.get('search') as string;
+    if (searchQuery.trim()) {
+      router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
     }
-  };
-  
+   };
+   
   return (
     <>
-      <LoadingOverlay isLoading={isLoading} message={loadingMessage} />
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-primary/5 via-background to-background">
-        <div className="flex-grow flex items-center justify-center p-4">
-          <div className="w-full max-w-md mx-auto">
-            <div className="text-center mb-10">
-              <h1 className="text-4xl font-bold font-headline text-foreground tracking-tight">
-                {isLoginView ? "Selamat Datang" : "Buat Akun"}
-              </h1>
-              <p className="text-muted-foreground mt-2">
-                {isLoginView ? "Masuk untuk melanjutkan" : "Mulai perjalananmu bersama kami"}
-              </p>
-            </div>
-
-            <div className="bg-card p-8 rounded-2xl shadow-xl">
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                {!isLoginView && (
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input id="name" name="name" type="text" placeholder="Nama Lengkap" className="pl-10 h-12 rounded-full" required />
-                  </div>
-                )}
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input id="email" name="email" type="email" placeholder="m@example.com" required className="pl-10 h-12 rounded-full" />
-                </div>
-                <div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input id="password" name="password" type="password" required placeholder="Kata Sandi" className="pl-10 h-12 rounded-full" />
-                  </div>
-                  {isLoginView && (
-                      <div className="text-right mt-1">
-                          <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs">
-                              <Link href="/account/forgot-password">Lupa kata sandi?</Link>
-                          </Button>
-                      </div>
-                  )}
-                </div>
-                {!isLoginView && (
-                  <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input id="repeatPassword" name="repeatPassword" type="password" required placeholder="Ulangi Kata Sandi" className="pl-10 h-12 rounded-full" />
-                  </div>
-                )}
-                
-                <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-lg font-bold group !mt-6" disabled={isLoading}>
-                  {isLoginView ? "Masuk" : "Daftar"}
-                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </form>
-            </div>
-
-            <div className="text-center mt-6">
-              <p className="text-muted-foreground">
-                {isLoginView ? "Belum punya akun?" : "Sudah punya akun?"}{' '}
-                <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-primary hover:underline" disabled={isLoading}>
-                  {isLoginView ? "Daftar sekarang" : "Masuk"}
-                </button>
-              </p>
-            </div>
+      <FlyingPoints isVisible={flyingPointsVisible} startRect={startRect} />
+      <DailyRewardDialog 
+        isOpen={isDialogOpen}
+        onOpenChange={onOpenChange}
+        claimState={claimState}
+        onClaim={claimReward}
+        onClaimWithPosition={handleClaimWithPosition}
+      />
+      <div className="flex flex-col h-full bg-background overflow-x-hidden">
+        <header className="bg-primary text-primary-foreground p-6 pb-20 rounded-b-[40px] shadow-lg">
+          <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col">
+                  <p className="opacity-80 text-sm">Selamat Datang!</p>
+                  <h1 className="text-2xl font-bold">John Doe</h1>
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">Toggle theme</span>
+              </Button>
           </div>
-        </div>
+          <div className="bg-primary-foreground/20 backdrop-blur-sm p-3 rounded-2xl flex justify-between items-center">
+              <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm opacity-80">Coin Anda</p>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                           <Info className="w-4 h-4 cursor-pointer opacity-80 hover:opacity-100"/>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                            <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">Apa itu Coin?</h4>
+                                <p className="text-sm text-muted-foreground">
+                                Coin adalah mata uang virtual di aplikasi ini. Anda bisa mendapatkannya secara gratis dengan check-in harian.
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">Untuk apa Coin digunakan?</h4>
+                                <p className="text-sm text-muted-foreground">
+                                Beberapa fitur canggih atau premium di aplikasi ini mungkin memerlukan sejumlah Coin untuk sekali pakai. Namun, sebagian besar alat tetap gratis digunakan tanpa batas!
+                                </p>
+                            </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    <CountUp end={points} />
+                  </div>
+              </div>
+              <Button variant="secondary" className="bg-white/90 hover:bg-white text-primary rounded-full font-bold" onClick={() => onOpenChange(true) }>
+                  <Gift className="mr-2 h-4 w-4"/>
+                  Klaim Coin
+              </Button>
+          </div>
+        </header>
+        
+        <main className="flex-1 flex flex-col -mt-10 z-10">
+          <div className="w-full px-6">
+              <form className="relative mb-8" onSubmit={handleSearch}>
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    name="search"
+                    type="search"
+                    placeholder="Cari tool yg kamu butuhkan"
+                    className="w-full rounded-full bg-card text-foreground placeholder:text-muted-foreground pl-11 pr-4 py-2 h-12 border-2 border-transparent focus-visible:border-primary focus-visible:ring-0"
+                  />
+              </form>
+          </div>
+
+          <section id="features" className="mb-8 px-6">
+            <div className="flex justify-around items-start gap-y-4 gap-x-2 bg-card p-4 rounded-2xl shadow-md">
+              {isLoading ? (
+                  Array.from({ length: 3 }).map((_, index) => <CategorySkeleton key={index} />)
+              ) : (
+                <>
+                  {mainFeatures.slice(0, 3).map(feature => (
+                      <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
+                  ))}
+                </>
+              )}
+            </div>
+          </section>
+
+          <section id="interactive-cards" className="mb-8 w-full">
+            <Carousel
+              opts={{ align: "center", loop: true }}
+              plugins={[plugin.current]}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-2">
+                {carouselItems.map((item, index) => (
+                  <CarouselItem key={index} className="basis-[80%] md:basis-1/2 pl-4">
+                    <div className="p-1 h-36">
+                      <CarouselCard item={item} />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          </section>
+          
+          <div className="px-6">
+            <section id="recommendations" className="pb-28">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold flex items-center gap-2">Rekomendasi untuk Anda</h2>
+                    <Link href="#" className="text-sm text-primary font-semibold">Lihat Semua</Link>
+                </div>
+                <div className="space-y-4">
+                    {isLoading ? (
+                      Array.from({ length: 2 }).map((_, index) => <ArticleSkeleton key={index} />)
+                    ) : (
+                      latestArticles.map(article => (
+                        <Link href={`/blog/${article.slug}`} key={article.id} className="group">
+                           <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
+                            <CardContent className="p-4 flex gap-4 items-center">
+                                <Image data-ai-hint={article.aiHint} src={article.image} alt={article.title} className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
+                                <div className="flex-1">
+                                    <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">{article.title}</h3>
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{article.description}</p>
+                                </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      ))
+                    )}
+                </div>
+            </section>
+          </div>
+        </main>
       </div>
     </>
   );
 }
+

@@ -1,7 +1,7 @@
 
 'use server';
 
-import { genkit } from 'genkit';
+import { genkit, durableFlow } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { ApiKeyManager } from '@/services/ApiKeyManager';
 import { z } from 'zod';
@@ -10,28 +10,41 @@ import { gemini15Flash, type GenerationCommonConfig } from '@genkit-ai/googleai'
 
 const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 
-// This file defines and registers flows.
-// It is imported by `dev.ts` to make Genkit aware of the flows,
-// but should NOT be imported by any client-facing server actions.
+let currentAiInstance: any = null;
 
-export const ai = genkit({
-  plugins: [
-    googleAI({
-      apiKey: async () => {
-        const apiKeyRecord = await ApiKeyManager.getApiKey();
-        if (apiKeyRecord.key === FALLBACK_KEY) {
-          console.error('CRITICAL: No valid API key available for Genkit operation.');
-          throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
-        }
-        return apiKeyRecord.key;
-      },
-    }),
-  ],
-  errorHandler: async (err) => {
-    console.error("Genkit error handler caught:", err);
-  },
-  model: 'googleai/gemini-1.5-flash-latest',
-});
+/**
+ * Configures the global Genkit instance with a dynamically fetched API key.
+ * This function is designed to be called just before a flow that requires AI is run.
+ */
+export async function configureGenkit() {
+    const apiKeyRecord = await ApiKeyManager.getApiKey();
+    if (apiKeyRecord.key === FALLBACK_KEY) {
+        console.error('CRITICAL: No valid API key available for Genkit operation.');
+        throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
+    }
+
+    currentAiInstance = genkit({
+        plugins: [
+            googleAI({
+                apiKey: apiKeyRecord.key,
+            }),
+        ],
+        errorHandler: async (err) => {
+            console.error("Genkit error handler caught:", err);
+        },
+    });
+}
+
+const getAiInstance = () => {
+    if (!currentAiInstance) {
+        // Fallback initialization if configureGenkit hasn't been called.
+        // This is a safety net and shouldn't be the primary path.
+        return genkit({
+             plugins: [googleAI({ apiKey: process.env.GEMINI_API_KEY || FALLBACK_KEY })]
+        });
+    }
+    return currentAiInstance;
+}
 
 
 // -- Define the chat flow --
@@ -43,7 +56,10 @@ const ChatMessageSchema = z.object({
 
 const ChatHistorySchema = z.array(ChatMessageSchema);
 
-ai.defineFlow(
+// This is the actual logic of the chat flow.
+// It is defined here and registered with Genkit via the import in `dev.ts`.
+// It is never imported by a client-facing server action.
+durableFlow(
   {
     name: 'chatFlow',
     inputSchema: ChatHistorySchema,
@@ -73,6 +89,8 @@ ai.defineFlow(
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
           { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
       ];
+      
+      const ai = getAiInstance();
 
       const response = await ai.generate({
           model: gemini15Flash,

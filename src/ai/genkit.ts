@@ -26,9 +26,9 @@ import {
 import htmlToDocx from 'html-to-docx';
 
 
-// Initialize a single, global AI instance. This is used to define flows.
+// Initialize a single, file-internal AI instance. This is NOT exported.
 // The API key is not provided here; it will be injected per-call.
-export const ai = genkit({
+const ai = genkit({
   plugins: [
     googleAI(),
   ],
@@ -37,7 +37,7 @@ export const ai = genkit({
 
 // --------------------------------------------------------------------------
 //  FLOW DEFINITIONS
-//  These are defined using the global 'ai' instance and are not exported.
+//  These are defined using the internal 'ai' instance and are not exported.
 //  They are invoked by the exported server actions below.
 // --------------------------------------------------------------------------
 

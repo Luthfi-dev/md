@@ -1,3 +1,4 @@
+
 'use client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,14 +27,15 @@ import appsData from '@/data/apps.json';
 const getIcon = (iconName: string): React.ReactNode => {
     const IconComponent = (LucideIcons as any)[iconName];
     if (IconComponent) {
-        return <IconComponent className="text-primary" />;
+        return <IconComponent className="text-primary w-8 h-8" />;
     }
-    return <Package className="text-primary" />; // Fallback icon
+    return <Package className="text-primary w-8 h-8" />; // Fallback icon
 };
+
 
 const CarouselCard = ({ item }: { item: CarouselItemType }) => (
     <Card className="w-full h-full bg-primary text-primary-foreground shadow-lg rounded-2xl overflow-hidden">
-        <Link href={item.href}>
+        <Link href={item.href} className="w-full h-full">
              <CardContent className="p-5 flex flex-col justify-between h-full relative">
                 <div className="z-10">
                     <h3 className="text-lg font-bold">{item.title}</h3>
@@ -273,7 +275,7 @@ export default function HomePageContent() {
           <section id="interactive-cards" className="mb-4 w-full">
             <Carousel
               opts={{
-                align: "center",
+                align: "start",
                 loop: true,
               }}
               plugins={[plugin.current]}
@@ -283,7 +285,7 @@ export default function HomePageContent() {
             >
               <CarouselContent className="-ml-2">
                 {carouselItems.map(item => (
-                  <CarouselItem key={item.id} className="basis-[85%] md:basis-1/2 pl-2">
+                  <CarouselItem key={item.id} className="basis-[85%] md:basis-1/2 pl-4">
                     <div className="p-1 h-36">
                       <CarouselCard item={item} />
                     </div>

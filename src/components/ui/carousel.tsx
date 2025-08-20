@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -75,6 +76,16 @@ const Carousel = React.forwardRef<
 
       setCanScrollPrev(api.canScrollPrev())
       setCanScrollNext(api.canScrollNext())
+
+      // Manually add/remove is-active class to slides
+      api.slideNodes().forEach((node, index) => {
+        if (api.selectedScrollSnap() === index) {
+          node.classList.add("is-active")
+        } else {
+          node.classList.remove("is-active")
+        }
+      })
+
     }, [])
 
     const scrollPrev = React.useCallback(() => {
@@ -162,7 +173,7 @@ const CarouselContent = React.forwardRef<
         ref={ref}
         className={cn(
           "flex",
-          orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
+          orientation === "horizontal" ? "" : "flex-col",
           className
         )}
         {...props}
@@ -184,7 +195,7 @@ const CarouselItem = React.forwardRef<
       role="group"
       aria-roledescription="slide"
       className={cn(
-        "min-w-0 shrink-0 grow-0 basis-full",
+        "min-w-0 shrink-0 grow-0 basis-full embla__slide",
         orientation === "horizontal" ? "pl-4" : "pt-4",
         className
       )}

@@ -1,6 +1,9 @@
+
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { ApiKeyManager } from '@/services/ApiKeyManager';
+
+const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 
 /**
  * Defines the AI instance for the entire application.
@@ -11,20 +14,17 @@ import { ApiKeyManager } from '@/services/ApiKeyManager';
 export const ai = genkit({
   plugins: [
     googleAI({
-      // Provide the API key dynamically using a function.
-      // This function will be called by Genkit internally for each operation.
       apiKey: async () => {
         const apiKeyRecord = await ApiKeyManager.getApiKey();
-        if (!apiKeyRecord) {
-            // Log the error but don't throw here, as Genkit's retry logic might handle it.
-            // If all keys fail, Genkit will eventually throw its own error.
-            console.error('No active Gemini API keys available.');
-            return ''; // Return empty string to let Genkit's own error handling proceed.
+        // If the key is the fallback, it means no valid keys are available.
+        if (apiKeyRecord.key === FALLBACK_KEY) {
+          console.error('CRITICAL: No valid API key available for Genkit operation.');
+          // Throwing an error here prevents the API call from even being attempted.
+          throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
         }
         return apiKeyRecord.key;
       },
       // Override the default retry logic to use our custom key rotation.
-      // We only want to retry on UNAVAILABLE (e.g. rate limit, server error), not on INVALID_ARGUMENT (e.g. bad prompt).
       retry: {
          shouldRetry: (err) => {
             const errorMessage = (err as any)?.cause?.message || '';
@@ -53,11 +53,3 @@ export const ai = genkit({
   // Set a default model to be used across the app unless specified otherwise.
   model: 'googleai/gemini-pro',
 });
-
-// DEPRECATED: This function is no longer needed with the new dynamic API key provider.
-// Keeping it here but commented out to show the change in approach.
-/*
-export async function configureAi() {
-  // This logic is now handled directly inside the genkit() initialization.
-}
-*/

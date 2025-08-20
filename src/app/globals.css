@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -113,11 +114,10 @@ body {
 @layer utilities {
   .embla__slide {
     transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    opacity: 0.5;
-    transform: scale(0.9);
   }
-  .embla__slide.is-active {
-    opacity: 1;
-    transform: scale(1);
+
+  .embla__slide:not(.is-active) {
+    opacity: 0.5;
+    transform: scale(0.92);
   }
 }

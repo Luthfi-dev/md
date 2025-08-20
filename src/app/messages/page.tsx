@@ -12,34 +12,29 @@ import { useRouter } from 'next/navigation';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
-import { chat } from '@/ai/genkit'; 
+import { chat } from '@/ai/genkit';
 import { type ChatMessage } from '@/ai/schemas';
 
 const renderContent = (content: string) => {
-    // This is a placeholder for a more robust markdown-to-react renderer
     const linkRegex = /<Link href="(.+?)">(.+?)<\/Link>/g;
     let lastIndex = 0;
     const parts = [];
 
     let match;
     while ((match = linkRegex.exec(content)) !== null) {
-        // Text before the link
         if (match.index > lastIndex) {
             parts.push(content.substring(lastIndex, match.index));
         }
-        // The link itself
         const href = match[1];
         const text = match[2];
         parts.push(<Link key={match.index} href={href} className="text-primary underline hover:text-primary/80">{text}</Link>);
         lastIndex = match.index + match[0].length;
     }
 
-    // Text after the last link
     if (lastIndex < content.length) {
         parts.push(content.substring(lastIndex));
     }
     
-    // Process newlines for all text parts
     return parts.map((part, index) => {
         if (typeof part === 'string') {
             return part.split('\n').map((line, i) => (
@@ -73,14 +68,12 @@ export default function MessagesPage() {
             setAssistantAvatar(assistantData.avatarUrl);
         }
 
-        // Add welcome message on mount
         const welcomeMessage: ChatMessage = {
             role: 'model',
             content: `Hai! Aku ${assistantData.name}. Ada yang bisa kubantu hari ini?`
         };
         setMessages([welcomeMessage]);
 
-        // Preload sounds
         if (typeof window !== 'undefined') {
             typingSoundRef.current = new Audio('/sounds/typing.mp3');
             typingSoundRef.current.volume = 0.2;
@@ -89,7 +82,6 @@ export default function MessagesPage() {
     }, []);
     
     useEffect(() => {
-        // Play notification sound for the initial welcome message
         if (messages.length === 1 && messages[0].role === 'model') {
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
         }
@@ -125,7 +117,6 @@ export default function MessagesPage() {
         setIsLoading(true);
 
         try {
-            // Calling the server action from the single AI file
             const aiResponse = await chat(newMessages); 
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);

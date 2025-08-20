@@ -1,16 +1,13 @@
 
 'use server';
 /**
- * @fileOverview Core Genkit flow definitions and server actions.
- * This file contains flow definitions and their exported async wrapper functions.
- * It is marked with "use server" to be used as a server action module.
+ * @fileOverview Core AI flow definitions and exported server actions.
  */
 
 import { genkit, type GenerationCommonConfig } from 'genkit';
 import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
-import { z } from 'zod';
-import { ApiKeyManager, FALLBACK_KEY } from '@/services/ApiKeyManager';
-import assistant from '@/data/assistant.json';
+import { getApiKey, handleKeyFailure } from '@/services/ApiKeyManager';
+import assistantData from '@/data/assistant.json';
 import {
   ChatHistorySchema,
   ChatMessageSchema,
@@ -29,20 +26,20 @@ import {
 import htmlToDocx from 'html-to-docx';
 
 
-// Initialize a single, global AI instance.
-// This is the correct object to use for defining flows and prompts.
+// Initialize a single, global AI instance. This is used to define flows.
+// The API key is not provided here; it will be injected per-call.
 export const ai = genkit({
   plugins: [
-    googleAI(), // Initialized without an API key, which will be provided per-call.
+    googleAI(),
   ],
 });
 
 
 // --------------------------------------------------------------------------
-//  FLOW DEFINITIONS & EXPORTED ACTIONS
+//  FLOW DEFINITIONS
+//  These are defined using the global 'ai' instance and are not exported.
+//  They are invoked by the exported server actions below.
 // --------------------------------------------------------------------------
-
-// --- Chat Flow ---
 
 const chatFlow = ai.defineFlow(
   {
@@ -51,8 +48,8 @@ const chatFlow = ai.defineFlow(
     outputSchema: ChatMessageSchema,
   },
   async (history) => {
-    const apiKeyRecord = await ApiKeyManager.getApiKey();
-    if (apiKeyRecord.key === FALLBACK_KEY) {
+    const apiKeyRecord = await getApiKey();
+    if (apiKeyRecord.key === 'NO_VALID_KEY_CONFIGURED') {
       throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
     }
     
@@ -75,7 +72,7 @@ const chatFlow = ai.defineFlow(
     try {
       const response = await ai.generate({
         model: gemini15Flash,
-        system: assistant.systemPrompt,
+        system: assistantData.systemPrompt,
         history: modelHistory,
         prompt: prompt,
         config: { safetySettings },
@@ -86,25 +83,13 @@ const chatFlow = ai.defineFlow(
 
     } catch (error) {
        if (error instanceof Error && error.message.includes('API key not valid')) {
-        const currentKey = await ApiKeyManager.getApiKey(true);
-        await ApiKeyManager.handleKeyFailure(currentKey.id);
+        await handleKeyFailure(apiKeyRecord.id);
       }
       throw error;
     }
   }
 );
 
-export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
-  const validationResult = ChatHistorySchema.safeParse(history);
-  if (!validationResult.success) {
-    console.error("Invalid chat history format:", validationResult.error);
-    throw new Error('Format riwayat percakapan tidak valid.');
-  }
-  return chatFlow(history);
-}
-
-
-// --- Article Generation Flows ---
 
 const generateArticleOutlineFlow = ai.defineFlow(
   {
@@ -126,12 +111,6 @@ Deskripsi: ${input.description}`;
     return output!;
   }
 );
-
-export async function generateArticleOutline(input: { description: string }) {
-    const validationResult = ArticleOutlineInputSchema.safeParse(input);
-    if (!validationResult.success) throw new Error("Input untuk kerangka artikel tidak valid.");
-    return generateArticleOutlineFlow(input);
-}
 
 
 const generateArticleFromOutlineFlow = ai.defineFlow(
@@ -159,17 +138,6 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
     }
 );
 
-export async function generateArticleFromOutline(input: {
-  selectedOutline: { title: string; points: string[] };
-  wordCount: number;
-}) {
-    const validationResult = ArticleFromOutlineInputSchema.safeParse(input);
-    if (!validationResult.success) throw new Error("Input untuk artikel tidak valid.");
-    return generateArticleFromOutlineFlow(input);
-}
-
-
-// --- SEO Meta Flow ---
 
 const generateSeoMetaFlow = ai.defineFlow(
   {
@@ -192,14 +160,6 @@ const generateSeoMetaFlow = ai.defineFlow(
   }
 );
 
-export async function generateSeoMeta(input: { articleContent: string }) {
-    const validationResult = SeoMetaInputSchema.safeParse(input);
-    if (!validationResult.success) throw new Error("Input untuk SEO meta tidak valid.");
-    return generateSeoMetaFlow(input);
-}
-
-
-// --- File Converter Flow ---
 
 const convertHtmlToWordFlow = ai.defineFlow(
   {
@@ -229,6 +189,43 @@ const convertHtmlToWordFlow = ai.defineFlow(
     }
   }
 );
+
+
+// --------------------------------------------------------------------------
+//  EXPORTED SERVER ACTIONS
+//  These are the functions that client components will import and call.
+//  They are simple wrappers that call the defined flows.
+// --------------------------------------------------------------------------
+
+export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
+  const validationResult = ChatHistorySchema.safeParse(history);
+  if (!validationResult.success) {
+    console.error("Invalid chat history format:", validationResult.error);
+    throw new Error('Format riwayat percakapan tidak valid.');
+  }
+  return chatFlow(history);
+}
+
+export async function generateArticleOutline(input: { description: string }) {
+    const validationResult = ArticleOutlineInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk kerangka artikel tidak valid.");
+    return generateArticleOutlineFlow(input);
+}
+
+export async function generateArticleFromOutline(input: {
+  selectedOutline: { title: string; points: string[] };
+  wordCount: number;
+}) {
+    const validationResult = ArticleFromOutlineInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk artikel tidak valid.");
+    return generateArticleFromOutlineFlow(input);
+}
+
+export async function generateSeoMeta(input: { articleContent: string }) {
+    const validationResult = SeoMetaInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk SEO meta tidak valid.");
+    return generateSeoMetaFlow(input);
+}
 
 export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
   return await convertHtmlToWordFlow(input);

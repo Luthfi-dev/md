@@ -1,0 +1,11 @@
+
+[
+  {
+    "id": 1,
+    "key": "AIzaSyCr522l-NVqDL6usYbKy63AD4ZGQdyys9E",
+    "service": "gemini",
+    "status": "active",
+    "failure_count": 0,
+    "last_used_at": null
+  }
+]

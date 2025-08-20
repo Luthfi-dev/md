@@ -220,3 +220,14 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
         if (connection) connection.release();
     }
 }
+
+
+export async function generateSeoMeta(input: { articleContent: string }) {
+     try {
+        const result = await ai.runFlow('generateSeoMetaFlow', input);
+        return result;
+    } catch (error) {
+        console.error("Error running generateSeoMetaFlow:", error);
+        throw new Error((error as Error).message || "Gagal membuat metadata SEO.");
+    }
+}

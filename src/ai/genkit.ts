@@ -6,13 +6,13 @@ import { googleAI } from '@genkit-ai/googleai';
 import { ApiKeyManager } from '@/services/ApiKeyManager';
 import { z } from 'zod';
 import assistant from '@/data/assistant.json';
-import { gemini15Flash } from '@genkit-ai/googleai';
-import type { GenerationCommonConfig } from 'genkit';
+import { gemini15Flash, type GenerationCommonConfig } from '@genkit-ai/googleai';
 
 const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
 
-// This file now ONLY defines and registers flows. It is NOT imported by client-facing server actions.
-// It is imported by `dev.ts` to make Genkit aware of the flows.
+// This file defines and registers flows.
+// It is imported by `dev.ts` to make Genkit aware of the flows,
+// but should NOT be imported by any client-facing server actions.
 
 export const ai = genkit({
   plugins: [
@@ -51,17 +51,20 @@ ai.defineFlow(
   },
   async (history) => {
     const modelHistory = history.reduce((acc, msg) => {
+      // Ensure alternating roles as expected by the model
       if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
         acc.push({
           role: msg.role,
           parts: [{ text: msg.content }],
         });
       } else {
+        // If the same role repeats, merge content into the last message part.
         acc[acc.length - 1].parts.push({ text: msg.content });
       }
       return acc;
     }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
 
+    // The last message is the prompt.
     const lastMessage = modelHistory.pop();
     const prompt = lastMessage?.parts.map(p => p.text).join('\n') ?? '';
 
@@ -93,7 +96,6 @@ ai.defineFlow(
     } catch (error) {
       console.error("Error fetching from Generative AI:", error);
       const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
-      // Throw the error to be caught by the runFlow caller
       throw new Error(errorMessage);
     }
   }

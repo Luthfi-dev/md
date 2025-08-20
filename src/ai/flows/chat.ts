@@ -1,5 +1,6 @@
 
 'use server';
+
 /**
  * @fileOverview This file is the server action entrypoint for the chat functionality.
  * It is safe to be imported by client components. It does NOT contain any direct

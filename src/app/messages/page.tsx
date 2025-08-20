@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -124,7 +125,7 @@ export default function MessagesPage() {
         setIsLoading(true);
 
         try {
-            // Calling the new, clean server action
+            // Calling the server action from the single AI file
             const aiResponse = await chat(newMessages); 
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
@@ -142,53 +143,51 @@ export default function MessagesPage() {
     };
 
     return (
-        <div className="relative h-full">
-             <header className="fixed top-0 left-0 right-0 z-10">
-                <CardHeader className="flex flex-row items-center gap-3 border-b bg-card">
-                    {isMobile && (
-                        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                            <ArrowLeft />
-                        </Button>
-                    )}
-                    <Avatar>
-                        <AvatarImage src={assistantAvatar} alt={assistantName} />
-                        <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <CardTitle className="font-bold text-lg">{assistantName}</CardTitle>
-                        <CardDescription className="text-sm text-muted-foreground">Online</CardDescription>
-                    </div>
-                </CardHeader>
-             </header>
-
-            <ScrollArea className="h-full pt-28 pb-28 md:pb-28" viewportRef={viewportRef}>
-                <div className="space-y-6 p-4">
-                    {messages.map((message, index) => (
-                        <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
-                            {message.role === 'model' && (
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={assistantAvatar} alt={assistantName} />
-                                    <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
-                                </Avatar>
-                            )}
-                            <div className={cn(
-                                "max-w-[75%] rounded-2xl px-4 py-2 text-sm",
-                                message.role === 'user'
-                                    ? "bg-primary text-primary-foreground rounded-br-none"
-                                    : "bg-card text-card-foreground border rounded-bl-none"
-                            )}>
-                                {renderContent(message.content)}
+        <div className="flex flex-col h-screen bg-background">
+             <CardHeader className="flex flex-row items-center gap-3 border-b bg-card z-10 shrink-0">
+                 {isMobile && (
+                    <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+                        <ArrowLeft />
+                    </Button>
+                 )}
+                 <Avatar>
+                    <AvatarImage src={assistantAvatar} alt={assistantName} />
+                    <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
+                </Avatar>
+                <div>
+                    <CardTitle className="font-bold text-lg">{assistantName}</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground">Online</CardDescription>
+                </div>
+            </CardHeader>
+            <div className="flex-grow p-0 overflow-hidden">
+                <ScrollArea className="h-full" viewportRef={viewportRef}>
+                    <div className="space-y-6 p-4">
+                        {messages.map((message, index) => (
+                            <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
+                                {message.role === 'model' && (
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={assistantAvatar} alt={assistantName} />
+                                        <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
+                                    </Avatar>
+                                )}
+                                <div className={cn(
+                                    "max-w-[75%] rounded-2xl px-4 py-2 text-sm",
+                                    message.role === 'user'
+                                        ? "bg-primary text-primary-foreground rounded-br-none"
+                                        : "bg-card text-card-foreground border rounded-bl-none"
+                                )}>
+                                    {renderContent(message.content)}
+                                </div>
+                                 {message.role === 'user' && (
+                                    <Avatar className="h-8 w-8">
+                                         <AvatarFallback><User /></AvatarFallback>
+                                    </Avatar>
+                                )}
                             </div>
-                                {message.role === 'user' && (
-                                <Avatar className="h-8 w-8">
-                                        <AvatarFallback><User /></AvatarFallback>
-                                </Avatar>
-                            )}
-                        </div>
-                    ))}
-                    {isLoading && (
-                            <div className="flex items-end gap-2 justify-start">
-                                <Avatar className="h-8 w-8">
+                        ))}
+                        {isLoading && (
+                             <div className="flex items-end gap-2 justify-start">
+                                 <Avatar className="h-8 w-8">
                                     <AvatarImage src={assistantAvatar} alt={assistantName} />
                                     <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
                                 </Avatar>
@@ -199,11 +198,18 @@ export default function MessagesPage() {
                                 </div>
                             </div>
                         )}
-                </div>
-            </ScrollArea>
-           
-            <footer className={cn("fixed bottom-0 left-0 right-0 z-10 p-4 border-t bg-card", isMobile && 'bottom-16')}>
-                <form onSubmit={handleSubmit} className="flex w-full items-center gap-2 max-w-4xl mx-auto">
+                         {messages.length === 0 && !isLoading && (
+                            <div className="text-center py-16 text-muted-foreground">
+                                <Bot className="mx-auto h-12 w-12 mb-4" />
+                                <p className="font-semibold">Selamat Datang!</p>
+                                <p className="text-sm">Ketik pesan untuk memulai percakapan.</p>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+            </div>
+            <div className="p-4 border-t bg-card shrink-0">
+                <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
                     <Input
                         value={input}
                         onChange={handleInputChange}
@@ -215,7 +221,7 @@ export default function MessagesPage() {
                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                 </form>
-            </footer>
+            </div>
         </div>
     );
 }

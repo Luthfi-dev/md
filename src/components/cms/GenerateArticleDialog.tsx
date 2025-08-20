@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Sparkles, Wand2, Lightbulb } from "lucide-react";
 import { Textarea } from '../ui/textarea';
-import { generateArticleOutline, generateArticleFromOutline } from '@/ai/actions';
+import { generateArticleOutline, generateArticleFromOutline } from '@/ai/genkit';
 import { Card, CardContent } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Slider } from '../ui/slider';

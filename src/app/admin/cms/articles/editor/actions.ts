@@ -220,8 +220,3 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
         if (connection) connection.release();
     }
 }
-
-export async function generateSeoMeta(input: { articleContent: string }) {
-    // This is now a simple wrapper around the server action
-    return generateSeoMetaAction(input);
-}

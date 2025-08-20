@@ -1,9 +1,10 @@
+
+'use server';
 /**
  * @fileOverview Core Genkit flow definitions and server actions.
  * This file contains flow definitions and their exported async wrapper functions.
  * It is marked with "use server" to be used as a server action module.
  */
-'use server';
 
 import { genkit, type GenerationCommonConfig } from 'genkit';
 import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
@@ -29,9 +30,10 @@ import htmlToDocx from 'html-to-docx';
 
 
 // Initialize a single, global AI instance.
+// This is the correct object to use for defining flows and prompts.
 export const ai = genkit({
   plugins: [
-    googleAI(), // Initialized without an API key.
+    googleAI(), // Initialized without an API key, which will be provided per-call.
   ],
 });
 
@@ -199,7 +201,7 @@ export async function generateSeoMeta(input: { articleContent: string }) {
 
 // --- File Converter Flow ---
 
-const convertHtmlToWordFlow = genkit.defineFlow(
+const convertHtmlToWordFlow = ai.defineFlow(
   {
     name: 'convertHtmlToWordFlow',
     inputSchema: HtmlToWordInputSchema,

@@ -1,98 +1,96 @@
-
-'use server';
-
-import { genkit } from 'genkit';
+/**
+ * @fileOverview Core AI flow definitions for the application.
+ * This file contains the primary logic for all Genkit flows.
+ * It is imported ONLY by the server-side entry point (dev.ts) to register the flows.
+ * It should NOT be imported by any client components or server actions.
+ */
+import { genkit, type GenerationCommonConfig } from 'genkit';
 import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
-import { ApiKeyManager } from '@/services/ApiKeyManager';
 import { z } from 'zod';
+import { ApiKeyManager, FALLBACK_KEY } from '@/services/ApiKeyManager';
 import assistant from '@/data/assistant.json';
-import type { GenerationCommonConfig } from '@genkit-ai/googleai';
 
-// Initialize a global AI instance without an API key.
-// The key will be provided dynamically before each generation call.
+// Initialize a single, global AI instance.
+// This instance will be configured dynamically within each flow.
 export const ai = genkit({
-    plugins: [
-        googleAI(), // Initialize without an API key
-    ],
+  plugins: [
+    googleAI(), // Initialized without a key
+  ],
 });
+
+
+// --------------------------------------------------------------------------
+//  CHAT FLOW DEFINITION
+// --------------------------------------------------------------------------
 
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
   content: z.string(),
 });
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+type ChatMessage = z.infer<typeof ChatMessageSchema>;
 const ChatHistorySchema = z.array(ChatMessageSchema);
 
-/**
- * A server action that processes chat history and returns an AI-generated response.
- * This function is safe to be called from client components.
- */
-export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
-  const validationResult = ChatHistorySchema.safeParse(history);
-  if (!validationResult.success) {
-    console.error("Invalid chat history format:", validationResult.error);
-    return {
-      role: 'model',
-      content: 'Maaf, terjadi kesalahan format pada riwayat percakapan.'
-    };
-  }
-
-  try {
+ai.defineFlow(
+  {
+    name: 'chatFlow',
+    inputSchema: ChatHistorySchema,
+    outputSchema: ChatMessageSchema,
+  },
+  async (history) => {
     const apiKeyRecord = await ApiKeyManager.getApiKey();
-    if (apiKeyRecord.key === 'NO_VALID_KEY_CONFIGURED') {
+    if (apiKeyRecord.key === FALLBACK_KEY) {
       throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
     }
     
-    // Convert message history to the format Genkit expects
+    // Convert message history to the format Genkit expects for conversation
     const modelHistory = history.reduce((acc, msg) => {
+      // Don't include the very last user message in the history object, it becomes the prompt
+      if (acc.length === history.length - 1) return acc;
+      
       if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
-        acc.push({
-          role: msg.role,
-          parts: [{ text: msg.content }],
-        });
+        acc.push({ role: msg.role, parts: [{ text: msg.content }] });
       } else {
         acc[acc.length - 1].parts.push({ text: msg.content });
       }
       return acc;
     }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
 
-    const lastMessage = modelHistory.pop();
-    const prompt = lastMessage?.parts.map(p => p.text).join('\n') ?? '';
+    const lastMessage = history[history.length - 1];
+    const prompt = lastMessage?.content ?? '';
 
     const safetySettings: GenerationCommonConfig['safetySettings'] = [
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
     ];
-      
-    // Use the dynamically configured AI instance for generation
-    const response = await ai.generate({
+
+    try {
+      const response = await ai.generate({
         model: gemini15Flash,
         system: assistant.systemPrompt,
         history: modelHistory,
         prompt: prompt,
         config: { safetySettings },
-        plugins: [googleAI({ apiKey: apiKeyRecord.key })] // Provide the key dynamically
-    });
+        plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+      });
+      
+      return { role: 'model', content: response.text };
 
-    const textResponse = response.text ?? "Maaf, aku lagi bingung nih. Boleh coba tanya lagi dengan cara lain?";
-
-    return { role: 'model', content: textResponse };
-
-  } catch (error) {
-    console.error("Error in chat server action:", error);
-    // If the key fails, report it.
-    if (error instanceof Error && error.message.includes('API key not valid')) {
+    } catch (error) {
+       if (error instanceof Error && error.message.includes('API key not valid')) {
         const currentKey = await ApiKeyManager.getApiKey(true);
         await ApiKeyManager.handleKeyFailure(currentKey.id);
+      }
+      throw error; // Re-throw the error to be caught by the action caller
     }
-    throw new Error((error as Error).message || "Terjadi kesalahan tidak dikenal saat menghubungi AI.");
   }
-}
+);
 
 
-// --- All other flows are defined below, using the globally defined `ai` object ---
+// --------------------------------------------------------------------------
+//  ARTICLE GENERATION FLOWS
+// --------------------------------------------------------------------------
 
 const ArticleOutlineInputSchema = z.object({
   description: z.string().describe('Deskripsi singkat atau ide utama artikel.'),
@@ -119,9 +117,7 @@ Deskripsi: ${input.description}`;
     const { output } = await ai.generate({
         prompt: prompt,
         model: 'googleai/gemini-1.5-flash-latest',
-        output: {
-            schema: ArticleOutlineOutputSchema
-        }
+        output: { schema: ArticleOutlineOutputSchema }
     });
     
     return output!;
@@ -160,9 +156,7 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
         const { output } = await ai.generate({
             prompt: prompt,
             model: 'googleai/gemini-1.5-flash-latest',
-            output: {
-                schema: ArticleFromOutlineOutputSchema,
-            }
+            output: { schema: ArticleFromOutlineOutputSchema }
         });
         return output!;
     }
@@ -192,9 +186,7 @@ ai.defineFlow(
         Article Content:
         ${input.articleContent}
         `,
-        output: {
-            schema: SeoMetaOutputSchema
-        }
+        output: { schema: SeoMetaOutputSchema }
     });
 
     return output!;

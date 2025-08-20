@@ -1,7 +1,7 @@
-
 'use server';
 /**
  * @fileOverview All AI flows related to article generation.
- * This file's flows are now defined in `src/ai/genkit.ts` to solve architectural issues.
+ * This file is now deprecated. The flow definitions have been moved to `src/ai/genkit.ts`
+ * and the client-callable actions are in `src/ai/actions.ts`.
  * This file is kept to prevent breaking import chains but can be removed in a future cleanup.
  */

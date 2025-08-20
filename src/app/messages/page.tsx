@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
-import { chat, type ChatMessage } from '@/ai/genkit'; // Now importing directly from genkit.ts
+import { chat, type ChatMessage } from '@/ai/actions'; // IMPORTANT: Import from the new actions file
 
 const renderContent = (content: string) => {
     // This is a placeholder for a more robust markdown-to-react renderer
@@ -123,7 +123,7 @@ export default function MessagesPage() {
         setIsLoading(true);
 
         try {
-            // Memanggil server action yang sudah diperbaiki
+            // Calling the new, clean server action
             const aiResponse = await chat(newMessages); 
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);

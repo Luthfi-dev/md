@@ -1,12 +1,13 @@
+'use server';
+/**
+ * @fileOverview Development-only entry point for Genkit.
+ * This file is used to register all flows with the Genkit development tools.
+ * It ensures that all defined flows are discoverable by the system.
+ */
 import { config } from 'dotenv';
 import { configureGenkit } from 'genkit';
 config();
 
-// Import all flow definition files here to register them with Genkit
-import '@/services/ApiKeyManager.ts';
-// This file contains all the ai.defineFlow(...) calls
-import '@/ai/genkit.ts'; 
-import '@/ai/flows/file-converter.ts';
-// This file is now empty but we keep the import to avoid breaking changes if it's used elsewhere.
-// In a future cleanup, this could be removed if no other flows are defined there.
-import '@/ai/flows/article-flows.ts';
+// Import all flow definition files here to register them with Genkit.
+// This single import is responsible for making all flows in genkit.ts available.
+import '@/ai/genkit';

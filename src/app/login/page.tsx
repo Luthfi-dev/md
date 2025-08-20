@@ -273,13 +273,16 @@ export default function HomePageContent() {
 
           <section id="interactive-cards" className="mb-8 w-full">
             <Carousel
-              opts={{ align: "center", loop: true }}
+              opts={{
+                align: "center",
+                loop: true,
+              }}
               plugins={[plugin.current]}
               className="w-full"
             >
               <CarouselContent className="-ml-2">
                 {carouselItems.map((item, index) => (
-                  <CarouselItem key={index} className="basis-[80%] md:basis-1/2 pl-4">
+                  <CarouselItem key={index} className="basis-[85%] md:basis-1/2 pl-4">
                     <div className="p-1 h-36">
                       <CarouselCard item={item} />
                     </div>

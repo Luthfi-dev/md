@@ -4,7 +4,7 @@
  * This file should NOT be imported by any client components. It defines flows that are run by the server.
  */
 
-import { ai, configureAi } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 // --- Schema for Outline Generation ---
@@ -51,15 +51,13 @@ ai.defineFlow(
     outputSchema: ArticleOutlineOutputSchema,
   },
   async (input) => {
-    await configureAi();
-    
     const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan deskripsi berikut, buatkan 3 opsi kerangka (outline) yang menarik dan terstruktur untuk sebuah artikel blog. Setiap outline harus memiliki judul yang SEO-friendly dan beberapa poin utama (sub-judul).
 
 Deskripsi: ${input.description}`;
 
     const { output } = await ai.generate({
         prompt: prompt,
-        model: 'googleai/gemini-2.0-flash',
+        model: 'googleai/gemini-1.5-flash-latest',
         output: {
             schema: ArticleOutlineOutputSchema
         }
@@ -76,8 +74,6 @@ ai.defineFlow(
         outputSchema: ArticleFromOutlineOutputSchema,
     },
     async (input) => {
-        await configureAi();
-        
         const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan kerangka (outline) berikut, tulis sebuah artikel blog yang lengkap, menarik, dan informatif dengan target sekitar ${input.wordCount} kata.
 Gunakan format HTML dengan tag paragraf <p>, sub-judul <h2>, dan daftar <ul><li>. Pastikan gaya bahasanya engaging dan mudah dibaca.
 
@@ -89,7 +85,7 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
 
         const { output } = await ai.generate({
             prompt: prompt,
-            model: 'googleai/gemini-2.0-flash',
+            model: 'googleai/gemini-1.5-flash-latest',
             output: {
                 schema: ArticleFromOutlineOutputSchema,
             }
@@ -105,10 +101,8 @@ ai.defineFlow(
     outputSchema: SeoMetaOutputSchema,
   },
   async (input) => {
-    await configureAi();
-    
     const { output } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash',
+        model: 'googleai/gemini-1.5-flash-latest',
         prompt: `You are an SEO expert. Based on the following article content, generate an optimized meta title (around 60 characters) and meta description (around 160 characters).
 
         Article Content:

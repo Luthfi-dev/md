@@ -6,17 +6,16 @@
  * - convertHtmlToWord: Converts an HTML string to a Word document.
  */
 
-import { ai, configureAi } from '@/ai/genkit';
-import { z } from 'zod';
+import { genkit } from 'genkit';
 import htmlToDocx from 'html-to-docx';
 import {
     HtmlToWordInputSchema,
     HtmlToWordOutputSchema,
     type HtmlToWordInput,
     type HtmlToWordOutput,
-} from './schemas';
+} from '../schemas';
 
-const convertHtmlToWordFlow = ai.defineFlow(
+const convertHtmlToWordFlow = genkit.defineFlow(
   {
     name: 'convertHtmlToWordFlow',
     inputSchema: HtmlToWordInputSchema,
@@ -46,8 +45,5 @@ const convertHtmlToWordFlow = ai.defineFlow(
 );
 
 export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
-  // Dynamically configure Genkit with the appropriate API key before running the flow
-  // Although this specific flow doesn't use the AI, it's good practice for consistency.
-  // await configureAi(); 
   return await convertHtmlToWordFlow(input);
 }

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import crypto from 'crypto';
+import { generateSeoMeta as generateSeoMetaAction } from '@/ai/actions';
 
 
 // --- Schemas ---
@@ -221,13 +222,7 @@ export async function deleteArticle(uuid: string): Promise<{ success: boolean }>
     }
 }
 
-
 export async function generateSeoMeta(input: { articleContent: string }) {
-     try {
-        const result = await ai.runFlow('generateSeoMetaFlow', input);
-        return result;
-    } catch (error) {
-        console.error("Error running generateSeoMetaFlow:", error);
-        throw new Error((error as Error).message || "Gagal membuat metadata SEO.");
-    }
+    // This is now a simple wrapper around the server action
+    return generateSeoMetaAction(input);
 }

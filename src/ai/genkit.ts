@@ -1,18 +1,26 @@
 /**
- * @fileOverview Core AI flow definitions and server actions for the application.
- * This file contains the primary logic for all Genkit flows and exports
- * the async functions that can be safely called from Client Components.
+ * @fileOverview Core Genkit flow definitions.
+ * This file is ONLY for defining and registering flows with Genkit.
+ * It MUST NOT be imported by any client-facing server action files.
+ * It is imported by `dev.ts` to make flows available to the Genkit environment.
  */
-'use server';
-
 import { genkit, type GenerationCommonConfig } from 'genkit';
 import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
 import { z } from 'zod';
 import { ApiKeyManager, FALLBACK_KEY } from '@/services/ApiKeyManager';
 import assistant from '@/data/assistant.json';
+import {
+  ChatHistorySchema,
+  ChatMessageSchema,
+  ArticleOutlineInputSchema,
+  ArticleOutlineOutputSchema,
+  ArticleFromOutlineInputSchema,
+  ArticleFromOutlineOutputSchema,
+  SeoMetaInputSchema,
+  SeoMetaOutputSchema
+} from './schemas';
 
 // Initialize a single, global AI instance.
-// This instance will be configured dynamically within each flow.
 export const ai = genkit({
   plugins: [
     googleAI(), // Initialized without an API key.
@@ -21,17 +29,11 @@ export const ai = genkit({
 
 
 // --------------------------------------------------------------------------
-//  CHAT FLOW DEFINITION
+//  FLOW DEFINITIONS
+//  These are the core AI logic functions registered with Genkit.
 // --------------------------------------------------------------------------
 
-const ChatMessageSchema = z.object({
-  role: z.enum(['user', 'model']),
-  content: z.string(),
-});
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
-const ChatHistorySchema = z.array(ChatMessageSchema);
-
-const chatFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'chatFlow',
     inputSchema: ChatHistorySchema,
@@ -43,16 +45,9 @@ const chatFlow = ai.defineFlow(
       throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
     }
     
-    // Convert message history to the format Genkit expects for conversation
-    const modelHistory = history.reduce((acc, msg) => {
-      // Don't include the very last user message in the history object, it becomes the prompt
-      if (acc.length === history.length - 1) return acc;
-      
-      if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
-        acc.push({ role: msg.role, parts: [{ text: msg.content }] });
-      } else {
-        acc[acc.length - 1].parts.push({ text: msg.content });
-      }
+    const modelHistory = history.reduce((acc, msg, index) => {
+      if (index === history.length - 1) return acc;
+      acc.push({ role: msg.role, parts: [{ text: msg.content }] });
       return acc;
     }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
 
@@ -83,48 +78,13 @@ const chatFlow = ai.defineFlow(
         const currentKey = await ApiKeyManager.getApiKey(true);
         await ApiKeyManager.handleKeyFailure(currentKey.id);
       }
-      throw error; // Re-throw the error to be caught by the action caller
+      throw error;
     }
   }
 );
 
-/**
- * A server action that processes chat history and returns an AI-generated response.
- */
-export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
-  const validationResult = ChatHistorySchema.safeParse(history);
-  if (!validationResult.success) {
-    console.error("Invalid chat history format:", validationResult.error);
-    throw new Error('Format riwayat percakapan tidak valid.');
-  }
 
-  try {
-    const response = await chatFlow(history);
-    return response;
-  } catch (error) {
-    console.error("Error running chatFlow:", error);
-    // Propagate a user-friendly error message
-    throw new Error((error as Error).message || "Terjadi kesalahan saat berkomunikasi dengan AI.");
-  }
-}
-
-
-// --------------------------------------------------------------------------
-//  ARTICLE GENERATION FLOWS
-// --------------------------------------------------------------------------
-
-const ArticleOutlineInputSchema = z.object({
-  description: z.string().describe('Deskripsi singkat atau ide utama artikel.'),
-});
-
-const ArticleOutlineOutputSchema = z.object({
-  outlines: z.array(z.object({
-      title: z.string().describe("Judul yang menarik untuk artikel ini."),
-      points: z.array(z.string()).describe("Poin-poin utama atau sub-judul dalam kerangka artikel.")
-  })).describe('Tiga opsi kerangka artikel yang berbeda.'),
-});
-
-const generateArticleOutlineFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
     inputSchema: ArticleOutlineInputSchema,
@@ -145,29 +105,8 @@ Deskripsi: ${input.description}`;
   }
 );
 
-export async function generateArticleOutline(input: { description: string }) {
-    try {
-        return await generateArticleOutlineFlow(input);
-    } catch (error) {
-        console.error("Error running generateArticleOutlineFlow:", error);
-        throw new Error((error as Error).message || "Gagal membuat kerangka artikel.");
-    }
-}
 
-
-const ArticleFromOutlineInputSchema = z.object({
-  selectedOutline: z.object({
-    title: z.string(),
-    points: z.array(z.string())
-  }),
-  wordCount: z.number().describe('Target jumlah kata untuk artikel.'),
-});
-
-const ArticleFromOutlineOutputSchema = z.object({
-  articleContent: z.string().describe('Konten artikel lengkap dalam format HTML.'),
-});
-
-const generateArticleFromOutlineFlow = ai.defineFlow(
+ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
         inputSchema: ArticleFromOutlineInputSchema,
@@ -192,29 +131,8 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
     }
 );
 
-export async function generateArticleFromOutline(input: {
-  selectedOutline: { title: string; points: string[] };
-  wordCount: number;
-}) {
-     try {
-        return await generateArticleFromOutlineFlow(input);
-    } catch (error) {
-        console.error("Error running generateArticleFromOutlineFlow:", error);
-        throw new Error((error as Error).message || "Gagal membuat artikel.");
-    }
-}
 
-
-const SeoMetaInputSchema = z.object({
-  articleContent: z.string().describe('The full content of the blog article.'),
-});
-
-const SeoMetaOutputSchema = z.object({
-  title: z.string().describe('A catchy, SEO-friendly meta title, around 60 characters.'),
-  description: z.string().describe('A compelling meta description, around 155-160 characters.'),
-});
-
-const generateSeoMetaFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'generateSeoMetaFlow',
     inputSchema: SeoMetaInputSchema,
@@ -234,12 +152,3 @@ const generateSeoMetaFlow = ai.defineFlow(
     return output!;
   }
 );
-
-export async function generateSeoMeta(input: { articleContent: string }) {
-     try {
-        return await generateSeoMetaFlow(input);
-    } catch (error) {
-        console.error("Error running generateSeoMetaFlow:", error);
-        throw new Error((error as Error).message || "Gagal membuat metadata SEO.");
-    }
-}

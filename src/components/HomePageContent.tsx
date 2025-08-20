@@ -272,7 +272,10 @@ export default function HomePageContent() {
 
           <section id="interactive-cards" className="mb-4 w-full">
             <Carousel
-              opts={{ align: "center", loop: true }}
+              opts={{
+                align: "center",
+                loop: true,
+              }}
               plugins={[plugin.current]}
               className="w-full"
               onMouseEnter={plugin.current.stop}
@@ -280,7 +283,7 @@ export default function HomePageContent() {
             >
               <CarouselContent className="-ml-2">
                 {carouselItems.map(item => (
-                  <CarouselItem key={item.id} className="basis-[90%] md:basis-1/2 pl-2">
+                  <CarouselItem key={item.id} className="basis-[85%] md:basis-1/2 pl-2">
                     <div className="p-1 h-36">
                       <CarouselCard item={item} />
                     </div>

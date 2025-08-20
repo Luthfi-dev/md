@@ -53,12 +53,20 @@ export const ApiKeyManager = {
 
   /**
    * Retrieves the next available API key using a round-robin strategy.
+   * If no keys are in the DB, it falls back to the environment variable.
    * @param peek - If true, returns the current key without advancing.
    * @returns The API key record or null if none are available.
    */
   async getApiKey(peek = false): Promise<ApiKeyRecord | null> {
     const keys = await this.fetchKeys();
+    
     if (keys.length === 0) {
+      // Fallback to environment variable if no keys are in the DB
+      const envKey = process.env.GEMINI_API_KEY;
+      if (envKey) {
+        console.warn("No active keys in DB, falling back to GEMINI_API_KEY from .env");
+        return { id: 0, key: envKey }; // Use a dummy ID for env key
+      }
       return null;
     }
     
@@ -70,7 +78,6 @@ export const ApiKeyManager = {
 
     const selectedKey = keys[currentKeyIndex];
     
-    // Update last_used_at without awaiting to avoid blocking
     if (!peek) {
        this.updateLastUsed(selectedKey.id).catch(err => console.error("Failed to update last_used_at:", err));
     }
@@ -92,16 +99,19 @@ export const ApiKeyManager = {
    * @param keyId The ID of the failed key.
    */
   async handleKeyFailure(keyId: number): Promise<void> {
+    if (keyId === 0) {
+      // This is the fallback env key, do nothing.
+      console.warn("Failure reported for fallback environment API key.");
+      return;
+    }
     let connection;
     try {
       connection = await db.getConnection();
-      // Increment failure count
       await connection.execute(
         'UPDATE ai_api_keys SET failure_count = failure_count + 1, last_used_at = CURRENT_TIMESTAMP WHERE id = ?',
         [keyId]
       );
 
-      // Check if the key should be deactivated
       const [rows] = await connection.execute<RowDataPacket[]>(
         'SELECT failure_count FROM ai_api_keys WHERE id = ?',
         [keyId]
@@ -113,7 +123,6 @@ export const ApiKeyManager = {
           [keyId]
         );
         console.warn(`API key ${keyId} has been deactivated due to repeated failures.`);
-        // Invalidate cache since a key was deactivated
         lastFetchedTime = 0; 
       }
     } catch (error) {
@@ -128,6 +137,7 @@ export const ApiKeyManager = {
    * @param keyId The ID of the key to update.
    */
    async updateLastUsed(keyId: number): Promise<void> {
+    if (keyId === 0) return; // Don't try to update the env key in DB
     let connection;
     try {
         connection = await db.getConnection();
@@ -136,7 +146,6 @@ export const ApiKeyManager = {
             [keyId]
         );
     } catch (error) {
-        // This is a non-critical error, so just log it.
         console.error(`Failed to update last_used_at for key ${keyId}:`, error);
     } finally {
         if(connection) connection.release();
@@ -149,6 +158,7 @@ export const ApiKeyManager = {
    * @param keyId The ID of the key to reset.
    */
   async resetKeyFailureCount(keyId: number): Promise<void> {
+     if (keyId === 0) return;
      let connection;
     try {
       connection = await db.getConnection();

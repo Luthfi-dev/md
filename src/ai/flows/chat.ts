@@ -1,13 +1,12 @@
 
 'use server';
 /**
- * @fileOverview A simple chat flow for an AI assistant.
+ * @fileOverview This file is the server action entrypoint for the chat functionality.
+ * It is safe to be imported by client components. It does NOT contain any direct
+ * Genkit logic, but instead calls a registered Genkit flow.
  */
-import { generate, type GenerationCommonConfig } from 'genkit';
-import { configureAi } from '@/ai/dev';
 import { z } from 'zod';
-import assistant from '@/data/assistant.json';
-import { gemini15Flash } from '@genkit-ai/googleai';
+import { ai } from '@/ai/genkit';
 
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
@@ -15,59 +14,29 @@ const ChatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
-// The main function exported to the client. It directly calls the flow logic.
+const ChatHistorySchema = z.array(ChatMessageSchema);
+
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
-  // IMPORTANT: Configure AI with a valid key before making a call.
-  // This function now resides in `dev.ts` to keep this file clean.
-  await configureAi();
-
-  const modelHistory = history.reduce((acc, msg) => {
-    if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
-      acc.push({
-        role: msg.role,
-        parts: [{ text: msg.content }],
-      });
-    } else {
-      acc[acc.length - 1].parts.push({ text: msg.content });
-    }
-    return acc;
-  }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
-
-  const lastMessage = modelHistory.pop();
-  const prompt = lastMessage?.parts.map(p => p.text).join('\n') ?? '';
+  // Validate the input from the client using Zod.
+  const validationResult = ChatHistorySchema.safeParse(history);
+  if (!validationResult.success) {
+    console.error("Invalid chat history format:", validationResult.error);
+    return {
+      role: 'model',
+      content: 'Maaf, terjadi kesalahan format pada riwayat percakapan.'
+    };
+  }
 
   try {
-    const safetySettings: GenerationCommonConfig['safetySettings'] = [
-        { category: 'DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-    ];
-
-    const response = await generate({
-        model: gemini15Flash,
-        system: assistant.systemPrompt,
-        history: modelHistory,
-        prompt: prompt,
-        config: {
-            safetySettings,
-        },
-    });
-
-    const textResponse = response.text() ?? "Maaf, aku lagi bingung nih. Boleh coba tanya lagi dengan cara lain?";
-
-    return {
-        role: 'model',
-        content: textResponse,
-    };
-
+    // Securely run the flow by its name.
+    // The actual logic is in `genkit.ts`, which is never imported by the client.
+    const response = await ai.runFlow('chatFlow', history);
+    return response;
   } catch (error) {
-    console.error("Error fetching from Generative AI:", error);
-    const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
-    // Return the actual error message to the client for better debugging.
+    console.error("Error running chatFlow:", error);
     return {
         role: 'model',
-        content: `Maaf, terjadi masalah: ${errorMessage}`
-    }
+        content: "Maaf, sepertinya asisten sedang sibuk. Mohon coba lagi sesaat lagi ya."
+    };
   }
 }

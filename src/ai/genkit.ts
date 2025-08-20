@@ -49,9 +49,6 @@ const chatFlow = ai.defineFlow(
   },
   async (history) => {
     const apiKeyRecord = await getApiKey();
-    if (apiKeyRecord.key === 'NO_VALID_KEY_CONFIGURED') {
-      throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
-    }
     
     const modelHistory = history.reduce((acc, msg, index) => {
       if (index === history.length - 1) return acc;
@@ -98,6 +95,7 @@ const generateArticleOutlineFlow = ai.defineFlow(
     outputSchema: ArticleOutlineOutputSchema,
   },
   async (input) => {
+    const apiKeyRecord = await getApiKey();
     const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan deskripsi berikut, buatkan 3 opsi kerangka (outline) yang menarik dan terstruktur untuk sebuah artikel blog. Setiap outline harus memiliki judul yang SEO-friendly dan beberapa poin utama (sub-judul).
 
 Deskripsi: ${input.description}`;
@@ -105,7 +103,8 @@ Deskripsi: ${input.description}`;
     const { output } = await ai.generate({
         prompt: prompt,
         model: 'googleai/gemini-1.5-flash-latest',
-        output: { schema: ArticleOutlineOutputSchema }
+        output: { schema: ArticleOutlineOutputSchema },
+        plugins: [googleAI({ apiKey: apiKeyRecord.key })],
     });
     
     return output!;
@@ -120,6 +119,7 @@ const generateArticleFromOutlineFlow = ai.defineFlow(
         outputSchema: ArticleFromOutlineOutputSchema,
     },
     async (input) => {
+        const apiKeyRecord = await getApiKey();
         const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan kerangka (outline) berikut, tulis sebuah artikel blog yang lengkap, menarik, dan informatif dengan target sekitar ${input.wordCount} kata.
 Gunakan format HTML dengan tag paragraf <p>, sub-judul <h2>, dan daftar <ul><li>. Pastikan gaya bahasanya engaging dan mudah dibaca.
 
@@ -132,7 +132,8 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
         const { output } = await ai.generate({
             prompt: prompt,
             model: 'googleai/gemini-1.5-flash-latest',
-            output: { schema: ArticleFromOutlineOutputSchema }
+            output: { schema: ArticleFromOutlineOutputSchema },
+            plugins: [googleAI({ apiKey: apiKeyRecord.key })],
         });
         return output!;
     }
@@ -146,6 +147,7 @@ const generateSeoMetaFlow = ai.defineFlow(
     outputSchema: SeoMetaOutputSchema,
   },
   async (input) => {
+    const apiKeyRecord = await getApiKey();
     const { output } = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
         prompt: `You are an SEO expert. Based on the following article content, generate an optimized meta title (around 60 characters) and meta description (around 160 characters).
@@ -153,7 +155,8 @@ const generateSeoMetaFlow = ai.defineFlow(
         Article Content:
         ${input.articleContent}
         `,
-        output: { schema: SeoMetaOutputSchema }
+        output: { schema: SeoMetaOutputSchema },
+        plugins: [googleAI({ apiKey: apiKeyRecord.key })],
     });
 
     return output!;

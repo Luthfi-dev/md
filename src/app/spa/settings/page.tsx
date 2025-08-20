@@ -11,7 +11,6 @@ import { Save, Bot, KeyRound, Mail, Plus, Trash2, Loader2, RefreshCw } from "luc
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from '@/hooks/use-auth';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { getKeysForAdmin, addApiKey, deleteApiKey, resetKey } from '@/services/ApiKeyManager';
 
 interface ApiKey {
     id: number;
@@ -33,7 +32,7 @@ export default function SuperAdminSettingsPage() {
   const { toast } = useToast();
   const { fetchWithAuth } = useAuth();
   
-  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [smtpConfigs, setSmtpConfigs] = useState<SmtpConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,22 +44,18 @@ export default function SuperAdminSettingsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-        const [keys, smtpRes] = await Promise.all([
-            getKeysForAdmin(),
+        const [keysRes, smtpRes] = await Promise.all([
+            fetchWithAuth('/api/superadmin/apikeys'),
             fetchWithAuth('/api/superadmin/smtp')
         ]);
         
-        if (!smtpRes.ok) throw new Error("Gagal mengambil data SMTP.");
+        if(!keysRes.ok || !smtpRes.ok) throw new Error("Gagal memuat semua data pengaturan.");
         
+        const keysData = await keysRes.json();
         const smtpData = await smtpRes.json();
-        if (!smtpData.success) throw new Error("Gagal memuat data SMTP dari server.");
+        if (!keysData.success || !smtpData.success) throw new Error("Gagal mengambil data dari server.");
 
-        const keysForAdmin = keys.map(k => ({
-            ...k,
-            key_preview: '...' + k.key.slice(-4),
-        }));
-
-        setApiKeys(keysForAdmin);
+        setApiKeys(keysData.keys);
         setSmtpConfigs(smtpData.configs);
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal Memuat", description: (error as Error).message });
@@ -71,7 +66,7 @@ export default function SuperAdminSettingsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchWithAuth, toast]);
 
   const handleAddApiKey = async () => {
     if (!newApiKey.trim()) {
@@ -80,7 +75,12 @@ export default function SuperAdminSettingsPage() {
     }
     setIsSaving(true);
     try {
-        await addApiKey('gemini', newApiKey);
+        const res = await fetchWithAuth('/api/superadmin/apikeys', {
+            method: 'POST',
+            body: JSON.stringify({ service: 'gemini', key: newApiKey })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
         toast({ title: "Kunci API Ditambahkan!" });
         setNewApiKey('');
         fetchData();
@@ -94,7 +94,9 @@ export default function SuperAdminSettingsPage() {
   const handleDeleteApiKey = async (id: number) => {
     setIsSaving(true);
      try {
-        await deleteApiKey(id);
+        const res = await fetchWithAuth(`/api/superadmin/apikeys?id=${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
         toast({ title: "Kunci API Dihapus!" });
         fetchData();
     } catch (error) {
@@ -107,7 +109,9 @@ export default function SuperAdminSettingsPage() {
   const handleResetFailures = async (id: number) => {
       setIsSaving(true);
       try {
-        await resetKey(id);
+        const res = await fetchWithAuth(`/api/superadmin/apikeys/reset?id=${id}`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
         toast({title: "Counter Direset!"});
         fetchData();
       } catch (e) {
@@ -118,7 +122,6 @@ export default function SuperAdminSettingsPage() {
   }
 
   const handleAddSmtp = async () => {
-    // Basic validation
     if (!newSmtp.host || !newSmtp.user || !newSmtp.pass) {
         toast({variant: 'destructive', title: 'Data SMTP tidak lengkap'});
         return;

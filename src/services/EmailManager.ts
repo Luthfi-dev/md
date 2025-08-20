@@ -1,4 +1,6 @@
 
+'use server';
+
 import nodemailer from 'nodemailer';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
@@ -17,68 +19,66 @@ let activeSmtpConfigs: SmtpRecord[] = [];
 let lastFetchedTime: number = 0;
 const CACHE_DURATION_MS = 300000; // 5 minutes
 
-const EmailManager = {
-  async fetchConfigs(): Promise<SmtpRecord[]> {
-    const now = Date.now();
-    if (activeSmtpConfigs.length > 0 && now - lastFetchedTime < CACHE_DURATION_MS) {
-      return activeSmtpConfigs;
-    }
+async function fetchConfigs(): Promise<SmtpRecord[]> {
+  const now = Date.now();
+  if (activeSmtpConfigs.length > 0 && now - lastFetchedTime < CACHE_DURATION_MS) {
+    return activeSmtpConfigs;
+  }
 
-    let connection;
-    try {
+  let connection;
+  try {
+    connection = await db.getConnection();
+    const [rows] = await connection.execute<RowDataPacket[]>(
+      "SELECT id, host, port, secure, user, pass FROM smtp_configurations WHERE status = 'active' ORDER BY last_used_at ASC"
+    );
+    
+    activeSmtpConfigs = rows.map(row => ({
+      id: row.id,
+      host: row.host,
+      port: row.port,
+      secure: !!row.secure,
+      user: row.user,
+      pass: decrypt(row.pass),
+    }));
+
+    lastFetchedTime = now;
+    return activeSmtpConfigs;
+  } catch (error) {
+    console.error('Failed to fetch SMTP configurations:', error);
+    activeSmtpConfigs = []; // Clear cache on error
+    return [];
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+async function updateLastUsed(configId: number): Promise<void> {
+  let connection;
+  try {
       connection = await db.getConnection();
-      const [rows] = await connection.execute<RowDataPacket[]>(
-        "SELECT id, host, port, secure, user, pass FROM smtp_configurations WHERE status = 'active' ORDER BY last_used_at ASC"
-      );
-      
-      activeSmtpConfigs = rows.map(row => ({
-        id: row.id,
-        host: row.host,
-        port: row.port,
-        secure: !!row.secure,
-        user: row.user,
-        pass: decrypt(row.pass),
-      }));
-
-      lastFetchedTime = now;
-      return activeSmtpConfigs;
-    } catch (error) {
-      console.error('Failed to fetch SMTP configurations:', error);
-      activeSmtpConfigs = []; // Clear cache on error
-      return [];
-    } finally {
+      await connection.execute('UPDATE smtp_configurations SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?', [configId]);
+  } catch (error) {
+      console.error(`Failed to update last_used_at for SMTP config ${configId}:`, error);
+  } finally {
       if (connection) connection.release();
-    }
-  },
+  }
+}
 
-  async updateLastUsed(configId: number): Promise<void> {
+async function handleConfigFailure(configId: number): Promise<void> {
     let connection;
     try {
         connection = await db.getConnection();
-        await connection.execute('UPDATE smtp_configurations SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?', [configId]);
+        await connection.execute("UPDATE smtp_configurations SET failure_count = failure_count + 1 WHERE id = ?", [configId]);
+        // Optional: Add logic to deactivate if failure_count exceeds a threshold
     } catch (error) {
-        console.error(`Failed to update last_used_at for SMTP config ${configId}:`, error);
+        console.error(`Failed to handle failure for SMTP config ${configId}:`, error);
     } finally {
         if (connection) connection.release();
     }
-  },
-  
-  async handleConfigFailure(configId: number): Promise<void> {
-      let connection;
-      try {
-          connection = await db.getConnection();
-          await connection.execute("UPDATE smtp_configurations SET failure_count = failure_count + 1 WHERE id = ?", [configId]);
-          // Optional: Add logic to deactivate if failure_count exceeds a threshold
-      } catch (error) {
-          console.error(`Failed to handle failure for SMTP config ${configId}:`, error);
-      } finally {
-          if (connection) connection.release();
-      }
-  }
-};
+}
 
 export async function sendEmail(options: { to: string, subject: string, text?: string, html: string }) {
-    const configs = await EmailManager.fetchConfigs();
+    const configs = await fetchConfigs();
 
     if (configs.length === 0) {
         console.error("Email sending failed: No active SMTP configuration available in the database.");
@@ -93,7 +93,7 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
         const transportOptions: any = {
             host: config.host,
             port: config.port,
-            secure: config.secure, // Use the secure flag directly from DB
+            secure: config.secure,
             auth: {
                 user: config.user,
                 pass: config.pass,
@@ -113,17 +113,15 @@ export async function sendEmail(options: { to: string, subject: string, text?: s
                 ...options,
             });
             console.log("Message sent successfully using config %s: %s", config.id, info.messageId);
-            await EmailManager.updateLastUsed(config.id);
+            await updateLastUsed(config.id);
             return info; // Success, exit the loop
         } catch (error) {
             console.error(`Failed to send email with config ${config.id}. Error:`, error);
             lastError = error as Error;
-            // IMPORTANT: Record the failure for this specific config
-            await EmailManager.handleConfigFailure(config.id);
+            await handleConfigFailure(config.id);
         }
     }
     
-    // If the loop finishes, it means all configs failed.
     console.error("All available SMTP configurations failed.", { lastError });
     throw lastError || new Error("Semua server email sedang sibuk atau mengalami gangguan. Coba lagi nanti.");
 }

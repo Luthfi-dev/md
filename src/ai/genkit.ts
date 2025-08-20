@@ -8,7 +8,13 @@ import { z } from 'zod';
 import assistant from '@/data/assistant.json';
 import type { GenerationCommonConfig } from '@genkit-ai/googleai';
 
-const FALLBACK_KEY = 'NO_VALID_KEY_CONFIGURED';
+// Initialize a global AI instance without an API key.
+// The key will be provided dynamically before each generation call.
+export const ai = genkit({
+    plugins: [
+        googleAI(), // Initialize without an API key
+    ],
+});
 
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
@@ -33,16 +39,11 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
 
   try {
     const apiKeyRecord = await ApiKeyManager.getApiKey();
-    if (apiKeyRecord.key === FALLBACK_KEY) {
+    if (apiKeyRecord.key === 'NO_VALID_KEY_CONFIGURED') {
       throw new Error('Layanan AI tidak terkonfigurasi. Silakan hubungi administrator.');
     }
-
-    const ai = genkit({
-        plugins: [
-            googleAI({ apiKey: apiKeyRecord.key }),
-        ],
-    });
-
+    
+    // Convert message history to the format Genkit expects
     const modelHistory = history.reduce((acc, msg) => {
       if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
         acc.push({
@@ -65,12 +66,14 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
     ];
       
+    // Use the dynamically configured AI instance for generation
     const response = await ai.generate({
         model: gemini15Flash,
         system: assistant.systemPrompt,
         history: modelHistory,
         prompt: prompt,
         config: { safetySettings },
+        plugins: [googleAI({ apiKey: apiKeyRecord.key })] // Provide the key dynamically
     });
 
     const textResponse = response.text ?? "Maaf, aku lagi bingung nih. Boleh coba tanya lagi dengan cara lain?";
@@ -79,20 +82,34 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
 
   } catch (error) {
     console.error("Error in chat server action:", error);
+    // If the key fails, report it.
+    if (error instanceof Error && error.message.includes('API key not valid')) {
+        const currentKey = await ApiKeyManager.getApiKey(true);
+        await ApiKeyManager.handleKeyFailure(currentKey.id);
+    }
     throw new Error((error as Error).message || "Terjadi kesalahan tidak dikenal saat menghubungi AI.");
   }
 }
 
+
+// --- All other flows are defined below, using the globally defined `ai` object ---
+
+const ArticleOutlineInputSchema = z.object({
+  description: z.string().describe('Deskripsi singkat atau ide utama artikel.'),
+});
+
+const ArticleOutlineOutputSchema = z.object({
+  outlines: z.array(z.object({
+      title: z.string().describe("Judul yang menarik untuk artikel ini."),
+      points: z.array(z.string()).describe("Poin-poin utama atau sub-judul dalam kerangka artikel.")
+  })).describe('Tiga opsi kerangka artikel yang berbeda.'),
+});
+
 ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
-    inputSchema: z.object({ description: z.string() }),
-    outputSchema: z.object({
-      outlines: z.array(z.object({
-        title: z.string(),
-        points: z.array(z.string())
-      }))
-    }),
+    inputSchema: ArticleOutlineInputSchema,
+    outputSchema: ArticleOutlineOutputSchema,
   },
   async (input) => {
     const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan deskripsi berikut, buatkan 3 opsi kerangka (outline) yang menarik dan terstruktur untuk sebuah artikel blog. Setiap outline harus memiliki judul yang SEO-friendly dan beberapa poin utama (sub-judul).
@@ -103,12 +120,7 @@ Deskripsi: ${input.description}`;
         prompt: prompt,
         model: 'googleai/gemini-1.5-flash-latest',
         output: {
-            schema: z.object({
-              outlines: z.array(z.object({
-                title: z.string(),
-                points: z.array(z.string())
-              }))
-            }),
+            schema: ArticleOutlineOutputSchema
         }
     });
     
@@ -116,14 +128,24 @@ Deskripsi: ${input.description}`;
   }
 );
 
+
+const ArticleFromOutlineInputSchema = z.object({
+  selectedOutline: z.object({
+    title: z.string(),
+    points: z.array(z.string())
+  }),
+  wordCount: z.number().describe('Target jumlah kata untuk artikel.'),
+});
+
+const ArticleFromOutlineOutputSchema = z.object({
+  articleContent: z.string().describe('Konten artikel lengkap dalam format HTML.'),
+});
+
 ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
-        inputSchema: z.object({
-          selectedOutline: z.object({ title: z.string(), points: z.array(z.string()) }),
-          wordCount: z.number(),
-        }),
-        outputSchema: z.object({ articleContent: z.string() }),
+        inputSchema: ArticleFromOutlineInputSchema,
+        outputSchema: ArticleFromOutlineOutputSchema,
     },
     async (input) => {
         const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan kerangka (outline) berikut, tulis sebuah artikel blog yang lengkap, menarik, dan informatif dengan target sekitar ${input.wordCount} kata.
@@ -139,18 +161,28 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
             prompt: prompt,
             model: 'googleai/gemini-1.5-flash-latest',
             output: {
-                schema: z.object({ articleContent: z.string() }),
+                schema: ArticleFromOutlineOutputSchema,
             }
         });
         return output!;
     }
 );
 
+
+const SeoMetaInputSchema = z.object({
+  articleContent: z.string().describe('The full content of the blog article.'),
+});
+
+const SeoMetaOutputSchema = z.object({
+  title: z.string().describe('A catchy, SEO-friendly meta title, around 60 characters.'),
+  description: z.string().describe('A compelling meta description, around 155-160 characters.'),
+});
+
 ai.defineFlow(
   {
     name: 'generateSeoMetaFlow',
-    inputSchema: z.object({ articleContent: z.string() }),
-    outputSchema: z.object({ title: z.string(), description: z.string() }),
+    inputSchema: SeoMetaInputSchema,
+    outputSchema: SeoMetaOutputSchema,
   },
   async (input) => {
     const { output } = await ai.generate({
@@ -161,7 +193,7 @@ ai.defineFlow(
         ${input.articleContent}
         `,
         output: {
-            schema: z.object({ title: z.string(), description: z.string() })
+            schema: SeoMetaOutputSchema
         }
     });
 

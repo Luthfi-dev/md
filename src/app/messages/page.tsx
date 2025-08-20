@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
-import { chat, type ChatMessage } from '@/ai/genkit'; // Mengimpor dari file genkit.ts
+import { chat, type ChatMessage } from '@/ai/genkit'; // Now importing directly from genkit.ts
 
 const renderContent = (content: string) => {
     // This is a placeholder for a more robust markdown-to-react renderer

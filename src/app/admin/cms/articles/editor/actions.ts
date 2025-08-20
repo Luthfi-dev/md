@@ -1,10 +1,9 @@
 'use server';
-import { ai } from '@/ai/genkit';
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import crypto from 'crypto';
-import { generateSeoMeta as generateSeoMetaAction } from '@/ai/actions';
+import { generateSeoMeta as generateSeoMetaAction } from '@/ai/genkit';
 
 
 // --- Schemas ---

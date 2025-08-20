@@ -1,9 +1,10 @@
 /**
- * @fileOverview Core Genkit flow definitions.
- * This file is ONLY for defining and registering flows with Genkit.
- * It MUST NOT be imported by any client-facing server action files.
- * It is imported by `dev.ts` to make flows available to the Genkit environment.
+ * @fileOverview Core Genkit flow definitions and server actions.
+ * This file contains flow definitions and their exported async wrapper functions.
+ * It is marked with "use server" to be used as a server action module.
  */
+'use server';
+
 import { genkit, type GenerationCommonConfig } from 'genkit';
 import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
 import { z } from 'zod';
@@ -17,8 +18,15 @@ import {
   ArticleFromOutlineInputSchema,
   ArticleFromOutlineOutputSchema,
   SeoMetaInputSchema,
-  SeoMetaOutputSchema
+  SeoMetaOutputSchema,
+  HtmlToWordInputSchema,
+  HtmlToWordOutputSchema,
+  type HtmlToWordInput,
+  type HtmlToWordOutput,
+  type ChatMessage
 } from './schemas';
+import htmlToDocx from 'html-to-docx';
+
 
 // Initialize a single, global AI instance.
 export const ai = genkit({
@@ -29,11 +37,12 @@ export const ai = genkit({
 
 
 // --------------------------------------------------------------------------
-//  FLOW DEFINITIONS
-//  These are the core AI logic functions registered with Genkit.
+//  FLOW DEFINITIONS & EXPORTED ACTIONS
 // --------------------------------------------------------------------------
 
-ai.defineFlow(
+// --- Chat Flow ---
+
+const chatFlow = ai.defineFlow(
   {
     name: 'chatFlow',
     inputSchema: ChatHistorySchema,
@@ -83,8 +92,19 @@ ai.defineFlow(
   }
 );
 
+export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
+  const validationResult = ChatHistorySchema.safeParse(history);
+  if (!validationResult.success) {
+    console.error("Invalid chat history format:", validationResult.error);
+    throw new Error('Format riwayat percakapan tidak valid.');
+  }
+  return chatFlow(history);
+}
 
-ai.defineFlow(
+
+// --- Article Generation Flows ---
+
+const generateArticleOutlineFlow = ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
     inputSchema: ArticleOutlineInputSchema,
@@ -105,8 +125,14 @@ Deskripsi: ${input.description}`;
   }
 );
 
+export async function generateArticleOutline(input: { description: string }) {
+    const validationResult = ArticleOutlineInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk kerangka artikel tidak valid.");
+    return generateArticleOutlineFlow(input);
+}
 
-ai.defineFlow(
+
+const generateArticleFromOutlineFlow = ai.defineFlow(
     {
         name: 'generateArticleFromOutlineFlow',
         inputSchema: ArticleFromOutlineInputSchema,
@@ -131,8 +157,19 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
     }
 );
 
+export async function generateArticleFromOutline(input: {
+  selectedOutline: { title: string; points: string[] };
+  wordCount: number;
+}) {
+    const validationResult = ArticleFromOutlineInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk artikel tidak valid.");
+    return generateArticleFromOutlineFlow(input);
+}
 
-ai.defineFlow(
+
+// --- SEO Meta Flow ---
+
+const generateSeoMetaFlow = ai.defineFlow(
   {
     name: 'generateSeoMetaFlow',
     inputSchema: SeoMetaInputSchema,
@@ -152,3 +189,45 @@ ai.defineFlow(
     return output!;
   }
 );
+
+export async function generateSeoMeta(input: { articleContent: string }) {
+    const validationResult = SeoMetaInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk SEO meta tidak valid.");
+    return generateSeoMetaFlow(input);
+}
+
+
+// --- File Converter Flow ---
+
+const convertHtmlToWordFlow = genkit.defineFlow(
+  {
+    name: 'convertHtmlToWordFlow',
+    inputSchema: HtmlToWordInputSchema,
+    outputSchema: HtmlToWordOutputSchema,
+  },
+  async (input) => {
+    try {
+        const docxBuffer = await htmlToDocx(input.htmlContent, undefined, {
+            table: { row: { cantSplit: true } },
+            footer: true,
+            pageNumber: true,
+             pageSize: {
+                width: 11906,
+                height: 16838,
+            },
+        });
+
+        const docxDataUri = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${(docxBuffer as Buffer).toString('base64')}`;
+
+        return { docxDataUri };
+
+    } catch (e: any) {
+        console.error("Error in convertHtmlToWordFlow:", e);
+        return { error: e.message || 'An unknown error occurred during conversion.' };
+    }
+  }
+);
+
+export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
+  return await convertHtmlToWordFlow(input);
+}

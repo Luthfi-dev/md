@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
-import { chat } from '@/ai/actions'; 
+import { chat } from '@/ai/genkit'; 
 import { type ChatMessage } from '@/ai/schemas';
 
 const renderContent = (content: string) => {

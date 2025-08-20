@@ -10,7 +10,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
-import { getArticle, saveArticle, generateSeoMeta, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
+import { getArticle, saveArticle, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
+import { generateSeoMeta } from "@/ai/genkit";
 import { useRouter, useParams } from "next/navigation";
 import crypto from 'crypto';
 

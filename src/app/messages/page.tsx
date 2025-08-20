@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
-import { chat, type ChatMessage } from '@/ai/flows/chat';
+import { chat, type ChatMessage } from '@/ai/genkit'; // Mengimpor dari file genkit.ts
 
 const renderContent = (content: string) => {
     // This is a placeholder for a more robust markdown-to-react renderer
@@ -124,7 +123,8 @@ export default function MessagesPage() {
         setIsLoading(true);
 
         try {
-            const aiResponse = await chat(newMessages);
+            // Memanggil server action yang sudah diperbaiki
+            const aiResponse = await chat(newMessages); 
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
@@ -132,7 +132,7 @@ export default function MessagesPage() {
              notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
              const errorMessage: ChatMessage = {
                 role: 'model',
-                content: "Waduh, ada sedikit gangguan di koneksiku. Coba tanya lagi ya."
+                content: `Maaf, terjadi masalah: ${(error as Error).message}`
              };
              setMessages(prev => [...prev, errorMessage]);
         } finally {

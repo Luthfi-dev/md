@@ -50,21 +50,19 @@ ai.defineFlow(
     outputSchema: ChatMessageSchema,
   },
   async (history) => {
+    // This logic now lives entirely on the server and is never imported by the client action.
     const modelHistory = history.reduce((acc, msg) => {
-      // Ensure alternating roles as expected by the model
       if (acc.length === 0 || acc[acc.length - 1].role !== msg.role) {
         acc.push({
           role: msg.role,
           parts: [{ text: msg.content }],
         });
       } else {
-        // If the same role repeats, merge content into the last message part.
         acc[acc.length - 1].parts.push({ text: msg.content });
       }
       return acc;
     }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
 
-    // The last message is the prompt.
     const lastMessage = modelHistory.pop();
     const prompt = lastMessage?.parts.map(p => p.text).join('\n') ?? '';
 
@@ -94,9 +92,9 @@ ai.defineFlow(
       };
 
     } catch (error) {
-      console.error("Error fetching from Generative AI:", error);
-      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
-      throw new Error(errorMessage);
+      console.error("Error fetching from Generative AI in chatFlow:", error);
+      // This error will be propagated to the `ai.runFlow` call in the server action.
+      throw new Error((error as Error).message || "Terjadi kesalahan tidak dikenal saat menghubungi AI.");
     }
   }
 );

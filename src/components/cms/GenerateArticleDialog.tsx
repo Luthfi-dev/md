@@ -1,13 +1,13 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, Wand2, Lightbulb } from "lucide-react";
+import { Loader2, Sparkles, Wand2, Lightbulb, ChevronsRight } from "lucide-react";
 import { Textarea } from '../ui/textarea';
-import { generateArticleOutline, generateArticleFromOutline } from '@/ai/genkit';
+import { generateArticleOutline, generateArticleFromOutline, lengthenArticle } from '@/ai/genkit';
 import { Card, CardContent } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Slider } from '../ui/slider';
@@ -24,9 +24,11 @@ interface GenerateArticleDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     onArticleGenerated: (content: string, title?: string) => void;
+    initialTitle?: string;
+    initialContent?: string;
 }
 
-export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated }: GenerateArticleDialogProps) {
+export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated, initialTitle, initialContent }: GenerateArticleDialogProps) {
     const { toast } = useToast();
     const [stage, setStage] = useState<Stage>('description');
     const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +40,18 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
     const [outlines, setOutlines] = useState<Outline[]>([]);
     const [selectedOutlineIndex, setSelectedOutlineIndex] = useState<number | null>(null);
     const [wordCount, setWordCount] = useState(500);
+
+    // Existing content state for lengthening
+    const [currentTitle, setCurrentTitle] = useState(initialTitle || '');
+    const [currentContent, setCurrentContent] = useState(initialContent || '');
+
+    useEffect(() => {
+        if(isOpen) {
+           setCurrentTitle(initialTitle || '');
+           setCurrentContent(initialContent || '');
+        }
+    }, [isOpen, initialTitle, initialContent]);
+
 
     const resetState = () => {
         setStage('description');
@@ -100,13 +114,37 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
             setIsLoading(false);
         }
     }
+    
+    const handleLengthenArticle = async () => {
+        if (!currentContent.trim()) {
+             toast({ variant: 'destructive', title: "Konten Kosong", description: 'Tidak ada konten untuk diperpanjang.' });
+             return;
+        }
+         setIsLoading(true);
+         setStage('generating');
+         try {
+             const result = await lengthenArticle({ originalContent: currentContent });
+             if (result && result.articleContent) {
+                 onArticleGenerated(result.articleContent, currentTitle);
+                 handleOpenChange(false);
+             } else {
+                 throw new Error("Gagal memperpanjang artikel.");
+             }
+         } catch (error) {
+              toast({ variant: 'destructive', title: "Error AI", description: (error as Error).message });
+              setStage('description');
+         } finally {
+             setIsLoading(false);
+         }
+    };
+
 
     const renderContent = () => {
         if (isLoading && stage === 'generating') {
             return (
                 <div className="flex flex-col items-center justify-center text-center gap-4 h-64">
                     <Loader2 className="w-12 h-12 animate-spin text-primary" />
-                    <h3 className="font-semibold text-lg">AI sedang menulis artikel Anda...</h3>
+                    <h3 className="font-semibold text-lg">AI sedang memproses permintaan Anda...</h3>
                     <p className="text-muted-foreground">Ini mungkin memakan waktu hingga satu menit.</p>
                 </div>
             );
@@ -117,7 +155,7 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
                 return (
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="description">Deskripsi atau Ide Artikel</Label>
+                            <Label htmlFor="description">Deskripsi atau Ide Artikel Baru</Label>
                             <Textarea 
                                 id="description" 
                                 value={description} 
@@ -126,6 +164,18 @@ export function GenerateArticleDialog({ isOpen, onOpenChange, onArticleGenerated
                                 rows={5}
                             />
                         </div>
+                        {currentContent.length > 50 && (
+                             <>
+                                <div className="relative flex items-center justify-center my-4">
+                                  <div className="flex-grow border-t"></div>
+                                  <span className="flex-shrink mx-4 text-muted-foreground text-xs">ATAU</span>
+                                  <div className="flex-grow border-t"></div>
+                                </div>
+                                <Button variant="secondary" className="w-full" onClick={handleLengthenArticle}>
+                                    <ChevronsRight className="mr-2"/> Perpanjang Konten yang Sudah Ada
+                                </Button>
+                             </>
+                        )}
                     </div>
                 );
             case 'outline':

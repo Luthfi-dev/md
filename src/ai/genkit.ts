@@ -21,7 +21,9 @@ import {
   HtmlToWordOutputSchema,
   type HtmlToWordInput,
   type HtmlToWordOutput,
-  type ChatMessage
+  type ChatMessage,
+  LengthenArticleInputSchema,
+  LengthenArticleOutputSchema
 } from './schemas';
 import htmlToDocx from 'html-to-docx';
 
@@ -140,6 +142,33 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
 );
 
 
+const lengthenArticleFlow = ai.defineFlow(
+    {
+        name: 'lengthenArticleFlow',
+        inputSchema: LengthenArticleInputSchema,
+        outputSchema: LengthenArticleOutputSchema,
+    },
+    async (input) => {
+        const apiKeyRecord = await getApiKey();
+        const prompt = `Anda adalah seorang editor dan penulis konten profesional. Tugas Anda adalah memperpanjang artikel berikut tanpa mengubah gaya bahasa dan pesan intinya. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam pada setiap bagian. Pertahankan format HTML yang ada. Targetkan penambahan sekitar 50-75% dari panjang asli.
+
+Artikel Asli:
+---
+${input.originalContent}
+---
+`;
+
+        const { output } = await ai.generate({
+            prompt: prompt,
+            model: 'googleai/gemini-1.5-flash-latest',
+            output: { schema: LengthenArticleOutputSchema },
+            plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+        });
+        return output!;
+    }
+);
+
+
 const generateSeoMetaFlow = ai.defineFlow(
   {
     name: 'generateSeoMetaFlow',
@@ -222,6 +251,12 @@ export async function generateArticleFromOutline(input: {
     const validationResult = ArticleFromOutlineInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk artikel tidak valid.");
     return generateArticleFromOutlineFlow(input);
+}
+
+export async function lengthenArticle(input: { originalContent: string }) {
+    const validationResult = LengthenArticleInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk perpanjang artikel tidak valid.");
+    return lengthenArticleFlow(input);
 }
 
 export async function generateSeoMeta(input: { articleContent: string }) {

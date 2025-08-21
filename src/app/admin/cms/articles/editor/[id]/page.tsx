@@ -124,7 +124,7 @@ export default function ArticleEditorPage() {
             uuid: crypto.randomUUID(),
             title: '',
             slug: '',
-            content: '',
+            content: '<p>Tulis konten artikel Anda di sini...</p>',
             status: 'draft',
             tags: [],
         });
@@ -166,8 +166,8 @@ export default function ArticleEditorPage() {
   const handleArticleGenerated = (content: string, title?: string) => {
     if(editorRef.current) {
         editorRef.current.innerHTML = content;
-        setArticle(p => ({...p, content}));
     }
+    setArticle(p => ({...p, content}));
     if (title) {
        handleTitleChange({ target: { value: title } } as React.ChangeEvent<HTMLInputElement>);
     }
@@ -261,6 +261,8 @@ export default function ArticleEditorPage() {
         isOpen={isAiDialogOpen}
         onOpenChange={setIsAiDialogOpen}
         onArticleGenerated={handleArticleGenerated}
+        initialContent={article.content || ''}
+        initialTitle={article.title || ''}
     />
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -298,8 +300,8 @@ export default function ArticleEditorPage() {
                     contentEditable={true}
                     className="min-h-[400px] w-full rounded-b-md border border-input bg-background p-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 prose dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{ __html: article.content || '' }}
-                >
-                </div>
+                    suppressContentEditableWarning={true}
+                />
             </div>
           </CardContent>
         </Card>

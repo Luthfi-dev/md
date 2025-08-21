@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Shared schemas for AI flows.
  * This file contains only Zod schema definitions and TypeScript types.
@@ -37,6 +38,15 @@ export const ArticleFromOutlineInputSchema = z.object({
 export const ArticleFromOutlineOutputSchema = z.object({
   articleContent: z.string().describe('Konten artikel lengkap dalam format HTML.'),
 });
+
+export const LengthenArticleInputSchema = z.object({
+  originalContent: z.string().describe('The original HTML content of the article to be lengthened.'),
+});
+
+export const LengthenArticleOutputSchema = z.object({
+    articleContent: z.string().describe('The new, lengthened HTML content of the article.'),
+});
+
 
 export const SeoMetaInputSchema = z.object({
   articleContent: z.string().describe('The full content of the blog article.'),

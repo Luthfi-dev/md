@@ -1,4 +1,3 @@
-
 'use client';
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
@@ -24,7 +23,6 @@ import { Card, CardContent } from "./ui/card";
 
 // Simulate fetching data from JSON files
 import appsData from '@/data/apps.json';
-import carouselItemsData from '@/data/carousel-items.json';
 
 const getIcon = (iconName: string): React.ReactNode => {
     const IconComponent = (LucideIcons as any)[iconName];
@@ -295,15 +293,15 @@ export default function HomePageContent() {
               plugins={[plugin.current]}
               className="w-full"
             >
-              <CarouselContent>
+              <CarouselContent className="-mx-1">
                 {carouselItems.length > 0 ? carouselItems.map(item => (
-                  <CarouselItem key={item.id} className="basis-4/5 md:basis-1/2">
+                  <CarouselItem key={item.id} className="basis-4/5 md:basis-1/2 px-1">
                     <div className="p-1 h-36">
                       <CarouselCard item={item} />
                     </div>
                   </CarouselItem>
                 )) : Array.from({length: 3}).map((_, index) => (
-                  <CarouselItem key={index} className="basis-4/5 md:basis-1/2">
+                  <CarouselItem key={index} className="basis-4/5 md:basis-1/2 px-1">
                       <div className="p-1 h-36">
                          <Skeleton className="w-full h-full rounded-2xl"/>
                       </div>

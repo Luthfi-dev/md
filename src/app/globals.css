@@ -110,27 +110,21 @@ body {
   border-color: transparent transparent transparent hsl(var(--primary));
 }
 
-@layer utilities {
-  /* This class is added by the carousel component during transitions */
-  .is-transitioning .embla__slide {
-    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
-  }
-  
-  /* All slides get a default state */
-  .embla__slide {
-    transform: scale(1);
-    opacity: 1;
-    z-index: 1;
-  }
+/* Carousel Specific Styles */
+#interactive-cards.is-transitioning .embla__slide {
+  transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+}
 
-  /* Non-active slides are scaled down */
-  .embla__slide:not(.is-active) {
-    transform: scale(0.9);
-    opacity: 0.7;
-  }
+#interactive-cards .embla__slide {
+  transform: scale(1);
+  opacity: 1;
+}
 
-  /* Active slide is brought to the front */
-  .is-active {
-    z-index: 2;
-  }
+#interactive-cards .embla__slide:not(.is-active) {
+  transform: scale(0.9);
+  opacity: 0.7;
+}
+
+#interactive-cards .is-active {
+  z-index: 2;
 }

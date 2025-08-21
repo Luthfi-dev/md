@@ -110,7 +110,6 @@ body {
   border-color: transparent transparent transparent hsl(var(--primary));
 }
 
-/* Carousel Specific Styles */
 #interactive-cards.is-transitioning .embla__slide {
   transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
 }
@@ -121,7 +120,7 @@ body {
 }
 
 #interactive-cards .embla__slide:not(.is-active) {
-  transform: scale(0.9);
+  transform: scale(0.8);
   opacity: 0.7;
 }
 

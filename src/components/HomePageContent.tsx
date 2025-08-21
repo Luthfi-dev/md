@@ -138,7 +138,7 @@ export default function HomePageContent() {
         const fetchInitialData = async () => {
           setIsLoading(true);
           try {
-            // Fetch Apps
+            // Fetch Apps and sort them by the order property
             const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
             setMainFeatures(sortedApps);
 

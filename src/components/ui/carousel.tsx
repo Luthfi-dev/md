@@ -29,7 +29,7 @@ type CarouselContextProps = {
   scrollNext: () => void
   canScrollPrev: boolean
   canScrollNext: boolean
-  isSettled: boolean;
+  isTransitioning: boolean;
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -69,7 +69,7 @@ const Carousel = React.forwardRef<
     )
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
-    const [isSettled, setIsSettled] = React.useState(true);
+    const [isTransitioning, setIsTransitioning] = React.useState(false);
 
 
     const onSelect = React.useCallback((api: CarouselApi) => {
@@ -88,6 +88,18 @@ const Carousel = React.forwardRef<
         }
       })
     }, [])
+    
+    const onScroll = React.useCallback(() => {
+        if (api) {
+            setIsTransitioning(true);
+        }
+    }, [api]);
+
+    const onSettle = React.useCallback(() => {
+        if (api) {
+            setIsTransitioning(false);
+        }
+    }, [api]);
 
     const scrollPrev = React.useCallback(() => {
       api?.scrollPrev()
@@ -126,17 +138,15 @@ const Carousel = React.forwardRef<
       onSelect(api)
       api.on("reInit", onSelect)
       api.on("select", onSelect)
-      
-      api.on("settle", () => setIsSettled(true));
-      api.on("scroll", () => setIsSettled(false));
-
+      api.on("scroll", onScroll);
+      api.on("settle", onSettle);
 
       return () => {
         api?.off("select", onSelect)
-        api?.off("settle", () => setIsSettled(true));
-        api?.off("scroll", () => setIsSettled(false));
+        api?.off("scroll", onScroll);
+        api?.off("settle", onSettle);
       }
-    }, [api, onSelect])
+    }, [api, onSelect, onScroll, onSettle])
 
     return (
       <CarouselContext.Provider
@@ -150,13 +160,13 @@ const Carousel = React.forwardRef<
           scrollNext,
           canScrollPrev,
           canScrollNext,
-          isSettled,
+          isTransitioning,
         }}
       >
         <div
           ref={ref}
           onKeyDownCapture={handleKeyDown}
-          className={cn("relative", isSettled && 'is-settled', className)}
+          className={cn("relative", isTransitioning && "is-transitioning", className)}
           role="region"
           aria-roledescription="carousel"
           {...props}

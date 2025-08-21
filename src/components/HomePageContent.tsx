@@ -277,10 +277,11 @@ export default function HomePageContent() {
                 {isLoading ? (
                     Array.from({ length: 6 }).map((_, index) => <CategorySkeleton key={index} />)
                 ) : (
-                    mainFeatures.slice(0, 6).map(feature => (
+                    mainFeatures.slice(0, 5).map(feature => (
                         <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
                     ))
                 )}
+                 {!isLoading && <CategoryCard href="/explore" icon={<ArrowRight />} label="Lainnya" />}
              </div>
           </section>
 

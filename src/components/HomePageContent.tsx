@@ -1,7 +1,8 @@
+
 'use client';
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2 } from "lucide-react";
+import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2, Grid3x3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Autoplay from "embla-carousel-autoplay"
 import React, { useEffect, useState } from "react";
@@ -16,7 +17,6 @@ import type { AppDefinition, CarouselItem as CarouselItemType } from "@/types/ap
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions";
 import { Skeleton } from "./ui/skeleton";
 import { Card, CardContent } from "./ui/card";
@@ -119,7 +119,6 @@ export default function HomePageContent() {
    )
    const router = useRouter();
    const { theme, setTheme } = useTheme();
-   const isMobile = useIsMobile();
    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
    const { user, isAuthenticated } = useAuth();
    const { points: rewardPoints, claimState, claimReward, refreshClaimState } = useDailyReward();
@@ -277,11 +276,13 @@ export default function HomePageContent() {
                 {isLoading ? (
                     Array.from({ length: 6 }).map((_, index) => <CategorySkeleton key={index} />)
                 ) : (
-                    mainFeatures.slice(0, 5).map(feature => (
-                        <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
-                    ))
+                    <>
+                        {mainFeatures.slice(0, 5).map(feature => (
+                            <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
+                        ))}
+                        <CategoryCard href="/explore" icon={<Grid3x3 className="text-primary w-8 h-8" />} label="Semua Aplikasi" />
+                    </>
                 )}
-                 {!isLoading && <CategoryCard href="/explore" icon={<ArrowRight />} label="Lainnya" />}
              </div>
           </section>
 
@@ -292,7 +293,7 @@ export default function HomePageContent() {
                 loop: true,
               }}
               plugins={[plugin.current]}
-              className="w-full"
+              className="w-full is-settled"
             >
               <CarouselContent className="-mx-1">
                 {carouselItems.length > 0 ? carouselItems.map(item => (

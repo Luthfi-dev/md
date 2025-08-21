@@ -1,13 +1,12 @@
-
 [
   {
-    "id": "app_converter",
-    "title": "Konversi File",
-    "description": "Ubah format file dengan mudah, dari PDF ke Word, gambar ke PDF, dan lainnya.",
-    "href": "/converter",
-    "icon": "FileText",
+    "id": "app_wallet",
+    "title": "Dompet Digital",
+    "description": "Catat, kelola, dan analisis arus kas keuangan pribadi Anda.",
+    "href": "/wallet",
+    "icon": "Wallet",
     "isPopular": true,
-    "isNew": false,
+    "isNew": true,
     "order": 0
   },
   {
@@ -20,14 +19,14 @@
     "isNew": true,
     "order": 1
   },
-   {
-    "id": "app_wallet",
-    "title": "Dompet Digital",
-    "description": "Catat, kelola, dan analisis arus kas keuangan pribadi Anda.",
-    "href": "/wallet",
-    "icon": "Wallet",
+  {
+    "id": "app_converter",
+    "title": "Konversi File",
+    "description": "Ubah format file dengan mudah, dari PDF ke Word, gambar ke PDF, dan lainnya.",
+    "href": "/converter",
+    "icon": "FileText",
     "isPopular": true,
-    "isNew": true,
+    "isNew": false,
     "order": 2
   },
   {
@@ -90,7 +89,7 @@
     "isNew": false,
     "order": 8
   },
-   {
+  {
     "id": "app_all_apps",
     "title": "Semua App",
     "description": "Jelajahi semua alat produktivitas yang tersedia dalam satu tempat.",

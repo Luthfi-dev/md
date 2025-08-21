@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { getArticle } from "../admin/cms/articles/editor/actions";
+import { getArticle } from "@/app/admin/cms/articles/editor/actions";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from 'next/link';

@@ -20,6 +20,7 @@ import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions";
+import { Skeleton } from "./ui/skeleton";
 
 // Simulate fetching data
 import appsData from '@/data/apps.json';
@@ -57,6 +58,25 @@ const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: str
     <span className="text-xs font-medium text-foreground leading-tight">{label}</span>
   </Link>
 )
+
+const CategorySkeleton = () => (
+    <div className="flex flex-col items-center gap-2 flex-shrink-0 w-20">
+        <Skeleton className="w-16 h-16 rounded-2xl" />
+        <Skeleton className="h-4 w-12 rounded-md" />
+    </div>
+)
+
+const ArticleSkeleton = () => (
+    <Card className="shadow-sm border-0 bg-card">
+        <CardContent className="p-4 flex gap-4 items-center">
+            <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-3/4 rounded-md" />
+                <Skeleton className="h-4 w-1/2 rounded-md" />
+            </div>
+        </CardContent>
+    </Card>
+);
 
 const FlyingPoints = ({ isVisible, startRect }: { isVisible: boolean, startRect: DOMRect | null }) => {
   const pointsRef = React.useRef<HTMLDivElement>(null);
@@ -126,7 +146,7 @@ export default function HomePageContent() {
             const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
             const allAppsOption = sortedApps.find(app => app.id === 'app_all_apps');
             const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps');
-            const featuresToShow = otherApps.slice(0, 5);
+            const featuresToShow = otherApps.slice(0, 2);
             if (allAppsOption) featuresToShow.push(allAppsOption);
             setMainFeatures(featuresToShow);
 
@@ -245,7 +265,7 @@ export default function HomePageContent() {
         
         <main className="flex-1 flex flex-col -mt-10 z-10">
           <div className="w-full px-6">
-              <form className="relative" onSubmit={handleSearch}>
+              <form className="relative mb-8" onSubmit={handleSearch}>
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     name="search"
@@ -256,12 +276,10 @@ export default function HomePageContent() {
               </form>
           </div>
 
-          <section id="features" className="my-4 px-6">
-            <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+          <section id="features" className="mb-8 px-6">
+            <div className="flex justify-around items-start gap-y-4 gap-x-2 bg-card p-4 rounded-2xl shadow-md">
               {isLoading ? (
-                  <div className="col-span-3 flex justify-center items-center h-24 w-full">
-                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
+                  Array.from({ length: 3 }).map((_, index) => <CategorySkeleton key={index} />)
               ) : (
                 <>
                   {mainFeatures.map(feature => (
@@ -275,20 +293,24 @@ export default function HomePageContent() {
           <section id="interactive-cards" className="mb-4 w-full">
             <Carousel
               opts={{
-                align: "start",
+                align: "center",
                 loop: true,
               }}
               plugins={[plugin.current]}
               className="w-full"
-              onMouseEnter={plugin.current.stop}
-              onMouseLeave={plugin.current.reset}
             >
-              <CarouselContent className="-ml-2">
-                {carouselItems.map(item => (
-                  <CarouselItem key={item.id} className="basis-[85%] md:basis-1/2 pl-4">
+              <CarouselContent className="-ml-4">
+                {carouselItems.length > 0 ? carouselItems.map(item => (
+                  <CarouselItem key={item.id} className="basis-4/5 md:basis-1/2 pl-4">
                     <div className="p-1 h-36">
                       <CarouselCard item={item} />
                     </div>
+                  </CarouselItem>
+                )) : Array.from({length: 3}).map((_, index) => (
+                  <CarouselItem key={index} className="basis-4/5 md:basis-1/2 pl-4">
+                      <div className="p-1 h-36">
+                         <Skeleton className="w-full h-full rounded-2xl"/>
+                      </div>
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -303,22 +325,22 @@ export default function HomePageContent() {
                 </div>
                 <div className="space-y-4">
                    {isLoading ? (
-                      <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary"/></div>
+                       Array.from({ length: 2 }).map((_, index) => <ArticleSkeleton key={index} />)
                    ) : latestArticles.length > 0 ? (
                     latestArticles.map(article => (
                       <Link href={`/blog/${article.slug}`} key={article.uuid} className="group">
                         <Card className="shadow-sm border-0 bg-card hover:bg-secondary/50 transition-colors">
                             <CardContent className="p-4 flex gap-4 items-center">
                                 {article.featured_image_url ? (
-                                    <Image data-ai-hint="education learning" src={`/api/images/${article.featured_image_url}`} alt={article.title} className="w-20 h-20 rounded-lg object-cover" width={100} height={100} />
+                                    <Image data-ai-hint="education learning" src={`/api/images/${article.featured_image_url}`} alt={article.title} className="w-20 h-20 rounded-lg object-cover shrink-0" width={100} height={100} />
                                 ) : (
-                                    <div className="w-20 h-20 rounded-lg bg-secondary flex items-center justify-center">
+                                    <div className="w-20 h-20 rounded-lg bg-secondary flex items-center justify-center shrink-0">
                                         <Package className="w-8 h-8 text-muted-foreground"/>
                                     </div>
                                 )}
                                 <div className="flex-1">
                                     <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">{article.title}</h3>
-                                    <p className="text-sm text-muted-foreground mt-1">Oleh {article.authorName}</p>
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{article.meta_description || 'Baca selengkapnya...'}</p>
                                 </div>
                                 {!isMobile && (
                                   <Button variant="ghost" size="icon" className="rounded-full shrink-0">

@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import Image from 'next/image';
 
 const CAROUSEL_STORAGE_KEY = 'cms_carousel_items_v1';
 
@@ -27,23 +27,25 @@ const getInitialItems = (): CarouselItem[] => {
 }
 
 export default function ManageCarouselPage() {
-    const [items, setItems] = useState<CarouselItem[]>(getInitialItems);
-    const [isLoading, setIsLoading] = useState(false);
+    const [items, setItems] = useState<CarouselItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
         setItems(getInitialItems());
+        setIsLoading(false);
     }, []);
 
     const handleSave = () => {
-        setIsLoading(true);
+        setIsSaving(true);
         try {
             localStorage.setItem(CAROUSEL_STORAGE_KEY, JSON.stringify(items));
             toast({ title: "Perubahan Disimpan!", description: "Item carousel telah diperbarui." });
         } catch (error) {
             toast({ variant: 'destructive', title: "Gagal Menyimpan", description: (error as Error).message });
         } finally {
-            setIsLoading(false);
+            setIsSaving(false);
         }
     };
     
@@ -66,6 +68,14 @@ export default function ManageCarouselPage() {
     const handleDeleteItem = (id: string) => {
         setItems(prev => prev.filter(item => item.id !== id));
     }
+    
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
 
     return (
         <Card>
@@ -80,8 +90,8 @@ export default function ManageCarouselPage() {
                     <Button onClick={handleAddItem}>
                         <Plus className="mr-2 h-4 w-4" /> Tambah Item
                     </Button>
-                     <Button onClick={handleSave} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <Save className="mr-2" />} Simpan Perubahan
+                     <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Save className="mr-2" />} Simpan Perubahan
                     </Button>
                 </div>
 

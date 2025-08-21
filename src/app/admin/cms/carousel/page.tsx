@@ -10,21 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { saveCarouselItems } from './actions';
 
-const CAROUSEL_STORAGE_KEY = 'cms_carousel_items_v1';
-
-const getInitialItems = (): CarouselItem[] => {
-    if (typeof window === 'undefined') return [];
-    try {
-        const stored = localStorage.getItem(CAROUSEL_STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [
-            { id: 'item_1', title: 'Kuis Harian', description: 'Asah kemampuanmu dengan kuis interaktif', href: '/quiz', icon: 'BrainCircuit', status: 'published' },
-            { id: 'item_2', title: 'Latihan Soal', description: 'Perbanyak latihan untuk persiapan ujian.', href: '/practice', icon: 'Edit', status: 'published' }
-        ];
-    } catch {
-        return [];
-    }
-}
+// Import initial data from JSON for initial state
+import initialItemsData from '@/data/carousel-items.json';
 
 export default function ManageCarouselPage() {
     const [items, setItems] = useState<CarouselItem[]>([]);
@@ -33,14 +22,15 @@ export default function ManageCarouselPage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        setItems(getInitialItems());
+        // We now directly use the imported JSON data as the initial state
+        setItems(initialItemsData);
         setIsLoading(false);
     }, []);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setIsSaving(true);
         try {
-            localStorage.setItem(CAROUSEL_STORAGE_KEY, JSON.stringify(items));
+            await saveCarouselItems(items);
             toast({ title: "Perubahan Disimpan!", description: "Item carousel telah diperbarui." });
         } catch (error) {
             toast({ variant: 'destructive', title: "Gagal Menyimpan", description: (error as Error).message });

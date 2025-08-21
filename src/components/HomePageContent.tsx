@@ -22,8 +22,9 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions";
 import { Skeleton } from "./ui/skeleton";
 
-// Simulate fetching data
+// Simulate fetching data from JSON files
 import appsData from '@/data/apps.json';
+import carouselItemsData from '@/data/carousel-items.json';
 
 const getIcon = (iconName: string): React.ReactNode => {
     const IconComponent = (LucideIcons as any)[iconName];
@@ -51,7 +52,7 @@ const CarouselCard = ({ item }: { item: CarouselItemType }) => (
 );
 
 const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: string, href: string }) => (
-  <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 text-center">
+  <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 text-center w-1/3 p-1">
     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-white shadow-md`}>
       {icon}
     </div>
@@ -60,7 +61,7 @@ const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: str
 )
 
 const CategorySkeleton = () => (
-    <div className="flex flex-col items-center gap-2 flex-shrink-0 w-20">
+    <div className="flex flex-col items-center gap-2 flex-shrink-0 w-1/3 p-1">
         <Skeleton className="w-16 h-16 rounded-2xl" />
         <Skeleton className="h-4 w-12 rounded-md" />
     </div>
@@ -137,26 +138,15 @@ export default function HomePageContent() {
    const displayPoints = isAuthenticated && user ? user.points : rewardPoints;
 
    useEffect(() => {
-        const CAROUSEL_STORAGE_KEY = 'cms_carousel_items_v1';
-
         const fetchInitialData = async () => {
           setIsLoading(true);
           try {
             // Fetch Apps
             const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
-            const allAppsOption = sortedApps.find(app => app.id === 'app_all_apps');
-            const otherApps = sortedApps.filter(app => app.id !== 'app_all_apps');
-            const featuresToShow = otherApps.slice(0, 2);
-            if (allAppsOption) featuresToShow.push(allAppsOption);
-            setMainFeatures(featuresToShow);
+            setMainFeatures(sortedApps);
 
-            // Fetch Carousel Items from localStorage
-            const storedCarousel = localStorage.getItem(CAROUSEL_STORAGE_KEY);
-            const initialCarouselItems: CarouselItemType[] = storedCarousel ? JSON.parse(storedCarousel) : [
-                { id: 'item_1', title: 'Kuis Harian', description: 'Asah kemampuanmu dengan kuis interaktif', href: '/quiz', icon: 'BrainCircuit', status: 'published' },
-                { id: 'item_2', title: 'Latihan Soal', description: 'Perbanyak latihan untuk persiapan ujian.', href: '/practice', icon: 'Edit', status: 'published' }
-            ];
-            setCarouselItems(initialCarouselItems.filter(item => item.status === 'published'));
+            // Fetch Carousel Items from JSON
+            setCarouselItems(carouselItemsData.filter(item => item.status === 'published'));
 
             // Fetch Latest Articles
             const res = await fetch('/api/blog/articles');
@@ -277,17 +267,15 @@ export default function HomePageContent() {
           </div>
 
           <section id="features" className="mb-8 px-6">
-            <div className="flex justify-around items-start gap-y-4 gap-x-2 bg-card p-4 rounded-2xl shadow-md">
-              {isLoading ? (
-                  Array.from({ length: 3 }).map((_, index) => <CategorySkeleton key={index} />)
-              ) : (
-                <>
-                  {mainFeatures.map(feature => (
-                      <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
-                  ))}
-                </>
-              )}
-            </div>
+             <div className="grid grid-cols-3 gap-y-4 gap-x-2 bg-card p-4 rounded-2xl shadow-md">
+                {isLoading ? (
+                    Array.from({ length: 6 }).map((_, index) => <CategorySkeleton key={index} />)
+                ) : (
+                    mainFeatures.slice(0, 6).map(feature => (
+                        <CategoryCard key={feature.id} href={feature.href} icon={getIcon(feature.icon)} label={feature.title} />
+                    ))
+                )}
+             </div>
           </section>
 
           <section id="interactive-cards" className="mb-4 w-full">

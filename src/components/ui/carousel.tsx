@@ -68,6 +68,8 @@ const Carousel = React.forwardRef<
     )
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
+    const [isSettled, setIsSettled] = React.useState(true);
+
 
     const onSelect = React.useCallback((api: CarouselApi) => {
       if (!api) {
@@ -77,7 +79,6 @@ const Carousel = React.forwardRef<
       setCanScrollPrev(api.canScrollPrev())
       setCanScrollNext(api.canScrollNext())
 
-      // Manually add/remove is-active class to slides
       api.slideNodes().forEach((node, index) => {
         if (api.selectedScrollSnap() === index) {
           node.classList.add("is-active")
@@ -85,7 +86,6 @@ const Carousel = React.forwardRef<
           node.classList.remove("is-active")
         }
       })
-
     }, [])
 
     const scrollPrev = React.useCallback(() => {
@@ -125,9 +125,16 @@ const Carousel = React.forwardRef<
       onSelect(api)
       api.on("reInit", onSelect)
       api.on("select", onSelect)
+      
+      // Logic to handle settling state for smooth looping
+      api.on("settle", () => setIsSettled(true));
+      api.on("scroll", () => setIsSettled(false));
+
 
       return () => {
         api?.off("select", onSelect)
+        api?.off("settle", () => setIsSettled(true));
+        api?.off("scroll", () => setIsSettled(false));
       }
     }, [api, onSelect])
 
@@ -148,7 +155,7 @@ const Carousel = React.forwardRef<
         <div
           ref={ref}
           onKeyDownCapture={handleKeyDown}
-          className={cn("relative", className)}
+          className={cn("relative", isSettled && 'is-settled', className)}
           role="region"
           aria-roledescription="carousel"
           {...props}

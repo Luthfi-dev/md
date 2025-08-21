@@ -112,12 +112,18 @@ body {
 
 @layer utilities {
   .embla__slide {
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, height 0.3s ease-in-out;
-    transform-style: preserve-3d;
+    transition-property: transform, opacity;
   }
-
+  .is-settled .embla__slide {
+    transition-duration: 0.5s;
+    transition-timing-function: ease-in-out;
+  }
   .embla__slide:not(.is-active) {
-    transform: scaleY(0.92);
-    opacity: 0.6;
+    transform: scale(0.9) translateZ(-10px);
+    opacity: 0.7;
+    z-index: 1;
+  }
+  .is-active {
+    z-index: 2;
   }
 }

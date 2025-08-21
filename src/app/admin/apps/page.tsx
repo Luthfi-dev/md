@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Save, Flame, Star, ThumbsUp, Loader2, Settings } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { AppSettingsDialog } from '@/components/admin/AppSettingsDialog';
@@ -15,17 +15,8 @@ import { AppSettingsDialog } from '@/components/admin/AppSettingsDialog';
 // Simulate fetching and saving data
 import appsData from '@/data/apps.json';
 import { AppSettings, loadAppSettings, saveAppSettings } from '@/data/app-settings';
-
-export interface AppDefinition {
-  id: string;
-  title: string;
-  description: string;
-  href: string;
-  icon: string;
-  isPopular: boolean;
-  isNew: boolean;
-  order: number;
-}
+import { saveAppsConfig } from './actions';
+import type { AppDefinition } from '@/types/app';
 
 export default function ManageAppsPage() {
   const [apps, setApps] = useState<AppDefinition[]>([]);
@@ -69,14 +60,22 @@ export default function ManageAppsPage() {
   
   const handleSave = async () => {
     setIsSaving(true);
-    console.log("Saving data:", JSON.stringify(apps, null, 2));
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "Pengaturan Disimpan!",
-      description: "Daftar aplikasi telah berhasil diperbarui.",
-    });
-    setIsSaving(false);
+    try {
+        const sortedApps = [...apps].sort((a, b) => a.order - b.order);
+        await saveAppsConfig(sortedApps);
+        toast({
+            title: "Pengaturan Disimpan!",
+            description: "Daftar aplikasi telah berhasil diperbarui.",
+        });
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Gagal Menyimpan",
+            description: (error as Error).message
+        });
+    } finally {
+        setIsSaving(false);
+    }
   };
   
   const handleSaveSettings = (appId: string, newSettings: AppSettings) => {

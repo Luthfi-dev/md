@@ -14,7 +14,7 @@ import { GenerateArticleDialog } from "@/components/cms/GenerateArticleDialog";
 import { getArticle, saveArticle, type ArticlePayload, type ArticleWithAuthorAndTags } from "../actions";
 import { generateSeoMeta } from "@/ai/genkit";
 import { useRouter, useParams } from "next/navigation";
-import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -121,7 +121,7 @@ export default function ArticleEditorPage() {
     if (id === 'new') {
         // This is a new article, initialize with default values
         setArticle({
-            uuid: crypto.randomUUID(),
+            uuid: uuidv4(),
             title: '',
             slug: '',
             content: '<p>Tulis konten artikel Anda di sini...</p>',

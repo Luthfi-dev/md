@@ -2,7 +2,7 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
-import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { generateSeoMeta as generateSeoMetaAction } from '@/ai/genkit';
 
 
@@ -60,7 +60,7 @@ export type ArticleWithAuthorAndTags = {
 
 // --- GETTERS ---
 export async function getArticle(slugOrUuid: string): Promise<ArticleWithAuthorAndTags | null> {
-    if (!slugOrUuid || slugOrUuid === 'new') return null; // Prevent DB query for invalid or new states
+    if (!slugOrUuid) return null;
     let connection;
     try {
         const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(slugOrUuid);
@@ -111,40 +111,6 @@ export async function getArticles(): Promise<ArticleWithAuthor[]> {
 
 // --- MUTATIONS ---
 
-export async function createArticle(payload: Omit<CreateArticlePayload, 'slug' | 'content' | 'uuid'> & { content?: string }) {
-    let connection;
-    try {
-        const uuid = crypto.randomUUID();
-        const slug = payload.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
-
-        const finalPayload: CreateArticlePayload = {
-            ...payload,
-            uuid,
-            slug,
-            content: payload.content || '',
-        };
-
-        const validation = CreateArticlePayloadSchema.safeParse(finalPayload);
-        if (!validation.success) {
-            throw new Error(validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '));
-        }
-
-        const { title, content, author_id } = validation.data;
-        
-        connection = await db.getConnection();
-        const sql = `INSERT INTO articles (uuid, title, slug, content, author_id, status) VALUES (?, ?, ?, ?, ?, 'draft')`;
-        await connection.execute<ResultSetHeader>(sql, [uuid, title, slug, content, author_id]);
-
-        return { success: true, uuid, message: "Artikel berhasil dibuat." };
-
-    } catch (error) {
-        console.error("Error creating article:", error);
-        throw new Error((error as Error).message || "Terjadi kesalahan saat membuat artikel.");
-    } finally {
-        if (connection) connection.release();
-    }
-}
-
 export async function saveArticle(payload: ArticlePayload) {
     let connection;
     try {
@@ -161,21 +127,32 @@ export async function saveArticle(payload: ArticlePayload) {
         await connection.beginTransaction();
 
         const [existing]: [any[], any] = await connection.execute('SELECT id, published_at FROM articles WHERE uuid = ?', [articleData.uuid]);
-        if (existing.length === 0) {
-            throw new Error("Artikel tidak ditemukan untuk diperbarui.");
-        }
-        const articleId = existing[0].id;
         
-        const wasAlreadyPublished = !!existing[0].published_at;
-        const publishedAtUpdate = isPublished && !wasAlreadyPublished ? ', published_at = CURRENT_TIMESTAMP' : '';
+        let articleId: number;
+        
+        if (existing.length > 0) {
+            // UPDATE existing article
+            articleId = existing[0].id;
+            const wasAlreadyPublished = !!existing[0].published_at;
+            const publishedAtUpdate = isPublished && !wasAlreadyPublished ? ', published_at = CURRENT_TIMESTAMP' : '';
 
-        const sql = `UPDATE articles SET title=?, slug=?, content=?, featured_image_url=?, status=?, meta_title=?, meta_description=? ${publishedAtUpdate} WHERE id=?`;
-        await connection.execute(sql, [
-            articleData.title, articleData.slug, articleData.content, articleData.featured_image_url,
-            articleData.status, articleData.meta_title, articleData.meta_description, articleId
-        ]);
+            const sql = `UPDATE articles SET title=?, slug=?, content=?, featured_image_url=?, status=?, meta_title=?, meta_description=? ${publishedAtUpdate} WHERE id=?`;
+            await connection.execute(sql, [
+                articleData.title, articleData.slug, articleData.content, articleData.featured_image_url,
+                articleData.status, articleData.meta_title, articleData.meta_description, articleId
+            ]);
+        } else {
+            // INSERT new article
+            const publishedAtValue = isPublished ? 'CURRENT_TIMESTAMP' : 'NULL';
+            const sql = `INSERT INTO articles (uuid, title, slug, content, featured_image_url, status, meta_title, meta_description, author_id, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${publishedAtValue})`;
+            const [result] = await connection.execute<ResultSetHeader>(sql, [
+                 articleData.uuid, articleData.title, articleData.slug, articleData.content, articleData.featured_image_url,
+                articleData.status, articleData.meta_title, articleData.meta_description, articleData.author_id
+            ]);
+            articleId = result.insertId;
+        }
 
-        // Tag handling
+        // Tag handling (for both insert and update)
         await connection.execute('DELETE FROM article_tags WHERE article_id = ?', [articleId]);
         if (tags && tags.length > 0) {
             const tagIds: number[] = [];

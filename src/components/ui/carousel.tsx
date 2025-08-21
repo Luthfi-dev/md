@@ -29,6 +29,7 @@ type CarouselContextProps = {
   scrollNext: () => void
   canScrollPrev: boolean
   canScrollNext: boolean
+  isSettled: boolean;
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -126,7 +127,6 @@ const Carousel = React.forwardRef<
       api.on("reInit", onSelect)
       api.on("select", onSelect)
       
-      // Logic to handle settling state for smooth looping
       api.on("settle", () => setIsSettled(true));
       api.on("scroll", () => setIsSettled(false));
 
@@ -150,6 +150,7 @@ const Carousel = React.forwardRef<
           scrollNext,
           canScrollPrev,
           canScrollNext,
+          isSettled,
         }}
       >
         <div
@@ -180,7 +181,7 @@ const CarouselContent = React.forwardRef<
         ref={ref}
         className={cn(
           "flex",
-          orientation === "horizontal" ? "" : "flex-col",
+          orientation === "horizontal" ? "-mx-1" : "-mt-4 flex-col",
           className
         )}
         {...props}
@@ -203,7 +204,7 @@ const CarouselItem = React.forwardRef<
       aria-roledescription="slide"
       className={cn(
         "min-w-0 shrink-0 grow-0 basis-full embla__slide",
-        orientation === "horizontal" ? "pl-4" : "pt-4",
+        orientation === "horizontal" ? "px-1" : "pt-4",
         className
       )}
       {...props}

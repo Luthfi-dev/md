@@ -111,15 +111,11 @@ body {
 }
 
 @layer utilities {
-  .embla__slide {
-    transition-property: transform, opacity;
-  }
   .is-settled .embla__slide {
-    transition-duration: 0.5s;
-    transition-timing-function: ease-in-out;
+    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
   }
   .embla__slide:not(.is-active) {
-    transform: scale(0.9) translateZ(-10px);
+    transform: scaleY(0.9);
     opacity: 0.7;
     z-index: 1;
   }

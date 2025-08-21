@@ -145,8 +145,16 @@ export default function HomePageContent() {
             const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
             setMainFeatures(sortedApps);
 
-            // Fetch Carousel Items from JSON
-            setCarouselItems(carouselItemsData.filter(item => item.status === 'published'));
+            // Fetch Carousel Items from API
+             const carouselRes = await fetch('/api/carousel-items');
+            if (carouselRes.ok) {
+              const carouselData = await carouselRes.json();
+              if (carouselData.success) {
+                setCarouselItems(carouselData.items.filter((item: CarouselItemType) => item.status === 'published'));
+              }
+            } else {
+              console.error("Failed to fetch carousel items");
+            }
 
             // Fetch Latest Articles
             const res = await fetch('/api/blog/articles');
@@ -287,15 +295,15 @@ export default function HomePageContent() {
               plugins={[plugin.current]}
               className="w-full"
             >
-              <CarouselContent className="-ml-4">
+              <CarouselContent>
                 {carouselItems.length > 0 ? carouselItems.map(item => (
-                  <CarouselItem key={item.id} className="basis-4/5 md:basis-1/2 pl-4">
+                  <CarouselItem key={item.id} className="basis-4/5 md:basis-1/2">
                     <div className="p-1 h-36">
                       <CarouselCard item={item} />
                     </div>
                   </CarouselItem>
                 )) : Array.from({length: 3}).map((_, index) => (
-                  <CarouselItem key={index} className="basis-4/5 md:basis-1/2 pl-4">
+                  <CarouselItem key={index} className="basis-4/5 md:basis-1/2">
                       <div className="p-1 h-36">
                          <Skeleton className="w-full h-full rounded-2xl"/>
                       </div>

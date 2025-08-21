@@ -1,4 +1,3 @@
-
 [
   {
     "id": "item_1",
@@ -22,6 +21,14 @@
     "description": "Buat surat profesional dengan template dinamis.",
     "href": "/surat",
     "icon": "FileSignature",
+    "status": "published"
+  },
+  {
+    "id": "item_1755754241706",
+    "title": "Upgrade Dirimu",
+    "description": "Upgrade diri kami produktif bersama Maudigi",
+    "href": "#",
+    "icon": "Package",
     "status": "published"
   }
 ]

@@ -1,7 +1,6 @@
 
 'use client';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -21,6 +20,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions";
 import { Skeleton } from "./ui/skeleton";
+import { Card, CardContent } from "./ui/card";
 
 // Simulate fetching data from JSON files
 import appsData from '@/data/apps.json';
@@ -33,7 +33,6 @@ const getIcon = (iconName: string): React.ReactNode => {
     }
     return <Package className="text-primary w-8 h-8" />; // Fallback icon
 };
-
 
 const CarouselCard = ({ item }: { item: CarouselItemType }) => (
     <Card className="w-full h-full bg-primary text-primary-foreground shadow-lg rounded-2xl overflow-hidden">
@@ -52,7 +51,7 @@ const CarouselCard = ({ item }: { item: CarouselItemType }) => (
 );
 
 const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: string, href: string }) => (
-  <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 text-center w-1/3 p-1">
+  <Link href={href} className="flex flex-col items-center gap-2 flex-shrink-0 text-center">
     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-white shadow-md`}>
       {icon}
     </div>
@@ -61,7 +60,7 @@ const CategoryCard = ({ icon, label, href }: { icon: React.ReactNode, label: str
 )
 
 const CategorySkeleton = () => (
-    <div className="flex flex-col items-center gap-2 flex-shrink-0 w-1/3 p-1">
+    <div className="flex flex-col items-center gap-2 flex-shrink-0">
         <Skeleton className="w-16 h-16 rounded-2xl" />
         <Skeleton className="h-4 w-12 rounded-md" />
     </div>
@@ -114,6 +113,7 @@ const FlyingPoints = ({ isVisible, startRect }: { isVisible: boolean, startRect:
     </div>
   );
 };
+
 
 export default function HomePageContent() {
    const plugin = React.useRef(
@@ -267,7 +267,7 @@ export default function HomePageContent() {
           </div>
 
           <section id="features" className="mb-8 px-6">
-             <div className="grid grid-cols-3 gap-y-4 gap-x-2 bg-card p-4 rounded-2xl shadow-md">
+             <div className="grid grid-cols-3 gap-y-6 gap-x-2">
                 {isLoading ? (
                     Array.from({ length: 6 }).map((_, index) => <CategorySkeleton key={index} />)
                 ) : (
@@ -330,11 +330,6 @@ export default function HomePageContent() {
                                     <h3 className="font-bold leading-tight line-clamp-2 group-hover:text-primary">{article.title}</h3>
                                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{article.meta_description || 'Baca selengkapnya...'}</p>
                                 </div>
-                                {!isMobile && (
-                                  <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                                      <ArrowRight className="w-4 h-4 text-muted-foreground"/>
-                                  </Button>
-                                )}
                             </CardContent>
                         </Card>
                       </Link>

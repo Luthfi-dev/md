@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -12,7 +11,7 @@ import {
   SidebarContent,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, Compass, MessageSquare, Notebook, User } from 'lucide-react';
+import { Home, Compass, MessageSquare, Notebook, User, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -26,6 +25,7 @@ const navItems = [
   { href: '/explore', label: 'Jelajah', icon: Compass },
   { href: '/messages', label: 'Asisten AI', icon: MessageSquare },
   { href: '/notebook', label: 'Catatan', icon: Notebook },
+  { href: '/project-calculator', label: 'Kalkulator Proyek', icon: Briefcase },
 ];
 
 function DesktopLayoutContent({ children }: { children: React.ReactNode }) {

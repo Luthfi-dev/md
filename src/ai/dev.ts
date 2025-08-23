@@ -11,3 +11,4 @@ config();
 // Import all flow definition files here to register them with Genkit.
 // This single import is responsible for making all flows in genkit.ts available.
 import '@/ai/genkit';
+import '@/ai/flows/project-estimator';

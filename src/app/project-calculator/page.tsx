@@ -7,13 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Sparkles, Trash2, LogIn, BrainCircuit } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Trash2, LogIn, BrainCircuit, List, Save } from 'lucide-react';
 import { estimateProjectFeature } from '@/ai/flows/project-estimator';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Separator } from '@/components/ui/separator';
-import Image from 'next/image';
+import { v4 as uuidv4 } from 'uuid';
+
 
 interface Feature {
   id: string;
@@ -25,10 +26,14 @@ interface Feature {
 }
 
 const ProjectCalculatorContent = () => {
+    const router = useRouter();
+    const { toast } = useToast();
+    const { fetchWithAuth } = useAuth();
+    
     const [projectTitle, setProjectTitle] = useState('Aplikasi Toko Online');
     const [features, setFeatures] = useState<Feature[]>([]);
     const [newFeatureName, setNewFeatureName] = useState('');
-    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
     const featureInputRef = useRef<HTMLInputElement>(null);
 
     const handleAddFeature = async (e: FormEvent) => {
@@ -60,7 +65,6 @@ const ProjectCalculatorContent = () => {
 
         } catch (error) {
              toast({ variant: 'destructive', title: 'Gagal Estimasi', description: (error as Error).message });
-             // Remove feature if AI fails
              setFeatures(prev => prev.filter(f => f.id !== newFeature.id));
         }
     };
@@ -72,13 +76,65 @@ const ProjectCalculatorContent = () => {
     const totalMin = features.reduce((sum, f) => sum + (f.priceMin || 0), 0);
     const totalMax = features.reduce((sum, f) => sum + (f.priceMax || 0), 0);
 
+    const handleSaveEstimation = async () => {
+        if (!projectTitle.trim()) {
+            toast({ variant: 'destructive', title: 'Judul Proyek Kosong', description: 'Mohon masukkan judul proyek sebelum menyimpan.'});
+            return;
+        }
+        if (features.some(f => f.isEstimating)) {
+            toast({ variant: 'destructive', title: 'Masih Memproses', description: 'Tunggu semua estimasi fitur selesai sebelum menyimpan.'});
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const payload = {
+                uuid: uuidv4(),
+                title: projectTitle,
+                features: features.map(f => ({
+                    description: f.name,
+                    priceMin: f.priceMin!,
+                    priceMax: f.priceMax!,
+                    justification: f.justification!,
+                })),
+                totalMinPrice: totalMin,
+                totalMaxPrice: totalMax,
+            };
+
+            const res = await fetchWithAuth('/api/project-estimator', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message);
+
+            toast({ title: 'Berhasil Disimpan!', description: 'Estimasi proyek Anda telah disimpan.'});
+            setFeatures([]);
+            setProjectTitle('');
+
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: (error as Error).message });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+
     return (
         <div className="container mx-auto px-4 py-8 pb-24">
             <Card className="max-w-3xl mx-auto shadow-2xl">
-                <CardHeader className="text-center">
-                    <Sparkles className="w-12 h-12 mx-auto text-primary" />
-                    <CardTitle className="text-3xl font-headline">Kalkulator Estimasi Proyek</CardTitle>
-                    <CardDescription>Dapatkan estimasi biaya untuk ide atau proyek Anda dengan cepat menggunakan AI, berdasarkan data pasar di Indonesia.</CardDescription>
+                <CardHeader>
+                   <div className="flex justify-between items-start">
+                        <div className='text-center mx-auto'>
+                            <Sparkles className="w-12 h-12 mx-auto text-primary" />
+                            <CardTitle className="text-3xl font-headline mt-2">Kalkulator Estimasi Proyek</CardTitle>
+                            <CardDescription>Dapatkan estimasi biaya untuk ide atau proyek Anda dengan cepat menggunakan AI.</CardDescription>
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => router.push('/project-calculator/list')}>
+                            <List />
+                        </Button>
+                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
@@ -138,10 +194,16 @@ const ProjectCalculatorContent = () => {
                     {features.length > 0 && (
                         <>
                             <Separator />
-                            <div className="text-right">
-                                <h3 className="text-lg font-semibold">Total Estimasi Harga</h3>
-                                <p className="text-2xl font-bold text-primary">Rp {totalMin.toLocaleString('id-ID')} - Rp {totalMax.toLocaleString('id-ID')}</p>
-                                <p className="text-xs text-muted-foreground">*Harga merupakan estimasi kasar dan dapat bervariasi.</p>
+                            <div className="text-right space-y-2">
+                                <div>
+                                    <h3 className="text-lg font-semibold">Total Estimasi Harga</h3>
+                                    <p className="text-2xl font-bold text-primary">Rp {totalMin.toLocaleString('id-ID')} - Rp {totalMax.toLocaleString('id-ID')}</p>
+                                    <p className="text-xs text-muted-foreground">*Harga merupakan estimasi kasar dan dapat bervariasi.</p>
+                                </div>
+                                <Button onClick={handleSaveEstimation} disabled={isSaving || features.some(f => f.isEstimating)}>
+                                    {isSaving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>}
+                                    Simpan Estimasi
+                                </Button>
                             </div>
                         </>
                     )}

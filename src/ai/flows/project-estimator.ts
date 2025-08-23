@@ -8,7 +8,7 @@
  * - ProjectFeatureOutputSchema: The output schema for the estimation flow.
  */
 
-import { genkit } from 'genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { getApiKey } from '@/services/ApiKeyManager';
 import { googleAI } from '@genkit-ai/googleai';
@@ -34,7 +34,7 @@ export type ProjectFeatureOutput = z.infer<typeof ProjectFeatureOutputSchema>;
 
 // --- Genkit Flow Definition ---
 
-const estimateProjectFeatureFlow = genkit.defineFlow(
+const estimateProjectFeatureFlow = ai.defineFlow(
   {
     name: 'estimateProjectFeatureFlow',
     inputSchema: ProjectFeatureInputSchema,
@@ -44,9 +44,8 @@ const estimateProjectFeatureFlow = genkit.defineFlow(
     const apiKeyRecord = await getApiKey();
     
     const prompt = `
-      Anda adalah seorang konsultan bisnis dan manajer proyek senior di Indonesia dengan pengalaman 15 tahun dalam berbagai industri.
+      Anda adalah seorang konsultan bisnis dan manajer proyek senior di Indonesia dengan pengalaman 15 tahun dalam berbagai industri (termasuk IT, desain, konstruksi, event, dll).
       Tugas Anda adalah memberikan estimasi biaya yang realistis untuk sebuah pekerjaan, fitur, atau item dalam sebuah proyek.
-      Gunakan data dan standar harga yang relevan di Indonesia.
       Berikan harga dalam Rupiah (IDR).
 
       Anda HARUS memberikan output dalam format JSON yang sesuai dengan skema yang diberikan.
@@ -57,7 +56,7 @@ const estimateProjectFeatureFlow = genkit.defineFlow(
       Pekerjaan/Fitur yang akan diestimasi: "${input.featureDescription}"
     `;
 
-    const { output } = await genkit.generate({
+    const { output } = await ai.generate({
       prompt: prompt,
       model: googleAI.model('gemini-1.5-flash-latest'),
       output: { schema: ProjectFeatureOutputSchema },

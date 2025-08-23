@@ -101,3 +101,5 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|sounds|icon-|maskable_icon.png|.*\\.png$).*)',
   ],
 };
+
+    

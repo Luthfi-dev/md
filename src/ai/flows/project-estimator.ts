@@ -1,6 +1,7 @@
+
 'use server';
 /**
- * @fileOverview An AI flow for estimating software project feature costs.
+ * @fileOverview An AI flow for estimating project feature costs.
  *
  * - estimateProjectFeature: A function that provides a cost estimation for a specific software feature.
  * - ProjectFeatureInputSchema: The input schema for the estimation flow.
@@ -15,8 +16,8 @@ import { googleAI } from '@genkit-ai/googleai';
 // --- Zod Schemas for Input and Output ---
 
 export const ProjectFeatureInputSchema = z.object({
-  projectName: z.string().describe('The overall name or type of the project, e.g., "Aplikasi Toko Online".'),
-  featureDescription: z.string().describe('The specific feature to be estimated, e.g., "Sistem Keranjang Belanja".'),
+  projectName: z.string().describe('The overall name or type of the project, e.g., "Aplikasi Toko Online" atau "Jasa Desain Logo".'),
+  featureDescription: z.string().describe('The specific feature or work item to be estimated, e.g., "Sistem Keranjang Belanja" atau "Revisi desain 3 kali".'),
 });
 
 export const ProjectFeatureOutputSchema = z.object({
@@ -43,17 +44,17 @@ const estimateProjectFeatureFlow = genkit.defineFlow(
     const apiKeyRecord = await getApiKey();
     
     const prompt = `
-      Anda adalah seorang konsultan IT senior dan manajer proyek di Indonesia dengan pengalaman 15 tahun dalam pengembangan perangkat lunak.
-      Tugas Anda adalah memberikan estimasi biaya yang realistis untuk sebuah fitur dalam sebuah proyek perangkat lunak.
-      Gunakan data dan standar harga pengembangan software di Indonesia.
+      Anda adalah seorang konsultan bisnis dan manajer proyek senior di Indonesia dengan pengalaman 15 tahun dalam berbagai industri.
+      Tugas Anda adalah memberikan estimasi biaya yang realistis untuk sebuah pekerjaan, fitur, atau item dalam sebuah proyek.
+      Gunakan data dan standar harga yang relevan di Indonesia.
       Berikan harga dalam Rupiah (IDR).
 
       Anda HARUS memberikan output dalam format JSON yang sesuai dengan skema yang diberikan.
       - priceMin dan priceMax harus berupa angka (number), bukan string.
       - justification harus berupa satu kalimat singkat yang menjelaskan kompleksitas dan alasan rentang harga tersebut.
 
-      Konteks Proyek: ${input.projectName}
-      Fitur yang akan diestimasi: "${input.featureDescription}"
+      Konteks Proyek/Ide: ${input.projectName}
+      Pekerjaan/Fitur yang akan diestimasi: "${input.featureDescription}"
     `;
 
     const { output } = await genkit.generate({

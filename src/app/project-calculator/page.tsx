@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, FormEvent, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Sparkles, Trash2, LogIn, Briefcase } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Trash2, LogIn, BrainCircuit } from 'lucide-react';
 import { estimateProjectFeature } from '@/ai/flows/project-estimator';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
@@ -75,16 +76,16 @@ const ProjectCalculatorContent = () => {
         <div className="container mx-auto px-4 py-8 pb-24">
             <Card className="max-w-3xl mx-auto shadow-2xl">
                 <CardHeader className="text-center">
-                    <Briefcase className="w-12 h-12 mx-auto text-primary" />
-                    <CardTitle className="text-3xl font-headline">Kalkulator Harga Proyek</CardTitle>
-                    <CardDescription>Dapatkan estimasi biaya pengembangan proyek perangkat lunak Anda dengan AI berdasarkan data pasar di Indonesia.</CardDescription>
+                    <Sparkles className="w-12 h-12 mx-auto text-primary" />
+                    <CardTitle className="text-3xl font-headline">Kalkulator Estimasi Proyek</CardTitle>
+                    <CardDescription>Dapatkan estimasi biaya untuk ide atau proyek Anda dengan cepat menggunakan AI, berdasarkan data pasar di Indonesia.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="project-title" className="text-lg font-semibold">Judul Proyek</Label>
+                        <Label htmlFor="project-title" className="text-lg font-semibold">Nama Proyek atau Ide</Label>
                         <Input 
                             id="project-title" 
-                            placeholder="Contoh: Aplikasi Toko Online, Sistem ERP, dll."
+                            placeholder="Contoh: Aplikasi Toko Online, Jasa Desain Logo, dll."
                             value={projectTitle}
                             onChange={(e) => setProjectTitle(e.target.value)}
                             className="text-base"
@@ -94,7 +95,7 @@ const ProjectCalculatorContent = () => {
                     <Separator />
 
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Fitur-fitur Proyek</h3>
+                        <h3 className="text-lg font-semibold">Rincian & Fitur Proyek</h3>
                         <div className="space-y-3">
                             {features.map(feature => (
                                 <Card key={feature.id} className="p-4 bg-secondary/50">
@@ -124,7 +125,7 @@ const ProjectCalculatorContent = () => {
                         <form onSubmit={handleAddFeature} className="flex gap-2">
                             <Input 
                                 ref={featureInputRef}
-                                placeholder="Masukkan nama fitur (e.g., Autentikasi Pengguna)"
+                                placeholder="Masukkan fitur atau rincian pekerjaan..."
                                 value={newFeatureName}
                                 onChange={(e) => setNewFeatureName(e.target.value)}
                             />
@@ -134,13 +135,16 @@ const ProjectCalculatorContent = () => {
                         </form>
                     </div>
 
-                    <Separator />
-
-                    <div className="text-right">
-                         <h3 className="text-lg font-semibold">Total Estimasi Harga</h3>
-                         <p className="text-2xl font-bold text-primary">Rp {totalMin.toLocaleString('id-ID')} - Rp {totalMax.toLocaleString('id-ID')}</p>
-                         <p className="text-xs text-muted-foreground">*Harga merupakan estimasi kasar dan dapat bervariasi.</p>
-                    </div>
+                    {features.length > 0 && (
+                        <>
+                            <Separator />
+                            <div className="text-right">
+                                <h3 className="text-lg font-semibold">Total Estimasi Harga</h3>
+                                <p className="text-2xl font-bold text-primary">Rp {totalMin.toLocaleString('id-ID')} - Rp {totalMax.toLocaleString('id-ID')}</p>
+                                <p className="text-xs text-muted-foreground">*Harga merupakan estimasi kasar dan dapat bervariasi.</p>
+                            </div>
+                        </>
+                    )}
 
                 </CardContent>
             </Card>
@@ -153,20 +157,12 @@ const LoggedOutView = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-background to-primary/10 p-4 text-center">
         <div className="max-w-2xl">
-          <div className="relative w-full max-w-xs mx-auto mb-8">
-            <div className="absolute -inset-2 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
-            <Image
-              data-ai-hint="planning project"
-              src="https://placehold.co/600x400.png"
-              alt="Project Estimation"
-              width={600}
-              height={400}
-              className="relative rounded-2xl shadow-2xl"
-            />
-          </div>
-          <h1 className="text-4xl font-bold font-headline tracking-tight">Bingung Nentuin Budget Proyek?</h1>
+           <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
+             <BrainCircuit className="w-12 h-12 text-primary" />
+           </div>
+          <h1 className="text-4xl font-bold font-headline tracking-tight">Bingung Menentukan Anggaran Ide Anda?</h1>
           <p className="text-muted-foreground mt-4 text-lg max-w-xl mx-auto">
-            Gunakan Kalkulator Harga Proyek berbasis AI kami untuk mendapatkan estimasi biaya pengembangan aplikasi atau website Anda secara instan. Cukup masukkan fitur-fitur yang Anda inginkan!
+            Gunakan Kalkulator Estimasi Proyek berbasis AI kami untuk mendapatkan gambaran biaya untuk proyek atau ide apapun secara instan. Cukup masukkan rincian pekerjaan yang Anda inginkan!
           </p>
           <Button size="lg" className="mt-8" onClick={() => router.push('/login')}>
             <LogIn className="mr-2" /> Login & Coba Sekarang

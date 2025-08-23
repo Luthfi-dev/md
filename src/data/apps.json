@@ -23,9 +23,9 @@
   {
     "id": "app_project_calculator",
     "title": "Kalkulator Proyek",
-    "description": "Estimasi biaya proyek software Anda dengan bantuan AI.",
+    "description": "Estimasi biaya proyek atau ide Anda dengan bantuan AI.",
     "href": "/project-calculator",
-    "icon": "Briefcase",
+    "icon": "BrainCircuit",
     "isPopular": true,
     "isNew": true,
     "order": 2

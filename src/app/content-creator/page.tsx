@@ -15,8 +15,10 @@ import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { generateCreativeContent, lengthenArticle, shortenArticle, generateHeadlines } from '@/ai/genkit';
+import { generateCreativeContent, lengthenArticle, shortenArticle, generateHeadlines, translateContent, generateVideoScript } from '@/ai/genkit';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TranslateDialog } from '@/components/cms/TranslateDialog';
+import { VideoScriptDialog } from '@/components/cms/VideoScriptDialog';
 
 type ActionLoadingState = {
     [key: string]: boolean;
@@ -31,6 +33,11 @@ export default function ContentCreatorPage() {
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [style, setStyle] = useState('persuasif');
     const [generatedContent, setGeneratedContent] = useState('');
+    
+    // State for dialogs
+    const [isTranslateOpen, setIsTranslateOpen] = useState(false);
+    const [isVideoScriptOpen, setIsVideoScriptOpen] = useState(false);
+    const [videoScript, setVideoScript] = useState('');
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
@@ -75,7 +82,7 @@ export default function ContentCreatorPage() {
         }
     };
     
-    const runAction = async (actionName: 'lengthen' | 'shorten' | 'headlines', actionFn: (input: any) => Promise<any>) => {
+    const runAction = async (actionName: 'lengthen' | 'shorten' | 'headlines' | 'translate' | 'videoScript', actionFn: (input: any) => Promise<any>, params?: any) => {
         const currentContent = editorRef.current?.innerHTML || '';
         if (!currentContent.trim()) {
             toast({ variant: "destructive", title: "Konten Kosong", description: "Tidak ada konten untuk diproses." });
@@ -84,7 +91,8 @@ export default function ContentCreatorPage() {
 
         setActionLoading(prev => ({...prev, [actionName]: true}));
         try {
-            const result = await actionFn({ content: currentContent });
+            const result = await actionFn({ content: currentContent, ...params });
+            
             if (actionName === 'headlines') {
                  toast({
                     title: 'Judul Alternatif Dibuat',
@@ -95,7 +103,17 @@ export default function ContentCreatorPage() {
                     ),
                     duration: 10000,
                  });
-
+            } else if (actionName === 'translate') {
+                if (result.translatedContent) {
+                    setGeneratedContent(result.translatedContent);
+                    if (editorRef.current) editorRef.current.innerHTML = result.translatedContent;
+                    toast({ title: "Konten Berhasil Diterjemahkan!" });
+                }
+            } else if (actionName === 'videoScript') {
+                 if (result.videoScript) {
+                    setVideoScript(result.videoScript);
+                    setIsVideoScriptOpen(true);
+                 }
             } else if (result.content) {
                 setGeneratedContent(result.content);
                 if (editorRef.current) editorRef.current.innerHTML = result.content;
@@ -110,6 +128,11 @@ export default function ContentCreatorPage() {
         }
     }
     
+    const handleTranslateConfirm = (targetLanguage: string) => {
+        setIsTranslateOpen(false);
+        runAction('translate', translateContent, { targetLanguage });
+    }
+
     const copyContent = () => {
         const content = editorRef.current?.innerText || '';
         if(content) {
@@ -119,6 +142,20 @@ export default function ContentCreatorPage() {
     };
 
     return (
+        <>
+        <TranslateDialog 
+            isOpen={isTranslateOpen}
+            onOpenChange={setIsTranslateOpen}
+            onConfirm={handleTranslateConfirm}
+            isLoading={actionLoading.translate}
+        />
+        <VideoScriptDialog 
+            isOpen={isVideoScriptOpen}
+            onOpenChange={setIsVideoScriptOpen}
+            scriptContent={videoScript}
+            isLoading={actionLoading.videoScript}
+        />
+
         <div className="min-h-screen bg-secondary/20">
             <div className="container mx-auto px-4 py-8 pb-24">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -229,11 +266,11 @@ export default function ContentCreatorPage() {
                                 <Button variant="outline" className="w-full justify-start" onClick={() => runAction('headlines', generateHeadlines)} disabled={!generatedContent || isLoading || actionLoading.headlines}>
                                      {actionLoading.headlines ? <Loader2 className="mr-2 animate-spin"/> : <BrainCircuit className="mr-2"/>} Buat Judul/Slogan
                                 </Button>
-                                <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
-                                    <Languages className="mr-2"/> Terjemahkan
+                                <Button variant="outline" className="w-full justify-start" onClick={() => setIsTranslateOpen(true)} disabled={!generatedContent || isLoading || actionLoading.translate}>
+                                    {actionLoading.translate ? <Loader2 className="mr-2 animate-spin"/> : <Languages className="mr-2"/>} Terjemahkan
                                 </Button>
-                                <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
-                                    <Mic className="mr-2"/> Ubah Jadi Naskah Video
+                                <Button variant="outline" className="w-full justify-start" onClick={() => runAction('videoScript', generateVideoScript)} disabled={!generatedContent || isLoading || actionLoading.videoScript}>
+                                    {actionLoading.videoScript ? <Loader2 className="mr-2 animate-spin"/> : <Mic className="mr-2"/>} Ubah Jadi Naskah Video
                                 </Button>
                             </CardContent>
                         </Card>
@@ -241,5 +278,6 @@ export default function ContentCreatorPage() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

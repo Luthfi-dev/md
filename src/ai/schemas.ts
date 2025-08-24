@@ -118,3 +118,28 @@ export const CreativeContentOutputSchema = z.object({
   content: z.string().describe('Konten pemasaran yang dihasilkan dalam format HTML.'),
 });
 export type CreativeContentOutput = z.infer<typeof CreativeContentOutputSchema>;
+
+
+// --- Translation Schemas ---
+export const TranslateContentInputSchema = z.object({
+    content: z.string().describe('The HTML content to be translated.'),
+    targetLanguage: z.string().describe('The target language, e.g., "English", "Japanese", "Spanish".'),
+});
+export type TranslateContentInput = z.infer<typeof TranslateContentInputSchema>;
+
+export const TranslateContentOutputSchema = z.object({
+    translatedContent: z.string().describe('The translated content in HTML format.'),
+});
+export type TranslateContentOutput = z.infer<typeof TranslateContentOutputSchema>;
+
+
+// --- Video Script Schemas ---
+export const GenerateVideoScriptInputSchema = z.object({
+    content: z.string().describe('The source content to be converted into a video script.'),
+});
+export type GenerateVideoScriptInput = z.infer<typeof GenerateVideoScriptInputSchema>;
+
+export const GenerateVideoScriptOutputSchema = z.object({
+    videoScript: z.string().describe('The generated video script in a structured HTML format.'),
+});
+export type GenerateVideoScriptOutput = z.infer<typeof GenerateVideoScriptOutputSchema>;

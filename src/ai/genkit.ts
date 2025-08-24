@@ -36,6 +36,14 @@ import {
   ProjectFeatureOutputSchema,
   type ProjectFeatureInput,
   type ProjectFeatureOutput,
+  TranslateContentInputSchema,
+  TranslateContentOutputSchema,
+  type TranslateContentInput,
+  type TranslateContentOutput,
+  GenerateVideoScriptInputSchema,
+  GenerateVideoScriptOutputSchema,
+  type GenerateVideoScriptInput,
+  type GenerateVideoScriptOutput,
 } from './schemas';
 import htmlToDocx from 'html-to-docx';
 
@@ -289,12 +297,12 @@ const generateCreativeContentFlow = ai.defineFlow(
   async (input) => {
     const apiKeyRecord = await getApiKey();
 
+    const promptParts = [];
+    
     const basePrompt = `Anda adalah seorang ahli pemasaran digital dan copywriter yang sangat kreatif. Tugas Anda adalah membuat konten pemasaran yang menarik dan menjual berdasarkan informasi yang diberikan.
 Gaya bahasa yang Anda gunakan harus **${input.style}**.
 Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> untuk judul, <p> untuk paragraf, dan <strong> atau <b> untuk penekanan. Jika relevan, sertakan juga beberapa hashtag yang sesuai.`;
     
-    // Dynamically construct the prompt parts based on input
-    const promptParts = [];
     promptParts.push({ text: basePrompt });
 
     if (input.imageDataUri) {
@@ -320,40 +328,60 @@ Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> unt
   }
 );
 
-
-const estimateProjectFeatureFlow = ai.defineFlow(
+const translateContentFlow = ai.defineFlow(
   {
-    name: 'estimateProjectFeatureFlow',
-    inputSchema: ProjectFeatureInputSchema,
-    outputSchema: ProjectFeatureOutputSchema,
+    name: 'translateContentFlow',
+    inputSchema: TranslateContentInputSchema,
+    outputSchema: TranslateContentOutputSchema,
   },
   async (input) => {
     const apiKeyRecord = await getApiKey();
-    
-    const prompt = `
-      Anda adalah seorang konsultan bisnis dan manajer proyek senior di Indonesia dengan pengalaman 15 tahun dalam berbagai industri (termasuk IT, desain, konstruksi, event, dll).
-      Tugas Anda adalah memberikan estimasi biaya yang realistis untuk sebuah pekerjaan, fitur, atau item dalam sebuah proyek.
-      Berikan harga dalam Rupiah (IDR).
+    const prompt = `Anda adalah penerjemah profesional. Terjemahkan konten HTML berikut ke dalam bahasa **${input.targetLanguage}**. Pertahankan semua tag HTML dan struktur aslinya. Pastikan terjemahan akurat dan sesuai dengan konteks aslinya.
 
-      Anda HARUS memberikan output dalam format JSON yang sesuai dengan skema yang diberikan.
-      - priceMin dan priceMax harus berupa angka (number), bukan string.
-      - justification harus berupa satu kalimat singkat yang menjelaskan kompleksitas dan alasan rentang harga tersebut.
-
-      Konteks Proyek/Ide: ${input.projectName}
-      Pekerjaan/Fitur yang akan diestimasi: "${input.featureDescription}"
-    `;
-
+Konten Asli:
+---
+${input.content}
+---
+`;
     const { output } = await ai.generate({
       prompt: prompt,
       model: googleAI.model('gemini-1.5-flash-latest'),
-      output: { schema: ProjectFeatureOutputSchema },
+      output: { schema: TranslateContentOutputSchema },
       plugins: [googleAI({ apiKey: apiKeyRecord.key })],
     });
+    if (!output) throw new Error("AI tidak memberikan respons terjemahan.");
+    return output;
+  }
+);
 
-    if (!output) {
-      throw new Error('Gagal mendapatkan estimasi dari AI. Coba lagi.');
-    }
 
+const generateVideoScriptFlow = ai.defineFlow(
+  {
+    name: 'generateVideoScriptFlow',
+    inputSchema: GenerateVideoScriptInputSchema,
+    outputSchema: GenerateVideoScriptOutputSchema,
+  },
+  async (input) => {
+    const apiKeyRecord = await getApiKey();
+    const prompt = `Anda adalah seorang penulis naskah video profesional. Ubah konten berikut menjadi naskah video pendek (sekitar 1 menit) yang menarik untuk platform seperti Instagram Reels atau TikTok. Buat format yang jelas dengan bagian-bagian seperti:
+- **Scene [Nomor]:** (Deskripsi singkat adegan visual, B-roll, atau teks di layar)
+- **Narasi/Dialog:** (Teks yang akan diucapkan)
+- **Musik/SFX:** (Saran untuk musik latar atau efek suara)
+
+Pastikan naskahnya dinamis dan mudah diikuti. Gunakan format HTML.
+
+Konten Asli:
+---
+${input.content}
+---
+`;
+    const { output } = await ai.generate({
+      prompt: prompt,
+      model: googleAI.model('gemini-1.5-flash-latest'),
+      output: { schema: GenerateVideoScriptOutputSchema },
+      plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+    });
+    if (!output) throw new Error("AI tidak memberikan respons naskah video.");
     return output;
   }
 );
@@ -421,8 +449,14 @@ export async function generateCreativeContent(input: CreativeContentInput): Prom
   return generateCreativeContentFlow(input);
 }
 
-export async function estimateProjectFeature(input: ProjectFeatureInput): Promise<ProjectFeatureOutput> {
-  const validationResult = ProjectFeatureInputSchema.safeParse(input);
-  if(!validationResult.success) throw new Error("Input untuk estimasi proyek tidak valid.");
-  return await estimateProjectFeatureFlow(input);
+export async function translateContent(input: TranslateContentInput): Promise<TranslateContentOutput> {
+    const validationResult = TranslateContentInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk terjemahan tidak valid.");
+    return translateContentFlow(input);
+}
+
+export async function generateVideoScript(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
+    const validationResult = GenerateVideoScriptInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk naskah video tidak valid.");
+    return generateVideoScriptFlow(input);
 }

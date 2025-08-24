@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import Link from 'next/link';
 
 interface Estimation {
     uuid: string;
@@ -66,7 +67,8 @@ export default function SavedEstimationsPage() {
                 
                 <div className="space-y-4">
                     {estimations.length > 0 ? estimations.map(est => (
-                        <Card key={est.uuid} className="hover:shadow-lg transition-shadow cursor-pointer">
+                       <Link href={`/project-calculator/${est.uuid}`} key={est.uuid}>
+                         <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                             <CardHeader>
                                 <CardTitle>{est.title}</CardTitle>
                                 <CardDescription>Dibuat pada: {new Date(est.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</CardDescription>
@@ -77,6 +79,7 @@ export default function SavedEstimationsPage() {
                                 </p>
                             </CardContent>
                         </Card>
+                       </Link>
                     )) : (
                         <div className="text-center py-16 border-2 border-dashed rounded-lg">
                             <Notebook className="mx-auto h-12 w-12 text-muted-foreground" />

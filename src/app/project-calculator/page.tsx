@@ -53,8 +53,8 @@ const ProjectCalculatorContent = () => {
             setFeatures(project.features.map((f: any, i: number) => ({
                 id: `feature_${Date.now()}_${i}`,
                 name: f.description,
-                priceMin: f.price_min,
-                priceMax: f.price_max,
+                priceMin: parseFloat(f.price_min), // THE FIX
+                priceMax: parseFloat(f.price_max), // THE FIX
                 justification: f.justification,
                 isEstimating: false,
             })));

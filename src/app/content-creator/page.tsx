@@ -12,7 +12,7 @@ import {
     ChevronsRight, ChevronRight, PenLine, Languages, SlidersHorizontal
 } from 'lucide-react';
 import Image from 'next/image';
-import { Textarea } from '../ui/textarea';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { generateCreativeContent, lengthenArticle, shortenArticle, generateHeadlines } from '@/ai/genkit';
@@ -137,7 +137,7 @@ export default function ContentCreatorPage() {
                                 </div>
                                 <div className="relative flex items-center justify-center my-4">
                                     <div className="flex-grow border-t"></div>
-                                    <span className="flex-shrink mx-4 text-muted-foreground text-xs">ATAU</span>
+                                    <span className="flex-shrink mx-4 text-xs text-muted-foreground">ATAU</span>
                                     <div className="flex-grow border-t"></div>
                                 </div>
                                 <div className="space-y-2">
@@ -151,7 +151,7 @@ export default function ContentCreatorPage() {
                                         ) : (
                                             <div className="text-center">
                                                 <Upload className="mx-auto h-8 w-8"/>
-                                                <p className="text-sm mt-1">Klik untuk memilih</p>
+                                                <p className="mt-1 text-sm">Klik untuk memilih</p>
                                             </div>
                                         )}
                                         <Input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleImageUpload}/>
@@ -189,9 +189,9 @@ export default function ContentCreatorPage() {
                             </CardHeader>
                             <CardContent>
                                 {isLoading ? (
-                                     <div className="flex flex-col items-center justify-center text-center gap-4 py-16">
+                                     <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
                                         <Loader2 className="w-12 h-12 animate-spin text-primary" />
-                                        <h3 className="font-semibold text-lg">AI sedang meracik kata-kata...</h3>
+                                        <h3 className="text-lg font-semibold">AI sedang meracik kata-kata...</h3>
                                         <p className="text-muted-foreground">Ini mungkin butuh beberapa saat.</p>
                                     </div>
                                 ) : (
@@ -199,7 +199,7 @@ export default function ContentCreatorPage() {
                                         ref={editorRef}
                                         contentEditable={true}
                                         suppressContentEditableWarning={true}
-                                        className="prose dark:prose-invert max-w-none min-h-[400px] rounded-md border p-4 focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                                        className="prose dark:prose-invert max-w-none min-h-[400px] rounded-md border bg-background p-4 focus:outline-none focus:ring-2 focus:ring-primary"
                                         dangerouslySetInnerHTML={{ __html: generatedContent || '<p class="text-muted-foreground">Konten Anda akan muncul di sini...</p>' }}
                                     />
                                 )}

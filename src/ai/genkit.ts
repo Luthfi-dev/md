@@ -28,9 +28,9 @@ import {
 import htmlToDocx from 'html-to-docx';
 
 
-// Initialize a single, file-internal AI instance. This is NOT exported.
-// The API key is not provided here; it will be injected per-call.
-const ai = genkit({
+// Initialize and EXPORT the shared AI instance.
+// This is the single source of truth for Genkit configuration.
+export const ai = genkit({
   plugins: [
     googleAI(),
   ],

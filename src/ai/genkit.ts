@@ -24,6 +24,14 @@ import {
   type ChatMessage,
   LengthenArticleInputSchema,
   LengthenArticleOutputSchema,
+  ShortenArticleInputSchema,
+  ShortenArticleOutputSchema,
+  GenerateHeadlinesInputSchema,
+  GenerateHeadlinesOutputSchema,
+  CreativeContentInputSchema,
+  CreativeContentOutputSchema,
+  type CreativeContentInput,
+  type CreativeContentOutput,
   ProjectFeatureInputSchema,
   ProjectFeatureOutputSchema,
   type ProjectFeatureInput,
@@ -153,7 +161,7 @@ const lengthenArticleFlow = ai.defineFlow(
 
 Artikel Asli:
 ---
-${input.originalContent}
+${input.content}
 ---
 `;
 
@@ -166,6 +174,59 @@ ${input.originalContent}
         return output!;
     }
 );
+
+const shortenArticleFlow = ai.defineFlow(
+    {
+        name: 'shortenArticleFlow',
+        inputSchema: ShortenArticleInputSchema,
+        outputSchema: ShortenArticleOutputSchema,
+    },
+    async (input) => {
+        const apiKeyRecord = await getApiKey();
+        const prompt = `Anda adalah seorang editor konten ahli. Tugas Anda adalah meringkas artikel berikut menjadi lebih padat dan ringkas, sekitar 50-60% dari panjang asli. Fokus pada poin-poin terpenting dan hilangkan kalimat yang berulang atau kurang relevan. Pertahankan format HTML dan gaya bahasa aslinya.
+
+Artikel Asli:
+---
+${input.content}
+---
+`;
+
+        const { output } = await ai.generate({
+            prompt: prompt,
+            model: 'googleai/gemini-1.5-flash-latest',
+            output: { schema: ShortenArticleOutputSchema },
+            plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+        });
+        return output!;
+    }
+);
+
+const generateHeadlinesFlow = ai.defineFlow(
+    {
+        name: 'generateHeadlinesFlow',
+        inputSchema: GenerateHeadlinesInputSchema,
+        outputSchema: GenerateHeadlinesOutputSchema,
+    },
+    async (input) => {
+        const apiKeyRecord = await getApiKey();
+        const prompt = `Anda adalah seorang copywriter dan pakar branding. Berdasarkan konten berikut, buatkan 5 alternatif judul (headline) atau slogan yang sangat menarik, menjual, dan ringkas.
+
+Konten:
+---
+${input.content}
+---
+`;
+
+        const { output } = await ai.generate({
+            prompt: prompt,
+            model: 'googleai/gemini-1.5-flash-latest',
+            output: { schema: GenerateHeadlinesOutputSchema },
+            plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+        });
+        return output!;
+    }
+);
+
 
 const generateSeoMetaFlow = ai.defineFlow(
   {
@@ -216,6 +277,43 @@ const convertHtmlToWordFlow = ai.defineFlow(
         console.error("Error in convertHtmlToWordFlow:", e);
         return { error: e.message || 'An unknown error occurred during conversion.' };
     }
+  }
+);
+
+const generateCreativeContentFlow = ai.defineFlow(
+  {
+    name: 'generateCreativeContentFlow',
+    inputSchema: CreativeContentInputSchema,
+    outputSchema: CreativeContentOutputSchema,
+  },
+  async (input) => {
+    const apiKeyRecord = await getApiKey();
+    const promptParts: (string | { media: { url: string } })[] = [
+      `Anda adalah seorang ahli pemasaran digital dan copywriter yang sangat kreatif. Tugas Anda adalah membuat konten pemasaran yang menarik dan menjual berdasarkan informasi yang diberikan.
+Gaya bahasa yang Anda gunakan harus **${input.style}**.
+Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> untuk judul, <p> untuk paragraf, dan <strong> atau <b> untuk penekanan. Jika relevan, sertakan juga beberapa hashtag yang sesuai.`,
+    ];
+
+    if (input.imageDataUri) {
+      promptParts.push({ media: { url: input.imageDataUri } });
+      promptParts.push('Gunakan gambar ini sebagai referensi utama. Jelaskan apa yang ada di gambar dan buatlah teks pemasaran yang relevan.');
+    }
+    
+    if (input.text) {
+        promptParts.push(`Berikut adalah deskripsi tambahan dari pengguna: "${input.text}"`);
+    }
+
+    const { output } = await ai.generate({
+      prompt: promptParts,
+      model: googleAI.model('gemini-1.5-flash-latest'),
+      output: { schema: CreativeContentOutputSchema },
+      plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+    });
+
+    if (!output) {
+      throw new Error("AI tidak dapat menghasilkan konten. Coba lagi.");
+    }
+    return output;
   }
 );
 
@@ -285,10 +383,22 @@ export async function generateArticleFromOutline(input: {
     return generateArticleFromOutlineFlow(input);
 }
 
-export async function lengthenArticle(input: { originalContent: string }) {
+export async function lengthenArticle(input: { content: string }) {
     const validationResult = LengthenArticleInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk perpanjang artikel tidak valid.");
     return lengthenArticleFlow(input);
+}
+
+export async function shortenArticle(input: { content: string }) {
+    const validationResult = ShortenArticleInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk ringkas artikel tidak valid.");
+    return shortenArticleFlow(input);
+}
+
+export async function generateHeadlines(input: { content: string }) {
+    const validationResult = GenerateHeadlinesInputSchema.safeParse(input);
+    if (!validationResult.success) throw new Error("Input untuk buat judul tidak valid.");
+    return generateHeadlinesFlow(input);
 }
 
 export async function generateSeoMeta(input: { articleContent: string }) {
@@ -299,6 +409,12 @@ export async function generateSeoMeta(input: { articleContent: string }) {
 
 export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
   return await convertHtmlToWordFlow(input);
+}
+
+export async function generateCreativeContent(input: CreativeContentInput): Promise<CreativeContentOutput> {
+  const validationResult = CreativeContentInputSchema.safeParse(input);
+  if (!validationResult.success) throw new Error("Input untuk konten kreatif tidak valid.");
+  return generateCreativeContentFlow(input);
 }
 
 export async function estimateProjectFeature(input: ProjectFeatureInput): Promise<ProjectFeatureOutput> {

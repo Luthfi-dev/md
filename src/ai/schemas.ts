@@ -40,13 +40,34 @@ export const ArticleFromOutlineOutputSchema = z.object({
 });
 
 export const LengthenArticleInputSchema = z.object({
-  originalContent: z.string().describe('The original HTML content of the article to be lengthened.'),
+  content: z.string().describe('The original HTML content of the article to be lengthened.'),
 });
+export type LengthenArticleInput = z.infer<typeof LengthenArticleInputSchema>;
 
 export const LengthenArticleOutputSchema = z.object({
-    articleContent: z.string().describe('The new, lengthened HTML content of the article.'),
+    content: z.string().describe('The new, lengthened HTML content of the article.'),
 });
+export type LengthenArticleOutput = z.infer<typeof LengthenArticleOutputSchema>;
 
+export const ShortenArticleInputSchema = z.object({
+  content: z.string().describe('The original HTML content of the article to be shortened.'),
+});
+export type ShortenArticleInput = z.infer<typeof ShortenArticleInputSchema>;
+
+export const ShortenArticleOutputSchema = z.object({
+    content: z.string().describe('The new, shortened HTML content of the article.'),
+});
+export type ShortenArticleOutput = z.infer<typeof ShortenArticleOutputSchema>;
+
+export const GenerateHeadlinesInputSchema = z.object({
+  content: z.string().describe('The content of the article to generate headlines for.'),
+});
+export type GenerateHeadlinesInput = z.infer<typeof GenerateHeadlinesInputSchema>;
+
+export const GenerateHeadlinesOutputSchema = z.object({
+    headlines: z.array(z.string()).describe('An array of 5 catchy and relevant headlines.'),
+});
+export type GenerateHeadlinesOutput = z.infer<typeof GenerateHeadlinesOutputSchema>;
 
 export const SeoMetaInputSchema = z.object({
   articleContent: z.string().describe('The full content of the blog article.'),
@@ -83,3 +104,17 @@ export const HtmlToWordOutputSchema = z.object({
   error: z.string().optional(),
 });
 export type HtmlToWordOutput = z.infer<typeof HtmlToWordOutputSchema>;
+
+
+// --- Creative Content Schemas ---
+export const CreativeContentInputSchema = z.object({
+  text: z.string().optional().describe('Deskripsi teks dari produk atau ide.'),
+  imageDataUri: z.string().optional().describe('Gambar referensi sebagai data URI.'),
+  style: z.string().describe('Gaya bahasa yang diinginkan (e.g., profesional, santai).'),
+});
+export type CreativeContentInput = z.infer<typeof CreativeContentInputSchema>;
+
+export const CreativeContentOutputSchema = z.object({
+  content: z.string().describe('Konten pemasaran yang dihasilkan dalam format HTML.'),
+});
+export type CreativeContentOutput = z.infer<typeof CreativeContentOutputSchema>;

@@ -8,21 +8,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { 
-    Loader2, Sparkles, Upload, Image as ImageIcon, Copy, BrainCircuit, Mic,
-    ChevronsRight, ChevronRight, PenLine, Languages, SlidersHorizontal, Info, Bot
+    Loader2, Sparkles, Upload, Copy, BrainCircuit, Mic,
+    ChevronsRight, ChevronRight, PenLine, Languages, SlidersHorizontal
 } from 'lucide-react';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { generateCreativeContent, lengthenArticle, shortenArticle, generateHeadlines } from '@/ai/genkit';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+type ActionLoadingState = {
+    [key: string]: boolean;
+};
 
 export default function ContentCreatorPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState<ActionLoadingState>({});
+
     const [promptText, setPromptText] = useState('');
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+    const [style, setStyle] = useState('persuasif');
     const [generatedContent, setGeneratedContent] = useState('');
+    
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const editorRef = useRef<HTMLDivElement>(null);
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -34,7 +45,7 @@ export default function ContentCreatorPage() {
             reader.readAsDataURL(file);
         }
     };
-
+    
     const handleGenerate = async () => {
         if (!promptText && !uploadedImage) {
             toast({ variant: "destructive", title: "Input Kosong", description: "Mohon masukkan deskripsi atau unggah gambar." });
@@ -43,25 +54,68 @@ export default function ContentCreatorPage() {
         setIsLoading(true);
         setGeneratedContent('');
         
-        // Simulate AI generation
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            const result = await generateCreativeContent({
+                text: promptText,
+                imageDataUri: uploadedImage,
+                style,
+            });
+            if (result.content) {
+                setGeneratedContent(result.content);
+                if (editorRef.current) editorRef.current.innerHTML = result.content;
+                toast({ title: "Konten Berhasil Dibuat!", description: "AI telah selesai menulis. Anda bisa menyempurnakannya." });
+            } else {
+                 throw new Error("AI tidak memberikan konten.");
+            }
+        } catch(error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Gagal Membuat Konten', description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const runAction = async (actionName: 'lengthen' | 'shorten' | 'headlines', actionFn: (input: any) => Promise<any>) => {
+        const currentContent = editorRef.current?.innerHTML || '';
+        if (!currentContent.trim()) {
+            toast({ variant: "destructive", title: "Konten Kosong", description: "Tidak ada konten untuk diproses." });
+            return;
+        }
 
-        const exampleContent = `
-            <h2>✨ Hadirkan Keajaiban di Setiap Gigitan: Donat Pelangi Ceria! ✨</h2>
-            <p>Bosan dengan yang biasa? Saatnya mencoba sensasi rasa dan warna dari Donat Pelangi kami! Dibuat dengan adonan lembut premium dan topping glasir manis yang meleleh di mulut, setiap gigitan adalah petualangan baru.</p>
-            <p><strong>Kenapa harus Donat Pelangi?</strong></p>
-            <ul>
-                <li><strong>Instagrammable Banget:</strong> Warna-warni ceria yang siap menghiasi feed media sosialmu.</li>
-                <li><strong>Rasa Juara:</strong> Bukan cuma cantik, rasanya juga bikin nagih!</li>
-                <li><strong>Fresh from the Oven:</strong> Dibuat setiap hari untuk menjamin kualitas terbaik.</li>
-            </ul>
-            <p>Sempurna untuk menemani pagimu, jadi cemilan sore, atau hadiah spesial untuk orang tersayang. Yuk, warnai harimu! 🌈</p>
-            <p>#DonatPelangi #DonatEnak #CemilanHits #KulinerViral #JajananKekinian</p>
-        `;
-        setGeneratedContent(exampleContent);
-        
-        setIsLoading(false);
-        toast({ title: "Konten Berhasil Dibuat!", description: "AI telah selesai menulis. Anda bisa menyempurnakannya." });
+        setActionLoading(prev => ({...prev, [actionName]: true}));
+        try {
+            const result = await actionFn({ content: currentContent });
+            if (actionName === 'headlines') {
+                 toast({
+                    title: 'Judul Alternatif Dibuat',
+                    description: (
+                    <ul className="mt-2 w-full rounded-md bg-secondary p-4">
+                        {result.headlines.map((h: string, i: number) => <li key={i} className="mb-1">💡 {h}</li>)}
+                    </ul>
+                    ),
+                    duration: 10000,
+                 });
+
+            } else if (result.content) {
+                setGeneratedContent(result.content);
+                if (editorRef.current) editorRef.current.innerHTML = result.content;
+                toast({ title: "Konten Berhasil Diperbarui!" });
+            } else {
+                throw new Error("AI tidak memberikan respons yang valid.");
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: `Gagal ${actionName}`, description: (error as Error).message });
+        } finally {
+             setActionLoading(prev => ({...prev, [actionName]: false}));
+        }
+    }
+    
+    const copyContent = () => {
+        const content = editorRef.current?.innerHTML || '';
+        if(content) {
+            navigator.clipboard.writeText(content);
+            toast({ title: "Konten Disalin!" });
+        }
     };
 
     return (
@@ -106,7 +160,7 @@ export default function ContentCreatorPage() {
                                  <Separator />
                                 <div className="space-y-2">
                                     <Label htmlFor="style-select">Gaya Bahasa</Label>
-                                    <Select defaultValue="persuasif">
+                                    <Select value={style} onValueChange={setStyle}>
                                         <SelectTrigger id="style-select">
                                             <SelectValue placeholder="Pilih gaya bahasa" />
                                         </SelectTrigger>
@@ -130,7 +184,7 @@ export default function ContentCreatorPage() {
                     <div className="lg:col-span-5 xl:col-span-6">
                          <Card className="shadow-lg min-h-[70vh]">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Bot /> Hasil AI</CardTitle>
+                                <CardTitle className="flex items-center gap-2">Hasil AI</CardTitle>
                                 <CardDescription>Konten yang dihasilkan akan muncul di sini. Anda bisa mengeditnya langsung.</CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -142,6 +196,7 @@ export default function ContentCreatorPage() {
                                     </div>
                                 ) : (
                                      <div
+                                        ref={editorRef}
                                         contentEditable={true}
                                         suppressContentEditableWarning={true}
                                         className="prose dark:prose-invert max-w-none min-h-[400px] rounded-md border p-4 focus:outline-none focus:ring-2 focus:ring-primary bg-background"
@@ -160,22 +215,22 @@ export default function ContentCreatorPage() {
                                 <CardDescription>Gunakan alat bantu AI untuk menyempurnakan konten.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
+                                <Button variant="outline" className="w-full justify-start" onClick={copyContent} disabled={!generatedContent || isLoading}>
                                     <Copy className="mr-2"/> Salin Konten
                                 </Button>
                                 <Separator />
-                                <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
-                                    <ChevronsRight className="mr-2"/> Perpanjang Teks
+                                <Button variant="outline" className="w-full justify-start" onClick={() => runAction('lengthen', lengthenArticle)} disabled={!generatedContent || isLoading || actionLoading.lengthen}>
+                                    {actionLoading.lengthen ? <Loader2 className="mr-2 animate-spin"/> : <ChevronsRight className="mr-2"/>} Perpanjang Teks
                                 </Button>
-                                <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
-                                    <ChevronRight className="mr-2"/> Ringkas Teks
+                                <Button variant="outline" className="w-full justify-start" onClick={() => runAction('shorten', shortenArticle)} disabled={!generatedContent || isLoading || actionLoading.shorten}>
+                                     {actionLoading.shorten ? <Loader2 className="mr-2 animate-spin"/> : <ChevronRight className="mr-2"/>} Ringkas Teks
                                 </Button>
                                  <Separator />
-                                <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
-                                    <Languages className="mr-2"/> Terjemahkan
+                                <Button variant="outline" className="w-full justify-start" onClick={() => runAction('headlines', generateHeadlines)} disabled={!generatedContent || isLoading || actionLoading.headlines}>
+                                     {actionLoading.headlines ? <Loader2 className="mr-2 animate-spin"/> : <BrainCircuit className="mr-2"/>} Buat Judul/Slogan
                                 </Button>
                                 <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
-                                    <BrainCircuit className="mr-2"/> Buat Judul/Slogan
+                                    <Languages className="mr-2"/> Terjemahkan
                                 </Button>
                                 <Button variant="outline" className="w-full justify-start" disabled={!generatedContent || isLoading}>
                                     <Mic className="mr-2"/> Ubah Jadi Naskah Video

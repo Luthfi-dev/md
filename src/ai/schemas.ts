@@ -56,3 +56,30 @@ export const SeoMetaOutputSchema = z.object({
   title: z.string().describe('A catchy, SEO-friendly meta title, around 60 characters.'),
   description: z.string().describe('A compelling meta description, around 155-160 characters.'),
 });
+
+// --- Project Estimator Schemas ---
+export const ProjectFeatureInputSchema = z.object({
+  projectName: z.string().describe('The overall name or type of the project, e.g., "Aplikasi Toko Online" atau "Jasa Desain Logo".'),
+  featureDescription: z.string().describe('The specific feature or work item to be estimated, e.g., "Sistem Keranjang Belanja" atau "Revisi desain 3 kali".'),
+});
+export type ProjectFeatureInput = z.infer<typeof ProjectFeatureInputSchema>;
+
+export const ProjectFeatureOutputSchema = z.object({
+  priceMin: z.number().describe('The estimated minimum price for this feature in Indonesian Rupiah (IDR).'),
+  priceMax: z.number().describe('The estimated maximum price for this feature in Indonesian Rupiah (IDR).'),
+  justification: z.string().describe('A brief, one-sentence justification for the price range, explaining the complexity.'),
+});
+export type ProjectFeatureOutput = z.infer<typeof ProjectFeatureOutputSchema>;
+
+// --- File Converter Schemas ---
+export const HtmlToWordInputSchema = z.object({
+  htmlContent: z.string().describe("An HTML string to convert."),
+  filename: z.string().describe('The desired name of the file.'),
+});
+export type HtmlToWordInput = z.infer<typeof HtmlToWordInputSchema>;
+
+export const HtmlToWordOutputSchema = z.object({
+  docxDataUri: z.string().optional().describe('The content of the document as a DOCX data uri.'),
+  error: z.string().optional(),
+});
+export type HtmlToWordOutput = z.infer<typeof HtmlToWordOutputSchema>;

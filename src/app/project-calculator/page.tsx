@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Sparkles, Trash2, LogIn, BrainCircuit, List, Save } from 'lucide-react';
-import { estimateProjectFeature } from '@/ai/flows/project-estimator';
+import { estimateProjectFeature } from '@/ai/genkit';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';

@@ -23,14 +23,18 @@ import {
   type HtmlToWordOutput,
   type ChatMessage,
   LengthenArticleInputSchema,
-  LengthenArticleOutputSchema
+  LengthenArticleOutputSchema,
+  ProjectFeatureInputSchema,
+  ProjectFeatureOutputSchema,
+  type ProjectFeatureInput,
+  type ProjectFeatureOutput,
 } from './schemas';
 import htmlToDocx from 'html-to-docx';
 
 
-// Initialize and EXPORT the shared AI instance.
-// This is the single source of truth for Genkit configuration.
-export const ai = genkit({
+// Initialize the shared AI instance.
+// This is NOT exported, it's used internally by flows defined in this file.
+const ai = genkit({
   plugins: [
     googleAI(),
   ],
@@ -39,8 +43,6 @@ export const ai = genkit({
 
 // --------------------------------------------------------------------------
 //  FLOW DEFINITIONS
-//  These are defined using the internal 'ai' instance and are not exported.
-//  They are invoked by the exported server actions below.
 // --------------------------------------------------------------------------
 
 const chatFlow = ai.defineFlow(
@@ -89,7 +91,6 @@ const chatFlow = ai.defineFlow(
   }
 );
 
-
 const generateArticleOutlineFlow = ai.defineFlow(
   {
     name: 'generateArticleOutlineFlow',
@@ -112,7 +113,6 @@ Deskripsi: ${input.description}`;
     return output!;
   }
 );
-
 
 const generateArticleFromOutlineFlow = ai.defineFlow(
     {
@@ -141,7 +141,6 @@ ${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
     }
 );
 
-
 const lengthenArticleFlow = ai.defineFlow(
     {
         name: 'lengthenArticleFlow',
@@ -168,7 +167,6 @@ ${input.originalContent}
     }
 );
 
-
 const generateSeoMetaFlow = ai.defineFlow(
   {
     name: 'generateSeoMetaFlow',
@@ -191,7 +189,6 @@ const generateSeoMetaFlow = ai.defineFlow(
     return output!;
   }
 );
-
 
 const convertHtmlToWordFlow = ai.defineFlow(
   {
@@ -222,11 +219,46 @@ const convertHtmlToWordFlow = ai.defineFlow(
   }
 );
 
+const estimateProjectFeatureFlow = ai.defineFlow(
+  {
+    name: 'estimateProjectFeatureFlow',
+    inputSchema: ProjectFeatureInputSchema,
+    outputSchema: ProjectFeatureOutputSchema,
+  },
+  async (input) => {
+    const apiKeyRecord = await getApiKey();
+    
+    const prompt = `
+      Anda adalah seorang konsultan bisnis dan manajer proyek senior di Indonesia dengan pengalaman 15 tahun dalam berbagai industri (termasuk IT, desain, konstruksi, event, dll).
+      Tugas Anda adalah memberikan estimasi biaya yang realistis untuk sebuah pekerjaan, fitur, atau item dalam sebuah proyek.
+      Berikan harga dalam Rupiah (IDR).
+
+      Anda HARUS memberikan output dalam format JSON yang sesuai dengan skema yang diberikan.
+      - priceMin dan priceMax harus berupa angka (number), bukan string.
+      - justification harus berupa satu kalimat singkat yang menjelaskan kompleksitas dan alasan rentang harga tersebut.
+
+      Konteks Proyek/Ide: ${input.projectName}
+      Pekerjaan/Fitur yang akan diestimasi: "${input.featureDescription}"
+    `;
+
+    const { output } = await ai.generate({
+      prompt: prompt,
+      model: googleAI.model('gemini-1.5-flash-latest'),
+      output: { schema: ProjectFeatureOutputSchema },
+      plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+    });
+
+    if (!output) {
+      throw new Error('Gagal mendapatkan estimasi dari AI. Coba lagi.');
+    }
+
+    return output;
+  }
+);
+
 
 // --------------------------------------------------------------------------
 //  EXPORTED SERVER ACTIONS
-//  These are the functions that client components will import and call.
-//  They are simple wrappers that call the defined flows.
 // --------------------------------------------------------------------------
 
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
@@ -267,4 +299,8 @@ export async function generateSeoMeta(input: { articleContent: string }) {
 
 export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
   return await convertHtmlToWordFlow(input);
+}
+
+export async function estimateProjectFeature(input: ProjectFeatureInput): Promise<ProjectFeatureOutput> {
+  return await estimateProjectFeatureFlow(input);
 }

@@ -111,10 +111,10 @@ export default function ContentCreatorPage() {
     }
     
     const copyContent = () => {
-        const content = editorRef.current?.innerHTML || '';
+        const content = editorRef.current?.innerText || '';
         if(content) {
             navigator.clipboard.writeText(content);
-            toast({ title: "Konten Disalin!" });
+            toast({ title: "Teks Konten Disalin!" });
         }
     };
 
@@ -172,7 +172,7 @@ export default function ContentCreatorPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Button className="w-full" onClick={handleGenerate} disabled={isLoading}>
+                                <Button className="w-full" onClick={handleGenerate} disabled={isLoading || (!promptText && !uploadedImage)}>
                                     {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="mr-2"/>}
                                     Buat Konten
                                 </Button>
@@ -216,7 +216,7 @@ export default function ContentCreatorPage() {
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 <Button variant="outline" className="w-full justify-start" onClick={copyContent} disabled={!generatedContent || isLoading}>
-                                    <Copy className="mr-2"/> Salin Konten
+                                    <Copy className="mr-2"/> Salin Teks Konten
                                 </Button>
                                 <Separator />
                                 <Button variant="outline" className="w-full justify-start" onClick={() => runAction('lengthen', lengthenArticle)} disabled={!generatedContent || isLoading || actionLoading.lengthen}>

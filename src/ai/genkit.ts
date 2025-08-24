@@ -288,23 +288,27 @@ const generateCreativeContentFlow = ai.defineFlow(
   },
   async (input) => {
     const apiKeyRecord = await getApiKey();
-    const promptParts: (string | { media: { url: string } })[] = [
-      `Anda adalah seorang ahli pemasaran digital dan copywriter yang sangat kreatif. Tugas Anda adalah membuat konten pemasaran yang menarik dan menjual berdasarkan informasi yang diberikan.
-Gaya bahasa yang Anda gunakan harus **${input.style}**.
-Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> untuk judul, <p> untuk paragraf, dan <strong> atau <b> untuk penekanan. Jika relevan, sertakan juga beberapa hashtag yang sesuai.`,
-    ];
 
-    if (input.imageDataUri) {
-      promptParts.push({ media: { url: input.imageDataUri } });
-      promptParts.push('Gunakan gambar ini sebagai referensi utama. Jelaskan apa yang ada di gambar dan buatlah teks pemasaran yang relevan.');
+    const basePrompt = `Anda adalah seorang ahli pemasaran digital dan copywriter yang sangat kreatif. Tugas Anda adalah membuat konten pemasaran yang menarik dan menjual berdasarkan informasi yang diberikan.
+Gaya bahasa yang Anda gunakan harus **${input.style}**.
+Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> untuk judul, <p> untuk paragraf, dan <strong> atau <b> untuk penekanan. Jika relevan, sertakan juga beberapa hashtag yang sesuai.`;
+    
+    let fullPrompt: (string | { media: { url: string } })[] = [basePrompt];
+
+    if(input.imageDataUri) {
+        fullPrompt.push({ media: { url: input.imageDataUri } });
+    }
+
+    if (input.text) {
+        fullPrompt.push(`Berikut adalah deskripsi tambahan dari pengguna: "${input.text}"`);
     }
     
-    if (input.text) {
-        promptParts.push(`Berikut adalah deskripsi tambahan dari pengguna: "${input.text}"`);
+    if(input.imageDataUri) {
+         fullPrompt.push('Gunakan gambar ini sebagai referensi utama. Jelaskan apa yang ada di gambar dan buatlah teks pemasaran yang relevan.');
     }
 
     const { output } = await ai.generate({
-      prompt: promptParts,
+      prompt: fullPrompt,
       model: googleAI.model('gemini-1.5-flash-latest'),
       output: { schema: CreativeContentOutputSchema },
       plugins: [googleAI({ apiKey: apiKeyRecord.key })],
@@ -418,5 +422,7 @@ export async function generateCreativeContent(input: CreativeContentInput): Prom
 }
 
 export async function estimateProjectFeature(input: ProjectFeatureInput): Promise<ProjectFeatureOutput> {
+  const validationResult = ProjectFeatureInputSchema.safeParse(input);
+  if(!validationResult.success) throw new Error("Input untuk estimasi proyek tidak valid.");
   return await estimateProjectFeatureFlow(input);
 }

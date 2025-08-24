@@ -12,7 +12,7 @@ import {
     ChevronsRight, ChevronRight, PenLine, Languages, SlidersHorizontal
 } from 'lucide-react';
 import Image from 'next/image';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { generateCreativeContent, lengthenArticle, shortenArticle, generateHeadlines } from '@/ai/genkit';
@@ -172,7 +172,7 @@ export default function ContentCreatorPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Button className="w-full" onClick={handleGenerate} disabled={isLoading || (!promptText && !uploadedImage)}>
+                                <Button className="w-full" onClick={handleGenerate} disabled={isLoading || (!promptText.trim() && !uploadedImage)}>
                                     {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="mr-2"/>}
                                     Buat Konten
                                 </Button>

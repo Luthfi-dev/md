@@ -96,3 +96,66 @@ export async function POST(request: NextRequest) {
         if (connection) connection.release();
     }
 }
+
+// PUT (update) an existing project estimation
+export async function PUT(request: NextRequest) {
+    const user = await getAuthFromRequest(request);
+    if (!user) {
+        return NextResponse.json({ success: false, message: 'Tidak terotentikasi' }, { status: 401 });
+    }
+
+    let connection;
+    try {
+        const body = await request.json();
+        const validation = projectEstimationSchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json({ success: false, message: validation.error.errors.map(e => e.message).join(', ') }, { status: 400 });
+        }
+
+        const { uuid, title, features, totalMinPrice, totalMaxPrice } = validation.data;
+        
+        connection = await db.getConnection();
+        
+        // First, verify the project exists and belongs to the user
+        const [projectRows]:[RowDataPacket[], any] = await connection.execute(
+            'SELECT id FROM project_estimations WHERE uuid = ? AND user_id = ?', [uuid, user.id]
+        );
+
+        if (projectRows.length === 0) {
+            return NextResponse.json({ success: false, message: 'Proyek tidak ditemukan atau Anda tidak memiliki izin.' }, { status: 404 });
+        }
+        const projectId = projectRows[0].id;
+        
+        await connection.beginTransaction();
+
+        // Update the main project details
+        await connection.execute<ResultSetHeader>(
+            `UPDATE project_estimations SET title = ?, total_min_price = ?, total_max_price = ?
+             WHERE id = ?`,
+            [title, totalMinPrice, totalMaxPrice, projectId]
+        );
+        
+        // Sync features: delete old ones and insert the new set
+        await connection.execute<ResultSetHeader>('DELETE FROM project_features WHERE project_id = ?', [projectId]);
+        
+        if (features.length > 0) {
+            const featureValues = features.map(f => [projectId, f.description, f.priceMin, f.priceMax, f.justification]);
+            await connection.query(
+                `INSERT INTO project_features (project_id, description, price_min, price_max, justification) VALUES ?`,
+                [featureValues]
+            );
+        }
+
+        await connection.commit();
+
+        return NextResponse.json({ success: true, message: 'Estimasi proyek berhasil diperbarui.' });
+
+    } catch (error: any) {
+        if (connection) await connection.rollback();
+        console.error("UPDATE PROJECT ESTIMATION ERROR: ", error);
+        return NextResponse.json({ success: false, message: `Kesalahan server: ${error.message}` }, { status: 500 });
+    } finally {
+        if (connection) connection.release();
+    }
+}

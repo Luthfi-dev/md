@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft, Share2, Loader2, Edit } from "lucide-react";
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
@@ -31,7 +31,7 @@ export default function EstimationDetailPage() {
     const router = useRouter();
     const uuid = params.uuid as string;
     
-    const { isAuthenticated, isLoading: isAuthLoading, fetchWithAuth } = useAuth();
+    const { isAuthenticated, isLoading: isAuthLoading, fetchWithAuth, user } = useAuth();
     const { toast } = useToast();
     
     const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +41,6 @@ export default function EstimationDetailPage() {
         if (!isAuthenticated || !uuid) return;
         setIsLoading(true);
         try {
-            // This endpoint is public, but we use fetchWithAuth to ensure user is logged in to view their own projects this way
             const res = await fetchWithAuth(`/api/project-estimator/${uuid}`);
             if (!res.ok) {
                  const errorData = await res.json();
@@ -89,10 +88,16 @@ export default function EstimationDetailPage() {
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Kembali ke Daftar
                     </Button>
-                    <Button variant="outline" onClick={handleShare}>
-                        <Share2 className="mr-2 h-4 w-4" />
-                        Bagikan
-                    </Button>
+                    <div className="flex items-center gap-2">
+                         <Button variant="outline" onClick={() => router.push(`/project-calculator?id=${uuid}`)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                        </Button>
+                        <Button variant="secondary" onClick={handleShare}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Bagikan
+                        </Button>
+                    </div>
                 </div>
 
                 <Card className="shadow-lg">

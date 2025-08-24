@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, FormEvent } from 'react';
+import { useState, useRef, FormEvent, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Sparkles, Trash2, LogIn, BrainCircuit, List, Save } from 'lucide-react';
 import { estimateProjectFeature } from '@/ai/genkit';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Separator } from '@/components/ui/separator';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,14 +27,53 @@ interface Feature {
 
 const ProjectCalculatorContent = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const editId = searchParams.get('id');
+
     const { toast } = useToast();
-    const { fetchWithAuth } = useAuth();
+    const { user, fetchWithAuth } = useAuth();
     
-    const [projectTitle, setProjectTitle] = useState('Aplikasi Toko Online');
+    const [projectTitle, setProjectTitle] = useState('');
     const [features, setFeatures] = useState<Feature[]>([]);
     const [newFeatureName, setNewFeatureName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const featureInputRef = useRef<HTMLInputElement>(null);
+
+    const fetchProjectData = useCallback(async (uuid: string) => {
+        setIsLoadingData(true);
+        try {
+            const res = await fetchWithAuth(`/api/project-estimator/${uuid}`);
+            if (!res.ok) throw new Error("Gagal memuat data proyek untuk diedit.");
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message);
+            
+            const project = data.estimation;
+            setProjectTitle(project.title);
+            setFeatures(project.features.map((f: any, i: number) => ({
+                id: `feature_${Date.now()}_${i}`,
+                name: f.description,
+                priceMin: f.price_min,
+                priceMax: f.price_max,
+                justification: f.justification,
+                isEstimating: false,
+            })));
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Gagal Memuat', description: (e as Error).message });
+            router.push('/project-calculator');
+        } finally {
+            setIsLoadingData(false);
+        }
+    }, [fetchWithAuth, toast, router]);
+
+    useEffect(() => {
+        if (editId) {
+            fetchProjectData(editId);
+        } else {
+             setProjectTitle('Proyek Baru Tanpa Judul');
+             setIsLoadingData(false);
+        }
+    }, [editId, fetchProjectData]);
 
     const handleAddFeature = async (e: FormEvent) => {
         e.preventDefault();
@@ -89,7 +128,7 @@ const ProjectCalculatorContent = () => {
         setIsSaving(true);
         try {
             const payload = {
-                uuid: uuidv4(),
+                uuid: editId || uuidv4(),
                 title: projectTitle,
                 features: features.map(f => ({
                     description: f.name,
@@ -100,18 +139,19 @@ const ProjectCalculatorContent = () => {
                 totalMinPrice: totalMin,
                 totalMaxPrice: totalMax,
             };
-
-            const res = await fetchWithAuth('/api/project-estimator', {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
+            
+            const method = editId ? 'PUT' : 'POST';
+            const res = await fetchWithAuth('/api/project-estimator', { method, body: JSON.stringify(payload) });
 
             const data = await res.json();
             if (!data.success) throw new Error(data.message);
 
             toast({ title: 'Berhasil Disimpan!', description: 'Estimasi proyek Anda telah disimpan.'});
-            setFeatures([]);
-            setProjectTitle('');
+            
+            // If it was a new project, navigate to the list page. If editing, just show success.
+            if (!editId) {
+                router.push('/project-calculator/list');
+            }
 
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: (error as Error).message });
@@ -119,7 +159,10 @@ const ProjectCalculatorContent = () => {
             setIsSaving(false);
         }
     }
-
+    
+    if (isLoadingData) {
+        return <LoadingOverlay isLoading={true} message="Memuat data proyek..." />;
+    }
 
     return (
         <div className="container mx-auto px-4 py-8 pb-24">
@@ -200,7 +243,7 @@ const ProjectCalculatorContent = () => {
                                 </div>
                                 <Button onClick={handleSaveEstimation} disabled={isSaving || features.some(f => f.isEstimating)}>
                                     {isSaving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>}
-                                    Simpan Estimasi
+                                    {editId ? 'Perbarui Estimasi' : 'Simpan Estimasi'}
                                 </Button>
                             </div>
                         </>

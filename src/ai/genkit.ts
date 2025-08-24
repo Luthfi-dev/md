@@ -40,6 +40,10 @@ import {
   GenerateVideoScriptOutputSchema,
   type GenerateVideoScriptInput,
   type GenerateVideoScriptOutput,
+  AiRecommendationInputSchema,
+  AiRecommendationOutputSchema,
+  type AiRecommendationInput,
+  type AiRecommendationOutput,
 } from './schemas';
 import htmlToDocx from 'html-to-docx';
 
@@ -381,6 +385,43 @@ const convertHtmlToWordFlow = ai.defineFlow(
   }
 );
 
+const getAiRecommendationFlow = ai.defineFlow(
+  {
+    name: 'getAiRecommendationFlow',
+    inputSchema: AiRecommendationInputSchema,
+    outputSchema: AiRecommendationOutputSchema,
+  },
+  async (input) => {
+    const apiKeyRecord = await getApiKey();
+
+    const prompt = [
+        { text: "Anda adalah seorang konsultan ahli (seperti stylist, desainer interior, atau penasihat umum) yang sangat baik dalam mencocokkan barang. Tugas Anda adalah menganalisis satu 'Item Utama' dan beberapa 'Item Pilihan', lalu merekomendasikan satu pilihan terbaik yang paling cocok dengan item utama. Berikan juga ringkasan dan alasan yang logis untuk pilihan Anda." },
+        { text: "ITEM UTAMA (Referensi):" },
+        { media: { url: input.mainItem.dataUri } },
+        { text: "\n\nITEM PILIHAN (Pilih salah satu dari berikut ini):" }
+    ];
+
+    input.choices.forEach((choice, index) => {
+        prompt.push({ text: `\nPilihan ${index}:` });
+        prompt.push({ media: { url: choice.dataUri } });
+    });
+
+    prompt.push({ text: "\n\nAnalisis Anda harus mencakup:\n1. Pilihan terbaik (berdasarkan indeks, mulai dari 0).\n2. Ringkasan singkat (misal: 'Kombinasi Klasik & Modern').\n3. Alasan yang jelas dan logis, mempertimbangkan warna, gaya, acara, atau kriteria relevan lainnya." });
+
+    const { output } = await ai.generate({
+      prompt: prompt,
+      model: googleAI.model('gemini-1.5-flash-latest'),
+      output: { schema: AiRecommendationOutputSchema },
+      plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+    });
+
+    if (!output) {
+      throw new Error("AI tidak dapat memberikan rekomendasi. Coba lagi.");
+    }
+    return output;
+  }
+);
+
 
 // --------------------------------------------------------------------------
 //  EXPORTED SERVER ACTIONS
@@ -454,4 +495,12 @@ export async function generateVideoScript(input: GenerateVideoScriptInput): Prom
 
 export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
   return await convertHtmlToWordFlow(input);
+}
+
+export async function getAiRecommendation(input: AiRecommendationInput): Promise<AiRecommendationOutput> {
+    const validationResult = AiRecommendationInputSchema.safeParse(input);
+    if (!validationResult.success) {
+      throw new Error(`Input untuk rekomendasi AI tidak valid: ${validationResult.error.message}`);
+    }
+    return getAiRecommendationFlow(input);
 }

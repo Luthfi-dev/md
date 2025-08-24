@@ -40,6 +40,16 @@
     "isNew": true,
     "order": 3
   },
+   {
+    "id": "app_recommender",
+    "title": "Rekomendasi AI",
+    "description": "Dapatkan rekomendasi ahli untuk mencocokkan item apa pun.",
+    "href": "/recommender",
+    "icon": "Lightbulb",
+    "isPopular": true,
+    "isNew": true,
+    "order": 4
+  },
   {
     "id": "app_converter",
     "title": "Konversi File",
@@ -48,7 +58,7 @@
     "icon": "FileText",
     "isPopular": true,
     "isNew": false,
-    "order": 4
+    "order": 5
   },
   {
     "id": "app_scanner",
@@ -58,7 +68,7 @@
     "icon": "ScanLine",
     "isPopular": true,
     "isNew": false,
-    "order": 5
+    "order": 6
   },
   {
     "id": "app_unit_converter",
@@ -68,7 +78,7 @@
     "icon": "BookOpen",
     "isPopular": false,
     "isNew": false,
-    "order": 6
+    "order": 7
   },
   {
     "id": "app_calculator",
@@ -78,7 +88,7 @@
     "icon": "Calculator",
     "isPopular": true,
     "isNew": false,
-    "order": 7
+    "order": 8
   },
   {
     "id": "app_surat_generator",
@@ -88,7 +98,7 @@
     "icon": "FileSignature",
     "isPopular": true,
     "isNew": true,
-    "order": 8
+    "order": 9
   },
   {
     "id": "app_color_generator",
@@ -98,7 +108,7 @@
     "icon": "Palette",
     "isPopular": false,
     "isNew": true,
-    "order": 9
+    "order": 10
   },
   {
     "id": "app_stopwatch",
@@ -108,7 +118,7 @@
     "icon": "Timer",
     "isPopular": false,
     "isNew": false,
-    "order": 10
+    "order": 11
   },
   {
     "id": "app_all_apps",
@@ -118,6 +128,6 @@
     "icon": "Grid3x3",
     "isPopular": false,
     "isNew": false,
-    "order": 11
+    "order": 12
   }
 ]

@@ -143,3 +143,21 @@ export const GenerateVideoScriptOutputSchema = z.object({
     videoScript: z.string().describe('The generated video script in a structured HTML format.'),
 });
 export type GenerateVideoScriptOutput = z.infer<typeof GenerateVideoScriptOutputSchema>;
+
+// --- AI Recommender Schemas ---
+const ImageInputSchema = z.object({
+  dataUri: z.string().describe('A data URI of an image, including MIME type (e.g., "data:image/jpeg;base64,...").'),
+});
+
+export const AiRecommendationInputSchema = z.object({
+  mainItem: ImageInputSchema,
+  choices: z.array(ImageInputSchema).describe("An array of choice items to compare against the main item."),
+});
+export type AiRecommendationInput = z.infer<typeof AiRecommendationInputSchema>;
+
+export const AiRecommendationOutputSchema = z.object({
+  bestChoiceIndex: z.number().int().describe("The 0-based index of the recommended item from the 'choices' array."),
+  summary: z.string().describe("A very short, catchy summary of the recommendation (e.g., 'Kombinasi Klasik & Modern')."),
+  reasoning: z.string().describe("A detailed but concise explanation of why this choice is the best match."),
+});
+export type AiRecommendationOutput = z.infer<typeof AiRecommendationOutputSchema>;

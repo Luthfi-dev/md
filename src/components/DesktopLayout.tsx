@@ -12,7 +12,7 @@ import {
   SidebarContent,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, Compass, MessageSquare, Notebook, User, BrainCircuit } from 'lucide-react';
+import { Home, Compass, MessageSquare, Notebook, User, BrainCircuit, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,7 @@ const navItems = [
   { href: '/', label: 'Beranda', icon: Home },
   { href: '/explore', label: 'Jelajah', icon: Compass },
   { href: '/messages', label: 'Asisten AI', icon: MessageSquare },
+  { href: '/content-creator', label: 'AI Kreator Konten', icon: Sparkles },
   { href: '/notebook', label: 'Catatan', icon: Notebook },
   { href: '/project-calculator', label: 'Kalkulator Proyek', icon: BrainCircuit },
 ];

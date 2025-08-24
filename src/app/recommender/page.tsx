@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from '@/hooks/use-toast';
 import { 
-    Loader2, Upload, Trash2, Lightbulb, Sparkles, HelpCircle, X
+    Loader2, Upload, Trash2, Lightbulb, Sparkles, HelpCircle, X, Plus
 } from 'lucide-react';
 import Image from 'next/image';
 import { getAiRecommendation } from '@/ai/genkit';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 
 interface UploadedImage {
     id: string;
@@ -197,4 +198,3 @@ export default function RecommenderPage() {
         </div>
     );
 }
-

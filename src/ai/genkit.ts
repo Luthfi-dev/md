@@ -293,15 +293,17 @@ const generateCreativeContentFlow = ai.defineFlow(
 Gaya bahasa yang Anda gunakan harus **${input.style}**.
 Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> untuk judul, <p> untuk paragraf, dan <strong> atau <b> untuk penekanan. Jika relevan, sertakan juga beberapa hashtag yang sesuai.`;
     
-    let promptParts: (string | { media: { url: string } })[] = [basePrompt];
+    // Dynamically construct the prompt parts based on input
+    const promptParts = [];
+    promptParts.push({ text: basePrompt });
 
-    if (input.text) {
-        promptParts.push(`\n\nBerikut adalah deskripsi tambahan dari pengguna: "${input.text}"`);
+    if (input.imageDataUri) {
+        promptParts.push({ media: { url: input.imageDataUri } });
+        promptParts.push({ text: '\nGunakan gambar ini sebagai referensi utama. Jelaskan apa yang ada di gambar dan buatlah teks pemasaran yang relevan.' });
     }
 
-    if(input.imageDataUri) {
-        promptParts.push({ media: { url: input.imageDataUri } });
-        promptParts.push('\nGunakan gambar ini sebagai referensi utama. Jelaskan apa yang ada di gambar dan buatlah teks pemasaran yang relevan.');
+    if (input.text) {
+        promptParts.push({ text: `\n\nBerikut adalah deskripsi tambahan dari pengguna: "${input.text}"` });
     }
 
     const { output } = await ai.generate({
@@ -317,6 +319,7 @@ Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> unt
     return output;
   }
 );
+
 
 const estimateProjectFeatureFlow = ai.defineFlow(
   {

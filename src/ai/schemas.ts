@@ -108,9 +108,9 @@ export type HtmlToWordOutput = z.infer<typeof HtmlToWordOutputSchema>;
 
 // --- Creative Content Schemas ---
 export const CreativeContentInputSchema = z.object({
-  text: z.string().optional().describe('Deskripsi teks dari produk atau ide.'),
-  imageDataUri: z.string().optional().describe('Gambar referensi sebagai data URI.'),
-  style: z.string().describe('Gaya bahasa yang diinginkan (e.g., profesional, santai).'),
+  text: z.string().optional(),
+  imageDataUri: z.string().optional().nullable(),
+  style: z.string(),
 });
 export type CreativeContentInput = z.infer<typeof CreativeContentInputSchema>;
 

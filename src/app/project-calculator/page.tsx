@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, FormEvent, useEffect } from 'react';
+import { useState, useRef, FormEvent } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,18 +125,16 @@ const ProjectCalculatorContent = () => {
         <div className="container mx-auto px-4 py-8 pb-24">
             <Card className="max-w-3xl mx-auto shadow-2xl">
                 <CardHeader>
-                   <div className="flex justify-between items-start">
-                        <div className='text-center mx-auto'>
-                            <Sparkles className="w-12 h-12 mx-auto text-primary" />
-                            <CardTitle className="text-3xl font-headline mt-2">Kalkulator Estimasi Proyek</CardTitle>
-                            <CardDescription>Dapatkan estimasi biaya untuk ide atau proyek Anda dengan cepat menggunakan AI.</CardDescription>
-                        </div>
-                        <Button variant="outline" size="icon" onClick={() => router.push('/project-calculator/list')}>
-                            <List />
-                        </Button>
+                   <div className='text-center mx-auto'>
+                        <Sparkles className="w-12 h-12 mx-auto text-primary" />
+                        <CardTitle className="text-3xl font-headline mt-2">Kalkulator Estimasi Proyek</CardTitle>
+                        <CardDescription>Dapatkan estimasi biaya untuk ide atau proyek Anda dengan cepat menggunakan AI.</CardDescription>
                    </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                     <Button variant="outline" onClick={() => router.push('/project-calculator/list')} className="w-full">
+                        <List className="mr-2"/> Lihat Proyek Tersimpan
+                    </Button>
                     <div className="space-y-2">
                         <Label htmlFor="project-title" className="text-lg font-semibold">Nama Proyek atau Ide</Label>
                         <Input 

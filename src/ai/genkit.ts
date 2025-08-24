@@ -32,10 +32,6 @@ import {
   CreativeContentOutputSchema,
   type CreativeContentInput,
   type CreativeContentOutput,
-  ProjectFeatureInputSchema,
-  ProjectFeatureOutputSchema,
-  type ProjectFeatureInput,
-  type ProjectFeatureOutput,
   TranslateContentInputSchema,
   TranslateContentOutputSchema,
   type TranslateContentInput,
@@ -165,7 +161,7 @@ const lengthenArticleFlow = ai.defineFlow(
     },
     async (input) => {
         const apiKeyRecord = await getApiKey();
-        const prompt = `Anda adalah seorang editor dan penulis konten profesional. Tugas Anda adalah memperpanjang artikel berikut tanpa mengubah gaya bahasa dan pesan intinya. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam pada setiap bagian. Pertahankan format HTML yang ada. Targetkan penambahan sekitar 50-75% dari panjang asli.
+        const prompt = `Anda adalah seorang editor dan penulis konten profesional. Tugas Anda adalah memperpanjang artikel berikut tanpa mengubah gaya bahasa dan pesan intinya. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam pada setiap bagian. Pertahankan format HTML yang ada.
 
 Artikel Asli:
 ---
@@ -259,35 +255,6 @@ const generateSeoMetaFlow = ai.defineFlow(
   }
 );
 
-const convertHtmlToWordFlow = ai.defineFlow(
-  {
-    name: 'convertHtmlToWordFlow',
-    inputSchema: HtmlToWordInputSchema,
-    outputSchema: HtmlToWordOutputSchema,
-  },
-  async (input) => {
-    try {
-        const docxBuffer = await htmlToDocx(input.htmlContent, undefined, {
-            table: { row: { cantSplit: true } },
-            footer: true,
-            pageNumber: true,
-             pageSize: {
-                width: 11906,
-                height: 16838,
-            },
-        });
-
-        const docxDataUri = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${(docxBuffer as Buffer).toString('base64')}`;
-
-        return { docxDataUri };
-
-    } catch (e: any) {
-        console.error("Error in convertHtmlToWordFlow:", e);
-        return { error: e.message || 'An unknown error occurred during conversion.' };
-    }
-  }
-);
-
 const generateCreativeContentFlow = ai.defineFlow(
   {
     name: 'generateCreativeContentFlow',
@@ -296,7 +263,6 @@ const generateCreativeContentFlow = ai.defineFlow(
   },
   async (input) => {
     const apiKeyRecord = await getApiKey();
-
     const promptParts = [];
     
     const basePrompt = `Anda adalah seorang ahli pemasaran digital dan copywriter yang sangat kreatif. Tugas Anda adalah membuat konten pemasaran yang menarik dan menjual berdasarkan informasi yang diberikan.
@@ -313,7 +279,7 @@ Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> unt
     if (input.text) {
         promptParts.push({ text: `\n\nBerikut adalah deskripsi tambahan dari pengguna: "${input.text}"` });
     }
-
+    
     const { output } = await ai.generate({
       prompt: promptParts,
       model: googleAI.model('gemini-1.5-flash-latest'),
@@ -386,6 +352,35 @@ ${input.content}
   }
 );
 
+const convertHtmlToWordFlow = ai.defineFlow(
+  {
+    name: 'convertHtmlToWordFlow',
+    inputSchema: HtmlToWordInputSchema,
+    outputSchema: HtmlToWordOutputSchema,
+  },
+  async (input) => {
+    try {
+        const docxBuffer = await htmlToDocx(input.htmlContent, undefined, {
+            table: { row: { cantSplit: true } },
+            footer: true,
+            pageNumber: true,
+             pageSize: {
+                width: 11906,
+                height: 16838,
+            },
+        });
+
+        const docxDataUri = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${(docxBuffer as Buffer).toString('base64')}`;
+
+        return { docxDataUri };
+
+    } catch (e: any) {
+        console.error("Error in convertHtmlToWordFlow:", e);
+        return { error: e.message || 'An unknown error occurred during conversion.' };
+    }
+  }
+);
+
 
 // --------------------------------------------------------------------------
 //  EXPORTED SERVER ACTIONS
@@ -439,10 +434,6 @@ export async function generateSeoMeta(input: { articleContent: string }) {
     return generateSeoMetaFlow(input);
 }
 
-export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
-  return await convertHtmlToWordFlow(input);
-}
-
 export async function generateCreativeContent(input: CreativeContentInput): Promise<CreativeContentOutput> {
   const validationResult = CreativeContentInputSchema.safeParse(input);
   if (!validationResult.success) throw new Error("Input untuk konten kreatif tidak valid.");
@@ -459,4 +450,8 @@ export async function generateVideoScript(input: GenerateVideoScriptInput): Prom
     const validationResult = GenerateVideoScriptInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk naskah video tidak valid.");
     return generateVideoScriptFlow(input);
+}
+
+export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
+  return await convertHtmlToWordFlow(input);
 }

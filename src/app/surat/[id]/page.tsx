@@ -2,16 +2,17 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileDown, FileText, Edit, AlertTriangle } from 'lucide-react';
+import { convertHtmlToWord } from '@/ai/genkit';
 import { saveAs } from 'file-saver';
 import { type TemplateDataToShare } from '@/types/surat';
-import { convertHtmlToWord } from '@/ai/flows/file-converter';
+
 
 const LOCAL_STORAGE_KEY_SURAT_COUNTER = 'suratCounter_v1';
 
@@ -207,7 +208,16 @@ export default function FillSuratPage() {
                         </CardContent>
                     </Card>
                 </div>
+
             </div>
         </div>
     );
 }
+
+// Fallback component for when the ID is just "share" from the old URL structure
+// This is to maintain compatibility with any old links that might be out there.
+const SharePageFallback = () => {
+    return <FillSuratPage />;
+}
+
+export { SharePageFallback as Page };

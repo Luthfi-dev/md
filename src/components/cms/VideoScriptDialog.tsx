@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileDown, Loader2 } from "lucide-react";
-import { convertHtmlToWord } from "@/ai/flows/file-converter";
+import { convertHtmlToWord } from "@/ai/genkit";
 import { useToast } from "@/hooks/use-toast";
 import { saveAs } from 'file-saver';
 import { useState } from "react";

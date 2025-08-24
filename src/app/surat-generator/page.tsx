@@ -244,7 +244,7 @@ export default function SuratGeneratorPage() {
     };
 
     const handleShare = () => {
-        if (!template) return;
+         if (!template) return;
         
         if (checkProFeatures(template.content)) return;
         

@@ -13,6 +13,7 @@ import { getAiRecommendation } from '@/ai/genkit';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface UploadedImage {
     id: string;
@@ -93,6 +94,26 @@ export default function RecommenderPage() {
 
     return (
         <div className="container mx-auto px-4 py-8 pb-24">
+             <style jsx>{`
+                @keyframes pulse-border {
+                  0% {
+                    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.7);
+                    transform: scale(1.02);
+                  }
+                  70% {
+                    box-shadow: 0 0 0 10px hsl(var(--primary) / 0);
+                     transform: scale(1.02);
+                  }
+                  100% {
+                    box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+                     transform: scale(1.02);
+                  }
+                }
+                .recommended-choice {
+                  animation: pulse-border 2s infinite;
+                  border: 2px solid hsl(var(--primary));
+                }
+            `}</style>
             <Card className="max-w-4xl mx-auto shadow-2xl">
                 <CardHeader className="text-center">
                     <Lightbulb className="w-12 h-12 mx-auto text-primary" />
@@ -181,7 +202,10 @@ export default function RecommenderPage() {
                             <AlertDescription className="mt-4 space-y-4">
                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
                                     {choiceItems.map((item, index) => (
-                                         <div key={item.id} className={`relative aspect-square p-2 rounded-lg transition-all duration-300 ${index === recommendation.bestChoiceIndex ? 'bg-primary/20 ring-2 ring-primary' : 'bg-secondary/30'}`}>
+                                         <div key={item.id} className={cn(
+                                            "relative aspect-square p-2 rounded-lg transition-all duration-300 bg-secondary/30",
+                                            index === recommendation.bestChoiceIndex && 'recommended-choice'
+                                         )}>
                                             <Image src={item.dataUri} alt={`Pilihan ${index + 1}`} layout="fill" className="object-contain" />
                                         </div>
                                     ))}

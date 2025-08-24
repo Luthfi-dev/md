@@ -169,7 +169,7 @@ const lengthenArticleFlow = ai.defineFlow(
 
 Artikel Asli:
 ---
-${input.content}
+${input.originalContent}
 ---
 `;
 
@@ -395,7 +395,7 @@ const getAiRecommendationFlow = ai.defineFlow(
     const apiKeyRecord = await getApiKey();
 
     const prompt = [
-        { text: "Anda adalah seorang konsultan ahli (seperti stylist, desainer interior, atau penasihat umum) yang sangat baik dalam mencocokkan barang. Tugas Anda adalah menganalisis satu 'Item Utama' dan beberapa 'Item Pilihan', lalu merekomendasikan satu pilihan terbaik yang paling cocok dengan item utama. Berikan juga ringkasan dan alasan yang logis untuk pilihan Anda." },
+        { text: "Anda adalah seorang konsultan ahli (seperti stylist, desainer interior, atau penasihat umum) yang sangat baik dalam mencocokkan barang. Tugas Anda adalah menganalisis satu 'Item Utama' dan beberapa 'Item Pilihan', lalu merekomendasikan satu pilihan terbaik yang paling cocok dengan item utama. Berikan juga ringkasan dan alasan yang logis untuk pilihan Anda dalam BAHASA INDONESIA." },
         { text: "ITEM UTAMA (Referensi):" },
         { media: { url: input.mainItem.dataUri } },
         { text: "\n\nITEM PILIHAN (Pilih salah satu dari berikut ini):" }
@@ -406,7 +406,7 @@ const getAiRecommendationFlow = ai.defineFlow(
         prompt.push({ media: { url: choice.dataUri } });
     });
 
-    prompt.push({ text: "\n\nAnalisis Anda harus mencakup:\n1. Pilihan terbaik (berdasarkan indeks, mulai dari 0).\n2. Ringkasan singkat (misal: 'Kombinasi Klasik & Modern').\n3. Alasan yang jelas dan logis, mempertimbangkan warna, gaya, acara, atau kriteria relevan lainnya." });
+    prompt.push({ text: "\n\nAnalisis Anda HARUS dalam Bahasa Indonesia dan mencakup:\n1. Pilihan terbaik (berdasarkan indeks, mulai dari 0).\n2. Ringkasan singkat (misal: 'Kombinasi Klasik & Modern').\n3. Alasan yang jelas dan logis, mempertimbangkan warna, gaya, acara, atau kriteria relevan lainnya." });
 
     const { output } = await ai.generate({
       prompt: prompt,
@@ -451,7 +451,7 @@ export async function generateArticleFromOutline(input: {
     return generateArticleFromOutlineFlow(input);
 }
 
-export async function lengthenArticle(input: { content: string }) {
+export async function lengthenArticle(input: { originalContent: string }) {
     const validationResult = LengthenArticleInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk perpanjang artikel tidak valid.");
     return lengthenArticleFlow(input);

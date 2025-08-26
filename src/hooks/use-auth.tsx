@@ -1,4 +1,3 @@
-
 'use client';
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
@@ -49,6 +48,9 @@ const getAccessTokenClient = () => {
     return accessToken;
 };
 
+// Define the key for guest reward state
+const GUEST_STORAGE_KEY = 'guestRewardState_v3';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
@@ -80,20 +82,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = useCallback(async () => {
         setIsLoading(true);
         const currentRole = user?.role;
-        setAccessToken(null); // Clear client-side state
+        
+        // Immediately clear client state
+        setAccessToken(null); 
+        setUser(null);
+        setIsAuthenticated(false);
+        
         try {
             await fetch('/api/auth/logout', { 
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ role: currentRole })
+              body: JSON.stringify({ role: currentRole }) // Send role to help clear correct cookie
             });
         } catch (error) {
             console.error("Logout fetch failed:", error);
         } finally {
             setIsLoading(false);
+            // Force a full page reload to the login page to ensure all state is reset
             window.location.href = '/login'; 
         }
-    }, [user, setAccessToken]);
+    }, [user?.role, setAccessToken]);
 
     const silentRefresh = useCallback(async (): Promise<string | null> => {
         try {
@@ -108,26 +116,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Refresh token invalid or expired');
         } catch (error) {
             console.warn('Silent refresh failed:', error);
-            // If refresh fails, it means no valid session exists. Clear everything.
-            setAccessToken(null);
+            await logout(); // Logout if silent refresh fails
             return null;
         }
-    }, [setAccessToken]);
+    }, [setAccessToken, logout]);
     
     // Auth Check Effect
     useEffect(() => {
         const initializeAuth = async () => {
             const token = getAccessTokenClient();
             if (token && !isTokenExpired(token)) {
-                // If we have a valid access token, we are authenticated.
                 setAccessToken(token);
             } else {
-                 // If no valid access token, check for a refresh token and try to refresh.
                  const hasAnyRefreshToken = getCookie(getRefreshTokenName(1)) || getCookie(getRefreshTokenName(2)) || getCookie(getRefreshTokenName(3));
                  if(hasAnyRefreshToken) {
                     await silentRefresh();
                  } else {
-                    // No access token, no refresh token. Definitely not authenticated.
                     setIsAuthenticated(false);
                     setUser(null);
                  }
@@ -145,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!token) {
-            await logout();
+            // No need to call logout() here, silentRefresh already does it on failure
             throw new Error('Sesi berakhir. Silakan login kembali.');
         }
 
@@ -158,7 +162,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await fetch(url, { ...options, headers });
 
         if (response.status === 401) {
+             // Token might have been revoked on the server between refresh and this call
              await logout();
+             throw new Error('Akses ditolak oleh server. Sesi Anda mungkin telah berakhir.');
         }
 
         return response;
@@ -176,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
                 if (typeof window !== 'undefined') {
-                    localStorage.removeItem('guestRewardState_v3');
+                    localStorage.removeItem(GUEST_STORAGE_KEY);
                 }
             }
             return data;

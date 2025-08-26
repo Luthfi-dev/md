@@ -11,14 +11,12 @@ const publicPaths = [
     '/surat', '/surat/share-fallback', '/surat/shared-template', '/surat-generator',
     '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf',
     '/account/forgot-password', '/account/reset-password',
-    '/blog', '/messages' // <-- Moved from authPaths to publicPaths
+    '/blog', '/messages', '/project-calculator' 
 ];
 
 const userLoginPath = '/login';
 const authPaths = [
-    '/account/profile', '/account/edit-profile', '/account/security', 
-    '/account/notifications', '/account/settings', '/account/invite', 
-    '/notebook', '/wallet', '/notebook/groups', '/account/install'
+    '/account', '/notebook', '/wallet', '/project-calculator/list'
 ];
 
 const adminLoginPath = '/admin/login';
@@ -52,8 +50,7 @@ export function middleware(request: NextRequest) {
     // --- Super Admin Area Protection ---
     if (isSpaPath(pathname)) {
         if (!superAdminToken && pathname !== spaLoginPath) {
-            const url = new URL(spaLoginPath, request.url);
-            return NextResponse.redirect(url);
+            return NextResponse.redirect(new URL(spaLoginPath, request.url));
         }
         if (superAdminToken && pathname === spaLoginPath) {
             return NextResponse.redirect(new URL('/spa', request.url));
@@ -65,8 +62,7 @@ export function middleware(request: NextRequest) {
     if (isAdminPath(pathname)) {
         const hasAdminAccess = adminToken || superAdminToken;
         if (!hasAdminAccess && pathname !== adminLoginPath) {
-             const url = new URL(adminLoginPath, request.url);
-            return NextResponse.redirect(url);
+            return NextResponse.redirect(new URL(adminLoginPath, request.url));
         }
         if (hasAdminAccess && pathname === adminLoginPath) {
             return NextResponse.redirect(new URL('/admin', request.url));
@@ -74,11 +70,14 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
     
-    // Allow public paths to be accessed by anyone
-    // Including dynamic blog post pages like /blog/some-slug
-    if (publicPaths.some(p => pathname === p || (p !== '/' && pathname.startsWith(p+'/')))) {
+    // --- Public Paths ---
+    // Check if the path or its dynamic segments match public paths
+    const isPublic = publicPaths.some(p => pathname.startsWith(p) && (pathname.length === p.length || pathname[p.length] === '/'));
+    if (isPublic) {
         return NextResponse.next();
     }
+    
+    // --- User Area Protection ---
     
     // Redirect logged-in users away from the main login page
     if (pathname === userLoginPath && userToken) {
@@ -92,14 +91,13 @@ export function middleware(request: NextRequest) {
          return NextResponse.redirect(url);
     }
     
-    // Default case: allow access to all other paths (including root)
+    // Default case: allow access if no other rule has matched.
     return NextResponse.next();
 }
 
 export const config = {
   matcher: [
+    // Match all paths except for specific static assets and API routes.
     '/((?!api|_next/static|_next/image|favicon.ico|sounds|icon-|maskable_icon.png|.*\\.png$).*)',
   ],
 };
-
-    

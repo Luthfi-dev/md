@@ -1,14 +1,12 @@
-
 'use client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Lock, Mail, User, TriangleAlert } from "lucide-react";
+import { ArrowRight, Lock, Mail, User } from "lucide-react";
 import React, { useState, useEffect, Suspense } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from 'next/link';
 
 // A simple function to generate a browser fingerprint
@@ -30,9 +28,11 @@ const getBrowserFingerprint = () => {
   return hash.toString();
 };
 
+const GUEST_STORAGE_KEY = 'guestRewardState_v3';
+
 function LoginForm() {
   const [isLogin, setIsLogin] = useState(true);
-  const { isLoading, login, register, isAuthenticated, user } = useAuth();
+  const { isLoading, login, register, isAuthenticated } = useAuth();
   const [loadingMessage, setLoadingMessage] = useState('');
   const { toast } = useToast();
   const router = useRouter();
@@ -40,8 +40,8 @@ function LoginForm() {
   const redirectPath = searchParams.get('redirect');
 
   useEffect(() => {
-    // Middleware now handles redirecting logged-in users
-  }, [isAuthenticated, user, router]);
+    // Middleware handles redirecting logged-in users away from this page
+  }, [isAuthenticated, router]);
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -57,6 +57,7 @@ function LoginForm() {
         if (isLogin) {
             const result = await login(email, password);
             if (result.success) {
+                // Redirect to the intended path or home page
                 router.push(redirectPath || '/');
             } else {
                 toast({ variant: 'destructive', title: 'Login Gagal', description: result.message || 'Terjadi kesalahan.' });
@@ -97,7 +98,7 @@ function LoginForm() {
           </p>
         </div>
 
-        <Card className="bg-card p-8 rounded-2xl shadow-xl">
+        <div className="bg-card p-8 rounded-2xl shadow-xl">
           <form onSubmit={handleFormSubmit} className="space-y-6">
             {!isLogin && (
               <div className="relative">
@@ -132,7 +133,7 @@ function LoginForm() {
               <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Button>
           </form>
-        </Card>
+        </div>
 
         <div className="text-center mt-8">
           <p className="text-muted-foreground">
@@ -165,5 +166,3 @@ export default function LoginPage() {
         </div>
     )
 }
-
-    

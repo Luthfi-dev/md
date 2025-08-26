@@ -3,15 +3,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { clearTokenCookie } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
-  const { role } = await request.json();
-  const userRole = role || 3; // Default to user role if not provided
-
   const response = NextResponse.json({ success: true, message: 'Logout berhasil' });
   
-  // Clear all possible tokens for a full logout
-  clearTokenCookie(response, 1);
-  clearTokenCookie(response, 2);
-  clearTokenCookie(response, 3);
+  // Clear all possible tokens for a full logout, ensuring no session residue.
+  clearTokenCookie(response, 1); // Super Admin
+  clearTokenCookie(response, 2); // Admin
+  clearTokenCookie(response, 3); // User
 
   return response;
 }

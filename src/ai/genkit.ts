@@ -44,6 +44,10 @@ import {
   AiRecommendationOutputSchema,
   type AiRecommendationInput,
   type AiRecommendationOutput,
+  ProjectFeatureInputSchema,
+  ProjectFeatureOutputSchema,
+  type ProjectFeatureInput,
+  type ProjectFeatureOutput,
 } from './schemas';
 import htmlToDocx from 'html-to-docx';
 
@@ -395,7 +399,7 @@ const getAiRecommendationFlow = ai.defineFlow(
     const apiKeyRecord = await getApiKey();
 
     const prompt = [
-        { text: "Anda adalah seorang konsultan ahli (seperti stylist, desainer interior, atau penasihat umum) yang sangat baik dalam mencocokkan barang. Tugas Anda adalah menganalisis satu 'Item Utama' dan beberapa 'Item Pilihan', lalu merekomendasikan satu pilihan terbaik yang paling cocok dengan item utama. Berikan juga ringkasan dan alasan yang logis untuk pilihan Anda dalam BAHASA INDONESIA." },
+        { text: "Anda adalah seorang konsultan ahli (seperti stylist, desainer interior, atau penasihat umum) yang sangat baik dalam mencocokkan barang. Tugas Anda adalah menganalisis satu 'Item Utama' dan beberapa 'Item Pilihan', lalu merekomendasikan satu pilihan terbaik yang paling cocok dengan item utama. Berikan juga ringkasan dan alasan yang logis dalam BAHASA INDONESIA." },
         { text: "ITEM UTAMA (Referensi):" },
         { media: { url: input.mainItem.dataUri } },
         { text: "\n\nITEM PILIHAN (Pilih salah satu dari berikut ini):" }
@@ -418,6 +422,44 @@ const getAiRecommendationFlow = ai.defineFlow(
     if (!output) {
       throw new Error("AI tidak dapat memberikan rekomendasi. Coba lagi.");
     }
+    return output;
+  }
+);
+
+
+const estimateProjectFeatureFlow = ai.defineFlow(
+  {
+    name: 'estimateProjectFeatureFlow',
+    inputSchema: ProjectFeatureInputSchema,
+    outputSchema: ProjectFeatureOutputSchema,
+  },
+  async (input) => {
+    const apiKeyRecord = await getApiKey();
+    
+    const prompt = `
+      Anda adalah seorang konsultan bisnis dan manajer proyek senior di Indonesia dengan pengalaman 15 tahun dalam berbagai industri (termasuk IT, desain, konstruksi, event, dll).
+      Tugas Anda adalah memberikan estimasi biaya yang realistis untuk sebuah pekerjaan, fitur, atau item dalam sebuah proyek.
+      Berikan harga dalam Rupiah (IDR).
+
+      Anda HARUS memberikan output dalam format JSON yang sesuai dengan skema yang diberikan.
+      - priceMin dan priceMax harus berupa angka (number), bukan string.
+      - justification harus berupa satu kalimat singkat yang menjelaskan kompleksitas dan alasan rentang harga tersebut.
+
+      Konteks Proyek/Ide: ${input.projectName}
+      Pekerjaan/Fitur yang akan diestimasi: "${input.featureDescription}"
+    `;
+
+    const { output } = await ai.generate({
+      prompt: prompt,
+      model: googleAI.model('gemini-1.5-flash-latest'),
+      output: { schema: ProjectFeatureOutputSchema },
+      plugins: [googleAI({ apiKey: apiKeyRecord.key })],
+    });
+
+    if (!output) {
+      throw new Error('Gagal mendapatkan estimasi dari AI. Coba lagi.');
+    }
+
     return output;
   }
 );
@@ -503,4 +545,8 @@ export async function getAiRecommendation(input: AiRecommendationInput): Promise
       throw new Error(`Input untuk rekomendasi AI tidak valid: ${validationResult.error.message}`);
     }
     return getAiRecommendationFlow(input);
+}
+
+export async function estimateProjectFeature(input: ProjectFeatureInput): Promise<ProjectFeatureOutput> {
+  return await estimateProjectFeatureFlow(input);
 }

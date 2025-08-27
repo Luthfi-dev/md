@@ -1,4 +1,13 @@
+
 [
+  {
+    "id": "item_install_app",
+    "title": "Instal Aplikasi",
+    "description": "Dapatkan akses cepat & pengalaman terbaik di perangkat Anda.",
+    "href": "/install",
+    "icon": "Download",
+    "status": "published"
+  },
   {
     "id": "item_1",
     "title": "Kuis Harian",

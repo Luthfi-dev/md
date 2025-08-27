@@ -9,6 +9,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 import RootLayoutComponent from '@/components/RootLayout';
 import { PWAInstallProvider } from '@/hooks/use-pwa-install';
 import appMetadata from '@/data/app-metadata.json';
+import { headers } from 'next/headers';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -19,7 +20,11 @@ const ptSans = PT_Sans({
 
 // Dynamically generate metadata from the JSON file
 export async function generateMetadata(): Promise<Metadata> {
-  const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+  const headersList = headers();
+  const host = headersList.get('host') || 'localhost:3000';
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+  const baseUrl = `${protocol}://${host}`;
+
   const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/og-image.png`;
 
   return {
@@ -62,7 +67,7 @@ export async function generateMetadata(): Promise<Metadata> {
         'max-snippet': -1,
       },
     },
-    manifest: '/manifest.webmanifest', // Changed to .webmanifest
+    manifest: '/manifest.webmanifest',
     icons: {
         icon: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
         shortcut: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',

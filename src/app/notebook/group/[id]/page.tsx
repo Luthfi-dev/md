@@ -162,6 +162,37 @@ const AddTaskDialog = ({ members, onTaskAdded }: { members: GroupMember[], onTas
     );
 };
 
+const ViewMembersDialog = ({ group }: { group: NotebookGroup }) => (
+    <Dialog>
+        <DialogTrigger asChild>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <Users className="mr-2" /> Lihat Anggota
+            </DropdownMenuItem>
+        </DialogTrigger>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Anggota Grup: {group.title}</DialogTitle>
+                <DialogDescription>Total {group.members.length} anggota.</DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-3 max-h-[60vh] overflow-y-auto">
+                {group.members.map(member => (
+                    <div key={member.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
+                        <div className="flex items-center gap-3">
+                            <Avatar>
+                                <AvatarImage src={member.avatarUrl || undefined} />
+                                <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <p className="font-semibold">{member.name}</p>
+                        </div>
+                        <Badge variant={member.role === 'admin' ? 'default' : 'outline'}>{member.role}</Badge>
+                    </div>
+                ))}
+            </div>
+        </DialogContent>
+    </Dialog>
+)
+
+
 // --- Main Page Component ---
 
 export default function GroupNotebookPage() {
@@ -309,10 +340,11 @@ export default function GroupNotebookPage() {
                 <div className='flex-1'><h1 className="font-bold text-lg truncate">{group.title}</h1><p className="text-xs text-muted-foreground">{group.members.length} Anggota</p></div>
             </div>
              <div className="ml-auto flex items-center">
-                <InviteMemberDialog group={group} onMemberInvited={fetchGroupDetails} />
+                {currentUserRole === 'admin' && <InviteMemberDialog group={group} onMemberInvited={fetchGroupDetails} />}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <ViewMembersDialog group={group} />
                         {currentUserRole === 'admin' && <DropdownMenuItem className="text-destructive"><Trash className="mr-2"/> Hapus Grup</DropdownMenuItem>}
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -378,13 +410,17 @@ export default function GroupNotebookPage() {
                   <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg bg-background">
                     <Notebook className="mx-auto h-12 w-12 mb-4" />
                     <h3 className="font-semibold">Belum Ada Tugas</h3>
-                    <p className="text-sm">Klik tombol '+' untuk menambahkan tugas baru.</p>
+                    {currentUserRole === 'admin' ? (
+                        <p className="text-sm">Klik tombol '+' untuk menambahkan tugas baru.</p>
+                    ) : (
+                        <p className="text-sm">Admin grup belum menambahkan tugas apa pun.</p>
+                    )}
                   </div>
               )}
             </div>
         </main>
         
-        <AddTaskDialog members={group.members} onTaskAdded={handleAddTask} />
+        {currentUserRole === 'admin' && <AddTaskDialog members={group.members} onTaskAdded={handleAddTask} />}
     </div>
   );
 }

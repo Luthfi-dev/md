@@ -3,15 +3,11 @@
 
 import { useState, useEffect, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, Loader2, Star, Flame } from 'lucide-react';
 import { ToolCard } from '@/components/ToolCard';
-import type { AppDefinition } from '@/app/admin/apps/page';
+import type { AppDefinition } from '@/types/app';
 import * as LucideIcons from 'lucide-react';
-
-// Simulate fetching data
-import appsData from '@/data/apps.json';
 
 const BROWSER_STORAGE_KEY_FAVORITES = 'favorite_apps';
 
@@ -32,22 +28,31 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API fetch and load favorites from localStorage
-    const sortedApps = [...appsData]
-        .filter(app => app.id !== 'app_all_apps') // Exclude the "All Apps" card from its own page
-        .sort((a, b) => a.order - b.order);
-    setAllApps(sortedApps);
-
-    try {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/apps');
+        const data = await res.json();
+        if (data.success) {
+          const sortedApps = data.items
+            .filter((app: AppDefinition) => app.id !== 'app_all_apps')
+            .sort((a: AppDefinition, b: AppDefinition) => a.order - b.order);
+          setAllApps(sortedApps);
+        } else {
+          console.error("Failed to fetch apps from API");
+        }
+        
         const storedFavorites = window.localStorage.getItem(BROWSER_STORAGE_KEY_FAVORITES);
         if (storedFavorites) {
             setFavoriteApps(JSON.parse(storedFavorites));
         }
-    } catch (error) {
-        console.error("Failed to load favorite apps from localStorage", error);
-    }
-
-    setIsLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch or load data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   const toggleFavorite = (appId: string) => {

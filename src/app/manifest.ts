@@ -1,11 +1,12 @@
 
 import { MetadataRoute } from 'next'
+import appMetadata from '@/data/app-metadata.json';
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Maudigi',
-    short_name: 'Maudigi',
-    description: 'Satu aplikasi untuk semua kebutuhan produktivitas Anda.',
+    name: appMetadata.name,
+    short_name: appMetadata.name,
+    description: appMetadata.description,
     start_url: '/',
     display: 'standalone',
     background_color: '#FFFFFF',

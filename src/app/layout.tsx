@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/hooks/use-auth';
 import RootLayoutComponent from '@/components/RootLayout';
 import { PWAInstallProvider } from '@/hooks/use-pwa-install';
+import appMetadata from '@/data/app-metadata.json';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -16,24 +17,25 @@ const ptSans = PT_Sans({
   display: 'swap',
 });
 
+// Dynamically generate metadata from the JSON file
 export const metadata: Metadata = {
   title: {
-    default: 'Maudigi: Uplevel Your Life',
-    template: '%s | Maudigi',
+    default: appMetadata.name,
+    template: `%s | ${appMetadata.name}`,
   },
-  description: 'Satu aplikasi untuk semua kebutuhan produktivitas Anda: konverter file, scanner, kalkulator, dan banyak lagi. Alat canggih yang dirancang untuk meningkatkan level hidup Anda.',
+  description: appMetadata.description,
   keywords: ['maudigi', 'toolkit', 'produktivitas', 'converter', 'scanner', 'kalkulator', 'alat produktivitas', 'aplikasi all-in-one'],
   openGraph: {
-    title: 'Maudigi: Uplevel Your Life',
-    description: 'Satu aplikasi untuk semua kebutuhan produktivitas Anda.',
-    url: 'https://yourapp-url.com',
-    siteName: 'Maudigi',
+    title: appMetadata.name,
+    description: appMetadata.description,
+    url: process.env.APP_URL || 'http://localhost:3000',
+    siteName: appMetadata.name,
     images: [
       {
-        url: '/og-image.png',
+        url: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Maudigi App',
+        alt: `${appMetadata.name} App`,
       },
     ],
     locale: 'id_ID',
@@ -41,9 +43,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Maudigi: Uplevel Your Life',
-    description: 'Satu aplikasi untuk semua kebutuhan produktivitas Anda.',
-    images: ['/og-image.png'],
+    title: appMetadata.name,
+    description: appMetadata.description,
+    images: [appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/og-image.png'],
   },
   robots: {
     index: true,
@@ -84,7 +86,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
-            "name": "Maudigi",
+            "name": appMetadata.name,
             "operatingSystem": "WEB",
             "applicationCategory": "Productivity",
             "aggregateRating": {

@@ -2,7 +2,7 @@
 'use client';
 
 import { Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, useSidebar, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, ShieldAlert, AppWindow, Newspaper, GalleryHorizontal } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, ShieldAlert, AppWindow, Newspaper, GalleryHorizontal, GitCommitHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -76,6 +76,14 @@ export function SuperAdminLayoutContent({
                 <Link href="/spa/app-settings" onClick={handleLinkClick}>
                   <AppWindow />
                   Pengaturan Aplikasi
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/spa/versioning')}>
+                <Link href="/spa/versioning" onClick={handleLinkClick}>
+                  <GitCommitHorizontal />
+                  Versi Aplikasi
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

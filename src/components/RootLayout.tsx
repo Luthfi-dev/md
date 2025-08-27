@@ -7,8 +7,10 @@ import { Loader2 } from 'lucide-react';
 import { DesktopLayout } from '@/components/DesktopLayout';
 import { MobileLayout } from '@/components/MobileLayout';
 import { usePathname } from 'next/navigation';
+import { useCacheBuster } from '@/hooks/use-cache-buster';
 
 export default function RootLayoutComponent({ children }: { children: React.ReactNode }) {
+  useCacheBuster(); // Initialize the cache buster hook
   const isMobile = useIsMobile();
   const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
@@ -17,7 +19,7 @@ export default function RootLayoutComponent({ children }: { children: React.Reac
     setIsClient(true);
   }, []);
 
-  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/superadmin');
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/spa');
 
   if (!isClient) {
     return (

@@ -9,6 +9,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 import RootLayoutComponent from '@/components/RootLayout';
 import { PWAInstallProvider } from '@/hooks/use-pwa-install';
 import appMetadata from '@/data/app-metadata.json';
+import versionData from '@/data/version.json';
 import { headers } from 'next/headers';
 
 const ptSans = PT_Sans({
@@ -73,6 +74,9 @@ export async function generateMetadata(): Promise<Metadata> {
         shortcut: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
         apple: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
     },
+    other: {
+      'app-version': versionData.versionId,
+    }
   }
 }
 

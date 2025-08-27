@@ -2,7 +2,7 @@
 'use client';
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2, Grid3x3 } from "lucide-react";
+import { ArrowRight, Moon, Search, Sun, Gift, Star, Info, Package, Loader2, Grid3x3, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Autoplay from "embla-carousel-autoplay"
 import React, { useEffect, useState } from "react";
@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions";
 import { Skeleton } from "./ui/skeleton";
 import { Card, CardContent } from "./ui/card";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 
 const getIcon = (iconName: string): React.ReactNode => {
     const IconComponent = (LucideIcons as any)[iconName];
@@ -120,6 +121,7 @@ export default function HomePageContent() {
    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
    const { user, isAuthenticated } = useAuth();
    const { points: rewardPoints, claimState, claimReward, refreshClaimState } = useDailyReward();
+   const { canInstall, isInstalled, promptInstall } = usePWAInstall();
    
    const [flyingPointsVisible, setFlyingPointsVisible] = React.useState(false);
    const [startRect, setStartRect] = React.useState<DOMRect | null>(null);
@@ -221,11 +223,19 @@ export default function HomePageContent() {
                   <p className="opacity-80 text-sm">{isAuthenticated ? 'Selamat Datang!' : 'Selamat Datang, Tamu!'}</p>
                   <h1 className="text-2xl font-bold">{isAuthenticated && user ? user.name : 'Silakan Login'}</h1>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                <span className="sr-only">Toggle theme</span>
-              </Button>
+              <div className="flex items-center gap-1">
+                {canInstall && !isInstalled && (
+                  <Button variant="secondary" size="sm" onClick={promptInstall} className="rounded-full bg-white/20 hover:bg-white/30 text-white">
+                    <Download className="mr-2 h-4 w-4" />
+                    Instal
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  <span className="sr-only">Toggle theme</span>
+                </Button>
+              </div>
           </div>
           <div className="bg-primary-foreground/20 backdrop-blur-sm p-3 rounded-2xl flex justify-between items-center">
               <div>
@@ -359,3 +369,5 @@ export default function HomePageContent() {
     </>
   );
 }
+
+    

@@ -11,6 +11,7 @@ import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { CountUp } from "@/components/CountUp";
 import { Coins } from "lucide-react";
 import React, { useEffect } from "react";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 
 const menuItems = [
     { label: "Edit Profil", icon: Edit, href: "/account/edit-profile" },
@@ -22,12 +23,12 @@ const menuItems = [
 const engagementItems = [
     { label: "Kelola Langganan", icon: Gem, href: "/pricing" },
     { label: "Undang Teman", icon: Users, href: "/account/invite" },
-    { label: "Instal Aplikasi", icon: Download, href: "/account/install" },
-]
+];
 
 export default function ProfilePage() {
     const router = useRouter();
     const { user, logout, isAuthenticated, isLoading } = useAuth();
+    const { canInstall, isInstalled, promptInstall } = usePWAInstall();
 
     // Middleware menangani sebagian besar perlindungan rute.
     // Efek ini adalah pengaman tambahan untuk navigasi sisi klien jika diperlukan.
@@ -119,6 +120,15 @@ export default function ProfilePage() {
                                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
                             </button>
                        ))}
+                       {canInstall && !isInstalled && (
+                          <button onClick={promptInstall} className="w-full text-left p-4 rounded-lg hover:bg-secondary flex items-center justify-between transition-colors">
+                               <div className="flex items-center gap-4">
+                                  <Download className="w-6 h-6 text-muted-foreground" />
+                                  <span className="font-semibold text-base text-foreground">Instal Aplikasi</span>
+                               </div>
+                               <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                           </button>
+                       )}
                     </div>
                     <Separator className="my-2" />
                     <button onClick={handleLogout} className="w-full text-left p-4 rounded-lg hover:bg-destructive/10 flex items-center transition-colors text-destructive">
@@ -132,3 +142,5 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+    

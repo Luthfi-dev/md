@@ -11,11 +11,11 @@
     "order": 0
   },
   {
-    "id": "app_tts",
-    "title": "Text to Speech (AI)",
-    "description": "Ubah teks menjadi suara alami dengan teknologi AI Gemini.",
-    "href": "/tts",
-    "icon": "Voicemail",
+    "id": "app_notebook",
+    "title": "Catatan Cerdas",
+    "description": "Organisir ide dan tugas dengan checklist canggih.",
+    "href": "/notebook",
+    "icon": "Notebook",
     "isPopular": true,
     "isNew": true,
     "order": 1
@@ -51,11 +51,11 @@
     "order": 4
   },
   {
-    "id": "app_notebook",
-    "title": "Catatan Cerdas",
-    "description": "Organisir ide dan tugas dengan checklist canggih.",
-    "href": "/notebook",
-    "icon": "Notebook",
+    "id": "app_tts",
+    "title": "Text to Speech (AI)",
+    "description": "Ubah teks menjadi suara alami dengan teknologi AI Gemini.",
+    "href": "/tts",
+    "icon": "Voicemail",
     "isPopular": true,
     "isNew": true,
     "order": 5

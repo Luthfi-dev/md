@@ -8,7 +8,7 @@ const REFRESH_TOKEN_SECRET_USER = process.env.REFRESH_TOKEN_SECRET_USER || 'your
 const REFRESH_TOKEN_SECRET_ADMIN = process.env.REFRESH_TOKEN_SECRET_ADMIN || 'your_super_secret_refresh_key_admin';
 const REFRESH_TOKEN_SECRET_SUPERADMIN = process.env.REFRESH_TOKEN_SECRET_SUPERADMIN || 'your_super_secret_refresh_key_superadmin';
 
-const ACCESS_TOKEN_EXPIRATION = '15m';
+const ACCESS_TOKEN_EXPIRATION = '7d'; // Changed from '15m' to 7 days
 
 export interface UserForToken {
     id: number;
@@ -41,10 +41,10 @@ function getRefreshTokenExpiration(role: number): string {
     switch (role) {
         case 1: // Super Admin
         case 2: // Admin
-            return '6h';
+            return '6h'; // Admin sessions are shorter for security
         case 3: // User
         default:
-            return '30d';
+            return '180d'; // Changed from '30d' to 180 days (6 months)
     }
 }
 
@@ -79,9 +79,18 @@ export function verifyRefreshToken(token: string, role: number): JwtPayload | nu
 
 export function setTokenCookie(res: NextResponse, role: number, refreshToken: string) {
     const cookieName = getRefreshTokenName(role);
-    const expirationInSeconds = (role === 1 || role === 2) 
-        ? 6 * 60 * 60 // 6 hours
-        : 30 * 24 * 60 * 60; // 30 days
+    let expirationInSeconds;
+
+    switch (role) {
+        case 1: // Super Admin
+        case 2: // Admin
+            expirationInSeconds = 6 * 60 * 60; // 6 hours
+            break;
+        case 3: // User
+        default:
+            expirationInSeconds = 180 * 24 * 60 * 60; // 180 days
+            break;
+    }
 
     const cookie = serialize(cookieName, refreshToken, {
         httpOnly: true,

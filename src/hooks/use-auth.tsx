@@ -1,3 +1,4 @@
+
 'use client';
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
@@ -85,8 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Immediately clear client state
         setAccessToken(null); 
-        setUser(null);
-        setIsAuthenticated(false);
         
         try {
             await fetch('/api/auth/logout', { 

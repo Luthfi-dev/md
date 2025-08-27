@@ -15,7 +15,7 @@ const registerSchema = z.object({
   password: z.string().min(8, { message: "Kata sandi harus memiliki setidaknya 8 karakter." }),
   repeatPassword: z.string(),
   fingerprint: z.string().optional(),
-  guestData: z.string().optional(), // Encrypted guest data
+  guestData: z.string().nullable().optional(), // Encrypted guest data, can be null
 }).refine(data => data.password === data.repeatPassword, {
   message: "Kata sandi tidak cocok.",
   path: ["repeatPassword"],
@@ -66,8 +66,9 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password);
     const referralCode = generateReferralCode();
+    
+    // Encrypt the initial points before storing
     const encryptedPoints = encrypt(String(initialPoints));
-
 
     const [userResult] = await connection.execute<ResultSetHeader>(
       'INSERT INTO users (name, email, password, role_id, referral_code, browser_fingerprint, points) VALUES (?, ?, ?, ?, ?, ?, ?)',

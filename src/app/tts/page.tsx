@@ -8,6 +8,7 @@ import {
     Loader2, Sparkles, Volume2, Download, LogIn, Voicemail
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { textToSpeech, TtsInput } from '@/ai/genkit';
 import { useAuth } from '@/hooks/use-auth';

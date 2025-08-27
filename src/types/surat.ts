@@ -4,6 +4,16 @@ export interface SuratField {
   label: string;
 }
 
+export interface CarouselItem {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  icon: string;
+  status: 'draft' | 'published';
+}
+
+
 export interface Template {
   id: string;
   title: string;

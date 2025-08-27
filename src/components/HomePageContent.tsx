@@ -13,16 +13,14 @@ import { useDailyReward } from "@/hooks/use-daily-reward";
 import { DailyRewardDialog } from "@/components/DailyRewardDialog";
 import { CountUp } from "@/components/CountUp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { AppDefinition, CarouselItem as CarouselItemType } from "@/types/app";
+import type { AppDefinition } from "@/types/app";
+import type { CarouselItem as CarouselItemType } from "@/types/surat";
 import * as LucideIcons from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
 import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions";
 import { Skeleton } from "./ui/skeleton";
 import { Card, CardContent } from "./ui/card";
-
-// Simulate fetching data from JSON files
-import appsData from '@/data/apps.json';
 
 const getIcon = (iconName: string): React.ReactNode => {
     const IconComponent = (LucideIcons as any)[iconName];
@@ -138,9 +136,17 @@ export default function HomePageContent() {
         const fetchInitialData = async () => {
           setIsLoading(true);
           try {
-            // Fetch Apps and sort them by the order property
-            const sortedApps = [...appsData].sort((a, b) => a.order - b.order);
-            setMainFeatures(sortedApps);
+            // Fetch Apps from API
+            const appsRes = await fetch('/api/apps');
+            if (appsRes.ok) {
+              const appsData = await appsRes.json();
+              if (appsData.success) {
+                const sortedApps = appsData.items.sort((a: AppDefinition, b: AppDefinition) => a.order - b.order);
+                setMainFeatures(sortedApps);
+              }
+            } else {
+              console.error("Failed to fetch apps");
+            }
 
             // Fetch Carousel Items from API
              const carouselRes = await fetch('/api/carousel-items');

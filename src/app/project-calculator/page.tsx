@@ -70,7 +70,7 @@ const ProjectCalculatorContent = () => {
         if (editId) {
             fetchProjectData(editId);
         } else {
-             setProjectTitle('Proyek Baru Tanpa Judul');
+             setProjectTitle('');
              setIsLoadingData(false);
         }
     }, [editId, fetchProjectData]);
@@ -90,7 +90,7 @@ const ProjectCalculatorContent = () => {
         
         try {
             const result = await estimateProjectFeature({ 
-                projectName: projectTitle, 
+                projectName: projectTitle || 'Proyek Umum', 
                 featureDescription: newFeature.name 
             });
 

@@ -1,8 +1,10 @@
 
 'use server';
 import { db } from '@/lib/db';
-import { encrypt, decrypt } from '@/lib/encryption';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { decrypt } from '@/lib/encryption';
+import type { RowDataPacket } from 'mysql2';
+import { ai, gemini15Flash, type GenerationCommonConfig } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 interface ApiKeyRecord {
   id: number;
@@ -13,7 +15,7 @@ interface ApiKeyRecord {
   last_used_at: string | null;
 }
 
-const MAX_FAILURE_COUNT = 3;
+const MAX_FAILURE_COUNT = 5;
 
 // In-memory cache to avoid reading the database on every single request.
 let activeKeysCache: ApiKeyRecord[] = [];
@@ -86,21 +88,52 @@ async function updateLastUsed(keyId: number): Promise<void> {
 // --- EXPORTED ASYNC FUNCTIONS (Server Actions) ---
 
 /**
- * Retrieves the next available API key using a round-robin strategy.
+ * Executes an AI generation request with automatic API key rotation and retry mechanism.
+ * @param generateParams The parameters for the ai.generate() call.
+ * @returns The generation response.
+ * @throws An error if all available API keys fail.
  */
-export async function getApiKey(): Promise<{ id: number, key: string }> {
-  const keys = await fetchKeys();
-  
-  if (keys.length > 0) {
-      currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-      const selectedKey = keys[currentKeyIndex];
-      await updateLastUsed(selectedKey.id);
-      return { id: selectedKey.id, key: selectedKey.key };
+export async function executeAIGeneration(generateParams: Parameters<typeof ai.generate>[0]): Promise<ReturnType<typeof ai.generate>> {
+  const availableKeys = await fetchKeys();
+  if (availableKeys.length === 0) {
+    throw new Error("Layanan AI tidak tersedia saat ini. Tidak ada kunci API yang aktif.");
   }
-  
-  console.error("CRITICAL: No active API keys found in the database.");
-  throw new Error("Layanan AI tidak tersedia saat ini. Silakan coba lagi nanti.");
+
+  let lastError: Error | null = null;
+
+  for (let i = 0; i < availableKeys.length; i++) {
+    currentKeyIndex = (currentKeyIndex + 1) % availableKeys.length;
+    const keyRecord = availableKeys[currentKeyIndex];
+
+    try {
+      console.log(`Attempting AI generation with key ID: ${keyRecord.id}`);
+      
+      const result = await ai.generate({
+        ...generateParams,
+        plugins: [googleAI({ apiKey: keyRecord.key })],
+      });
+      
+      // Success, update last used timestamp and return
+      await updateLastUsed(keyRecord.id);
+      return result;
+
+    } catch (error) {
+      console.error(`AI generation failed with key ID: ${keyRecord.id}`, error);
+      lastError = error as Error;
+      
+      // Mark key as failed
+      await handleKeyFailure(keyRecord.id);
+      
+      // Invalidate cache to ensure the failed key is not picked up again immediately
+      lastFetchedTime = 0; 
+    }
+  }
+
+  // If all keys have been tried and failed
+  console.error("All available API keys failed.", { lastError });
+  throw new Error("Semua kunci API gagal atau mencapai batas penggunaan. Silakan coba lagi nanti atau hubungi administrator.");
 }
+
 
 /**
  * Handles the failure of an API key by incrementing its failure count.
@@ -142,4 +175,22 @@ export async function resetKeyFailureCount(keyId: number): Promise<void> {
    } finally {
      if(connection) connection.release();
    }
+}
+
+/**
+ * LEGACY - Retrieves the next available API key using a round-robin strategy.
+ * @deprecated Use executeAIGeneration instead for robustness.
+ */
+export async function getApiKey(): Promise<{ id: number, key: string }> {
+  const keys = await fetchKeys();
+  
+  if (keys.length > 0) {
+      currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+      const selectedKey = keys[currentKeyIndex];
+      await updateLastUsed(selectedKey.id);
+      return { id: selectedKey.id, key: selectedKey.key };
+  }
+  
+  console.error("CRITICAL: No active API keys found in the database.");
+  throw new Error("Layanan AI tidak tersedia saat ini. Silakan coba lagi nanti.");
 }

@@ -476,7 +476,7 @@ const textToSpeechFlow = ai.defineFlow(
     inputSchema: TtsInputSchema,
     outputSchema: TtsOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TtsOutput> => {
     try {
       const { media } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-preview-tts'),
@@ -492,7 +492,7 @@ const textToSpeechFlow = ai.defineFlow(
       });
 
       if (!media) {
-        throw new Error('AI tidak menghasilkan output audio.');
+        throw new Error('AI tidak menghasilkan output audio. Coba lagi atau gunakan teks yang berbeda.');
       }
 
       const audioBuffer = Buffer.from(

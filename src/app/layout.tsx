@@ -18,48 +18,58 @@ const ptSans = PT_Sans({
 });
 
 // Dynamically generate metadata from the JSON file
-export const metadata: Metadata = {
-  title: {
-    default: appMetadata.name,
-    template: `%s | ${appMetadata.name}`,
-  },
-  description: appMetadata.description,
-  keywords: ['maudigi', 'toolkit', 'produktivitas', 'converter', 'scanner', 'kalkulator', 'alat produktivitas', 'aplikasi all-in-one'],
-  openGraph: {
-    title: appMetadata.name,
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/og-image.png`;
+
+  return {
+    title: {
+      default: appMetadata.name,
+      template: `%s | ${appMetadata.name}`,
+    },
     description: appMetadata.description,
-    url: process.env.APP_URL || 'http://localhost:3000',
-    siteName: appMetadata.name,
-    images: [
-      {
-        url: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: `${appMetadata.name} App`,
-      },
-    ],
-    locale: 'id_ID',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: appMetadata.name,
-    description: appMetadata.description,
-    images: [appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/og-image.png'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+    keywords: ['maudigi', 'toolkit', 'produktivitas', 'converter', 'scanner', 'kalkulator', 'alat produktivitas', 'aplikasi all-in-one'],
+    openGraph: {
+      title: appMetadata.name,
+      description: appMetadata.description,
+      url: baseUrl,
+      siteName: appMetadata.name,
+      images: [
+        {
+          url: logoUrl,
+          width: 1200,
+          height: 630,
+          alt: `${appMetadata.name} App`,
+        },
+      ],
+      locale: 'id_ID',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: appMetadata.name,
+      description: appMetadata.description,
+      images: [logoUrl],
+    },
+    robots: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
-  },
-  manifest: '/manifest.json',
-};
+    manifest: '/manifest.webmanifest', // Changed to .webmanifest
+    icons: {
+        icon: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
+        shortcut: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
+        apple: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
+    },
+  }
+}
 
 export const viewport: Viewport = {
   themeColor: [

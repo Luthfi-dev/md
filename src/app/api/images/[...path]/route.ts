@@ -4,7 +4,8 @@ import path from 'path';
 import { readFile } from 'fs/promises';
 import mime from 'mime-types';
 
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+// The uploads directory is now outside the project root.
+const UPLOADS_DIR = path.join(process.cwd(), '..', 'uploads_maudigi');
 
 export async function GET(
   request: NextRequest,

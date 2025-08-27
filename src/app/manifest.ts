@@ -3,7 +3,8 @@ import { MetadataRoute } from 'next'
 import appMetadata from '@/data/app-metadata.json';
  
 export default function manifest(): MetadataRoute.Manifest {
-  const iconUrl = appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icon-512x512.png';
+  const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+  const iconUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icon-512x512.png`;
 
   return {
     name: appMetadata.name,

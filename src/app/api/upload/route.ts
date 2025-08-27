@@ -4,7 +4,9 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { optimizeImage } from '@/lib/image-optimizer';
 
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+// Move the uploads directory outside of the project root to prevent it from being part of the build.
+// This ensures that user-uploaded content is treated as dynamic runtime data, not static build assets.
+const UPLOADS_DIR = path.join(process.cwd(), '..', 'uploads_maudigi');
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // --- Directory and Path Handling ---
     const targetDir = path.join(UPLOADS_DIR, subfolder);
-    await mkdir(targetDir, { recursive: true });
+    await mkdir(targetDir, { recursive: true }); // Ensure the directory exists
 
     const fileExtension = path.extname(file.name) || '.jpg';
     const uniqueFilename = `${Date.now()}-${Math.floor(Math.random() * 1E9)}${fileExtension}`;

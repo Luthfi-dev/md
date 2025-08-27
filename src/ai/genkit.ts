@@ -8,6 +8,7 @@ import { genkit, type GenerationCommonConfig } from 'genkit';
 import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
 import { getApiKey, handleKeyFailure } from '@/services/ApiKeyManager';
 import assistantData from '@/data/assistant.json';
+import wav from 'wav';
 import {
   ChatHistorySchema,
   ChatMessageSchema,
@@ -48,6 +49,10 @@ import {
   ProjectFeatureOutputSchema,
   type ProjectFeatureInput,
   type ProjectFeatureOutput,
+  TtsInputSchema,
+  TtsOutputSchema,
+  type TtsInput,
+  type TtsOutput,
 } from './schemas';
 import htmlToDocx from 'html-to-docx';
 
@@ -465,6 +470,70 @@ const estimateProjectFeatureFlow = ai.defineFlow(
 );
 
 
+const textToSpeechFlow = ai.defineFlow(
+  {
+    name: 'textToSpeechFlow',
+    inputSchema: TtsInputSchema,
+    outputSchema: TtsOutputSchema,
+  },
+  async (input) => {
+    try {
+      const { media } = await ai.generate({
+        model: googleAI.model('gemini-2.5-flash-preview-tts'),
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: input.voice },
+            },
+          },
+        },
+        prompt: input.text,
+      });
+
+      if (!media) {
+        throw new Error('AI tidak menghasilkan output audio.');
+      }
+
+      const audioBuffer = Buffer.from(
+        media.url.substring(media.url.indexOf(',') + 1),
+        'base64'
+      );
+      
+      const wavDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+
+      return { media: wavDataUri };
+    } catch (error) {
+      console.error("Error in textToSpeechFlow:", error);
+      const message = error instanceof Error ? error.message : "Terjadi kesalahan yang tidak diketahui saat membuat audio.";
+      return { error: message };
+    }
+  }
+);
+
+
+// --------------------------------------------------------------------------
+//  HELPER FUNCTIONS
+// --------------------------------------------------------------------------
+
+async function toWav( pcmData: Buffer, channels = 1, rate = 24000, sampleWidth = 2): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs: Buffer[] = [];
+    writer.on('error', reject);
+    writer.on('data', (d) => bufs.push(d));
+    writer.on('end', () => resolve(Buffer.concat(bufs).toString('base64')));
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
 // --------------------------------------------------------------------------
 //  EXPORTED SERVER ACTIONS
 // --------------------------------------------------------------------------
@@ -548,5 +617,17 @@ export async function getAiRecommendation(input: AiRecommendationInput): Promise
 }
 
 export async function estimateProjectFeature(input: ProjectFeatureInput): Promise<ProjectFeatureOutput> {
+  const validationResult = ProjectFeatureInputSchema.safeParse(input);
+  if (!validationResult.success) {
+    throw new Error(`Input untuk estimasi proyek tidak valid: ${validationResult.error.message}`);
+  }
   return await estimateProjectFeatureFlow(input);
+}
+
+export async function textToSpeech(input: TtsInput): Promise<TtsOutput> {
+    const validationResult = TtsInputSchema.safeParse(input);
+    if (!validationResult.success) {
+        throw new Error(`Input untuk text-to-speech tidak valid: ${validationResult.error.message}`);
+    }
+    return await textToSpeechFlow(input);
 }

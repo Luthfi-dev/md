@@ -40,12 +40,12 @@ export const ArticleFromOutlineOutputSchema = z.object({
 });
 
 export const LengthenArticleInputSchema = z.object({
-  content: z.string().describe('The original HTML content of the article to be lengthened.'),
+  originalContent: z.string().describe('The original HTML content of the article to be lengthened.'),
 });
 export type LengthenArticleInput = z.infer<typeof LengthenArticleInputSchema>;
 
 export const LengthenArticleOutputSchema = z.object({
-    content: z.string().describe('The new, lengthened HTML content of the article.'),
+    articleContent: z.string().describe('The new, lengthened HTML content of the article.'),
 });
 export type LengthenArticleOutput = z.infer<typeof LengthenArticleOutputSchema>;
 
@@ -161,3 +161,17 @@ export const AiRecommendationOutputSchema = z.object({
   reasoning: z.string().describe("A detailed but concise explanation of why this choice is the best match."),
 });
 export type AiRecommendationOutput = z.infer<typeof AiRecommendationOutputSchema>;
+
+
+// --- Text to Speech Schemas ---
+export const TtsInputSchema = z.object({
+    text: z.string().describe('The text to convert to speech.'),
+    voice: z.string().describe('The prebuilt voice name to use, e.g., "Algenib", "Polaris".')
+});
+export type TtsInput = z.infer<typeof TtsInputSchema>;
+
+export const TtsOutputSchema = z.object({
+    media: z.string().optional().describe('A data URI of the generated WAV audio file.'),
+    error: z.string().optional().describe('An error message if the conversion failed.'),
+});
+export type TtsOutput = z.infer<typeof TtsOutputSchema>;

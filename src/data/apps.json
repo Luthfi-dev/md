@@ -11,11 +11,11 @@
     "order": 0
   },
   {
-    "id": "app_notebook",
-    "title": "Catatan Cerdas",
-    "description": "Organisir ide dan tugas dengan checklist canggih.",
-    "href": "/notebook",
-    "icon": "Notebook",
+    "id": "app_tts",
+    "title": "Text to Speech (AI)",
+    "description": "Ubah teks menjadi suara alami dengan teknologi AI Gemini.",
+    "href": "/tts",
+    "icon": "Voicemail",
     "isPopular": true,
     "isNew": true,
     "order": 1
@@ -51,6 +51,16 @@
     "order": 4
   },
   {
+    "id": "app_notebook",
+    "title": "Catatan Cerdas",
+    "description": "Organisir ide dan tugas dengan checklist canggih.",
+    "href": "/notebook",
+    "icon": "Notebook",
+    "isPopular": true,
+    "isNew": true,
+    "order": 5
+  },
+  {
     "id": "app_converter",
     "title": "Konversi File",
     "description": "Ubah format file dengan mudah, dari PDF ke Word, gambar ke PDF, dan lainnya.",
@@ -58,7 +68,7 @@
     "icon": "FileText",
     "isPopular": true,
     "isNew": false,
-    "order": 5
+    "order": 6
   },
   {
     "id": "app_scanner",
@@ -68,7 +78,7 @@
     "icon": "ScanLine",
     "isPopular": true,
     "isNew": false,
-    "order": 6
+    "order": 7
   },
   {
     "id": "app_unit_converter",
@@ -78,7 +88,7 @@
     "icon": "BookOpen",
     "isPopular": false,
     "isNew": false,
-    "order": 7
+    "order": 8
   },
   {
     "id": "app_calculator",
@@ -88,7 +98,7 @@
     "icon": "Calculator",
     "isPopular": true,
     "isNew": false,
-    "order": 8
+    "order": 9
   },
   {
     "id": "app_surat_generator",
@@ -98,7 +108,7 @@
     "icon": "FileSignature",
     "isPopular": true,
     "isNew": true,
-    "order": 9
+    "order": 10
   },
   {
     "id": "app_color_generator",
@@ -108,7 +118,7 @@
     "icon": "Palette",
     "isPopular": false,
     "isNew": true,
-    "order": 10
+    "order": 11
   },
   {
     "id": "app_stopwatch",
@@ -118,7 +128,7 @@
     "icon": "Timer",
     "isPopular": false,
     "isNew": false,
-    "order": 11
+    "order": 12
   },
   {
     "id": "app_all_apps",
@@ -128,6 +138,6 @@
     "icon": "Grid3x3",
     "isPopular": false,
     "isNew": false,
-    "order": 12
+    "order": 13
   }
 ]

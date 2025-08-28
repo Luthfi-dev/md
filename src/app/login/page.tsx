@@ -1,3 +1,4 @@
+
 'use client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ function LoginForm() {
         if (isLogin) {
             const result = await login(email, password);
             if (result.success) {
+                toast({ title: 'Login Berhasil!', description: 'Anda akan diarahkan...' });
                 // Redirect to the intended path or home page
                 router.push(redirectPath || '/');
             } else {

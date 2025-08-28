@@ -82,7 +82,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const logout = useCallback(async () => {
         setIsLoading(true);
-        const currentRole = user?.role;
         
         // Immediately clear client state
         setAccessToken(null); 
@@ -90,8 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             await fetch('/api/auth/logout', { 
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ role: currentRole }) // Send role to help clear correct cookie
+              headers: { 'Content-Type': 'application/json' }
             });
         } catch (error) {
             console.error("Logout fetch failed:", error);
@@ -100,19 +98,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Force a full page reload to the login page to ensure all state is reset
             window.location.href = '/login'; 
         }
-    }, [user?.role, setAccessToken]);
+    }, [setAccessToken]);
+
 
     const silentRefresh = useCallback(async (): Promise<string | null> => {
         try {
             const res = await fetch('/api/auth/refresh', { method: 'POST' });
-            if (!res.ok) throw new Error('Refresh failed');
             
             const data = await res.json();
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
                 return data.accessToken;
             }
-            throw new Error('Refresh token invalid or expired');
+            throw new Error(data.message || 'Refresh token invalid or expired');
         } catch (error) {
             console.warn('Silent refresh failed:', error);
             await logout(); // Logout if silent refresh fails
@@ -127,8 +125,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (token && !isTokenExpired(token)) {
                 setAccessToken(token);
             } else {
-                 const hasAnyRefreshToken = getCookie(getRefreshTokenName(1)) || getCookie(getRefreshTokenName(2)) || getCookie(getRefreshTokenName(3));
-                 if(hasAnyRefreshToken) {
+                 const hasRefreshToken = getCookie(getRefreshTokenName(1)) || getCookie(getRefreshTokenName(2)) || getCookie(getRefreshTokenName(3));
+                 if(hasRefreshToken) {
                     await silentRefresh();
                  } else {
                     setIsAuthenticated(false);

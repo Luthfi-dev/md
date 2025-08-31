@@ -20,19 +20,10 @@ export const chat = ai.defineFlow(
     outputSchema: schemas.ChatMessageSchema,
   },
   async history => {
-    // Correctly separate the last user message as the prompt
-    // and the rest of the conversation as history.
-    const lastMessage = history.pop();
-    if (!lastMessage || lastMessage.role !== 'user') {
-      // This should ideally not happen in a normal flow.
-      return { role: 'model', content: 'Maaf, sepertinya ada kesalahan dalam format percakapan.' };
-    }
-    
     const {output} = await ai.generate({
       model: gemini15Flash,
-      history: history,
-      prompt: lastMessage.content,
-      system: assistantData.systemPrompt,
+      history: history, // Pass the entire history to the model
+      system: assistantData.systemPrompt, // Provide system instructions separately
     });
 
     // Ensure content is never null to prevent schema validation errors.

@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -119,14 +120,15 @@ export default function MessagesPage() {
         if (!input.trim() || isLoading) return;
 
         const userMessage: ChatMessage = { role: 'user', content: input };
-        const newMessages = [...messages, userMessage];
-        setMessages(newMessages);
+        setMessages(prev => [...prev, userMessage]);
+        const currentInput = input;
         setInput('');
         
         setIsLoading(true);
 
         try {
-            const aiResponse = await chat(newMessages); 
+            // The chat flow now only takes the user's new message.
+            const aiResponse = await chat(currentInput); 
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {

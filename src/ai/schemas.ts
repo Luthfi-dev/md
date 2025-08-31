@@ -13,6 +13,9 @@ export const ChatMessageSchema = z.object({
   content: z.string(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+// Note: The `chat` flow now takes a simple string, so a dedicated schema for history is not needed at the flow level.
+// This schema remains useful for the frontend to manage the conversation state.
 export const ChatHistorySchema = z.array(ChatMessageSchema);
 
 // --- Article Generation Schemas ---

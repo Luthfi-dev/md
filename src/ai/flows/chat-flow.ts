@@ -20,9 +20,12 @@ export const chat = ai.defineFlow(
     outputSchema: schemas.ChatMessageSchema,
   },
   async history => {
+    const latestMessage = history.pop(); // Remove the last message to use as the prompt
+
     const {output} = await ai.generate({
       model: gemini15Flash,
-      prompt: history, // Pass the entire history as the prompt
+      prompt: latestMessage?.content || '', // Use the last message content as the prompt
+      history: history, // Pass the rest of the history
       system: assistantData.systemPrompt,
     });
     // Ensure content is never null to prevent schema validation errors.

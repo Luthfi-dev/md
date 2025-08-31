@@ -11,7 +11,7 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
   const isLoginPage = pathname === '/login';
-  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/superadmin');
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/spa');
 
   const showBottomNav = !isLoginPage && !isAdminRoute;
   

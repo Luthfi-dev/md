@@ -30,6 +30,7 @@ import {
 } from './schemas';
 import { convertHtmlToWord as convertHtmlToWordFlow } from './flows/file-converter';
 import type { HtmlToWordInput, HtmlToWordOutput } from './schemas';
+import assistantData from '@/data/assistant.json';
 
 
 // --------------------------------------------------------------------------
@@ -42,11 +43,10 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
     console.error("Invalid chat history format:", validationResult.error);
     throw new Error('Format riwayat percakapan tidak valid.');
   }
-  const lastMessage = history[history.length - 1];
 
   const response = await callExternalAI({
-      text: lastMessage.content,
-      // You can add more context from history if the API supports it
+      history: history,
+      system_prompt: assistantData.systemPrompt
   });
   
   if (typeof response.response !== 'string') {

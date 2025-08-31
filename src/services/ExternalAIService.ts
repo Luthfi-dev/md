@@ -9,6 +9,8 @@ const API_ENDPOINT = 'https://api.maudigi.com/ai/index.php';
 interface ExternalAIRequest {
     task?: string;
     text?: string;
+    system_prompt?: string;
+    history?: any[];
     data?: any;
     [key: string]: any;
 }

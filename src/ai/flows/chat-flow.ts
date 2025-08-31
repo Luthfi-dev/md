@@ -22,8 +22,7 @@ export const chat = ai.defineFlow(
   async history => {
     const {output} = await ai.generate({
       model: gemini15Flash,
-      history,
-      prompt: history[history.length - 1].content,
+      prompt: history, // Pass the entire history as the prompt
       system: assistantData.systemPrompt,
     });
     // Ensure content is never null to prevent schema validation errors.

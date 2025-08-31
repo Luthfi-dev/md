@@ -45,7 +45,7 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
   const lastMessage = history[history.length - 1];
 
   const responseText = await callExternalAI({
-      prompt: lastMessage.content,
+      text: lastMessage.content, // FIX: Changed 'prompt' to 'text' to match API expectation
       // You can add more context from history if the API supports it
   });
   

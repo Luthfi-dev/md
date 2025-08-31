@@ -8,7 +8,7 @@ const API_ENDPOINT = 'https://api.maudigi.com/ai/index.php';
 
 interface ExternalAIRequest {
     task?: string;
-    prompt?: string;
+    text?: string;
     data?: any;
     [key: string]: any;
 }
@@ -49,11 +49,7 @@ export async function callExternalAI(payload: ExternalAIRequest): Promise<any> {
              throw new Error(result.message || 'API mengembalikan error yang tidak diketahui.');
         }
 
-        // If the main purpose was a simple text response (like in chat)
-        if (payload.prompt && result.text) {
-            return result.text;
-        }
-
+        // Return the whole result object
         return result;
 
     } catch (error) {

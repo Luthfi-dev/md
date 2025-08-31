@@ -44,12 +44,16 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
   }
   const lastMessage = history[history.length - 1];
 
-  const responseText = await callExternalAI({
-      text: lastMessage.content, // FIX: Changed 'prompt' to 'text' to match API expectation
+  const response = await callExternalAI({
+      text: lastMessage.content,
       // You can add more context from history if the API supports it
   });
   
-  return { role: 'model', content: responseText };
+  if (typeof response.text !== 'string') {
+    throw new Error('Respons dari AI tidak berisi teks yang valid.');
+  }
+  
+  return { role: 'model', content: response.text };
 }
 
 export async function generateArticleOutline(input: { description: string }) {

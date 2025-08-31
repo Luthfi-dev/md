@@ -85,7 +85,7 @@ export default function MessagesPage() {
         if (messages.length === 1 && messages[0].role === 'model') {
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
         }
-    }, [messages.length]);
+    }, [messages]);
 
     const scrollToBottom = () => {
         if (viewportRef.current) {

@@ -26,6 +26,7 @@ export const ArticleOutlineOutputSchema = z.object({
       points: z.array(z.string()).describe("Poin-poin utama atau sub-judul dalam kerangka artikel.")
   })).describe('Tiga opsi kerangka artikel yang berbeda.'),
 });
+export type ArticleOutlineOutput = z.infer<typeof ArticleOutlineOutputSchema>;
 
 export const ArticleFromOutlineInputSchema = z.object({
   selectedOutline: z.object({
@@ -38,6 +39,8 @@ export const ArticleFromOutlineInputSchema = z.object({
 export const ArticleFromOutlineOutputSchema = z.object({
   articleContent: z.string().describe('Konten artikel lengkap dalam format HTML.'),
 });
+export type ArticleFromOutlineOutput = z.infer<typeof ArticleFromOutlineOutputSchema>;
+
 
 export const LengthenArticleInputSchema = z.object({
   originalContent: z.string().describe('The original HTML content of the article to be lengthened.'),
@@ -48,6 +51,7 @@ export const LengthenArticleOutputSchema = z.object({
     articleContent: z.string().describe('The new, lengthened HTML content of the article.'),
 });
 export type LengthenArticleOutput = z.infer<typeof LengthenArticleOutputSchema>;
+
 
 export const ShortenArticleInputSchema = z.object({
   content: z.string().describe('The original HTML content of the article to be shortened.'),
@@ -72,11 +76,13 @@ export type GenerateHeadlinesOutput = z.infer<typeof GenerateHeadlinesOutputSche
 export const SeoMetaInputSchema = z.object({
   articleContent: z.string().describe('The full content of the blog article.'),
 });
+export type SeoMetaInput = z.infer<typeof SeoMetaInputSchema>;
 
 export const SeoMetaOutputSchema = z.object({
   title: z.string().describe('A catchy, SEO-friendly meta title, around 60 characters.'),
   description: z.string().describe('A compelling meta description, around 155-160 characters.'),
 });
+export type SeoMetaOutput = z.infer<typeof SeoMetaOutputSchema>;
 
 // --- Project Estimator Schemas ---
 export const ProjectFeatureInputSchema = z.object({
@@ -108,9 +114,9 @@ export type HtmlToWordOutput = z.infer<typeof HtmlToWordOutputSchema>;
 
 // --- Creative Content Schemas ---
 export const CreativeContentInputSchema = z.object({
-  text: z.string().optional(),
-  imageDataUri: z.string().optional().nullable(),
-  style: z.string(),
+  text: z.string().optional().describe("Deskripsi teks atau ide utama untuk konten pemasaran."),
+  imageDataUri: z.string().optional().nullable().describe("Gambar referensi sebagai data URI, format: 'data:<mimetype>;base64,<encoded_data>'."),
+  style: z.string().describe("Gaya bahasa yang diinginkan (contoh: profesional, santai, jenaka, persuasif)."),
 });
 export type CreativeContentInput = z.infer<typeof CreativeContentInputSchema>;
 
@@ -146,7 +152,7 @@ export type GenerateVideoScriptOutput = z.infer<typeof GenerateVideoScriptOutput
 
 // --- AI Recommender Schemas ---
 const ImageInputSchema = z.object({
-  dataUri: z.string().describe('A data URI of an image, including MIME type (e.g., "data:image/jpeg;base64,...").'),
+  dataUri: z.string().describe("A data URI of an image, format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 
 export const AiRecommendationInputSchema = z.object({

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,25 +15,30 @@ import { chat } from '@/ai/genkit';
 import { type ChatMessage } from '@/ai/schemas';
 
 const renderContent = (content: string) => {
+    // This regex looks for <Link href="...">...</Link> and captures the href and the text.
     const linkRegex = /<Link href="(.+?)">(.+?)<\/Link>/g;
     let lastIndex = 0;
     const parts = [];
 
     let match;
     while ((match = linkRegex.exec(content)) !== null) {
+        // Push text before the link
         if (match.index > lastIndex) {
             parts.push(content.substring(lastIndex, match.index));
         }
+        // Push the link component
         const href = match[1];
         const text = match[2];
         parts.push(<Link key={match.index} href={href} className="text-primary underline hover:text-primary/80">{text}</Link>);
         lastIndex = match.index + match[0].length;
     }
 
+    // Push any remaining text after the last link
     if (lastIndex < content.length) {
         parts.push(content.substring(lastIndex));
     }
     
+    // Now, handle newlines for all string parts
     return parts.map((part, index) => {
         if (typeof part === 'string') {
             return part.split('\n').map((line, i) => (
@@ -59,21 +63,25 @@ export default function MessagesPage() {
     const router = useRouter();
     const isMobile = useIsMobile();
     
+    // Audio refs
     const typingSoundRef = useRef<HTMLAudioElement | null>(null);
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
+        // Load assistant data
         setAssistantName(assistantData.name);
         if (assistantData.avatarUrl) {
             setAssistantAvatar(assistantData.avatarUrl);
         }
 
+        // Set initial welcome message
         const welcomeMessage: ChatMessage = {
             role: 'model',
             content: `Hai! Aku ${assistantData.name}. Ada yang bisa kubantu hari ini?`
         };
         setMessages([welcomeMessage]);
 
+        // Initialize audio on client
         if (typeof window !== 'undefined') {
             typingSoundRef.current = new Audio('/sounds/typing.mp3');
             typingSoundRef.current.volume = 0.2;
@@ -81,6 +89,7 @@ export default function MessagesPage() {
         }
     }, []);
     
+    // Play notification sound for the initial message
     useEffect(() => {
         if (messages.length === 1 && messages[0].role === 'model') {
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));

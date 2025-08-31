@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useRef, useEffect, ChangeEvent } from 'react';
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { textToSpeech, TtsInput } from '@/ai/genkit';
+import { textToSpeech } from '@/ai/genkit';
+import type { TtsInput } from '@/ai/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import Link from 'next/link';
@@ -70,7 +70,7 @@ export default function TextToSpeechPage() {
                 setAudioSrc(result.media);
                 toast({ title: "Audio Berhasil Dibuat!", description: "Anda sekarang dapat memutar atau mengunduh hasilnya." });
             } else {
-                 throw new Error("AI tidak menghasilkan audio.");
+                 throw new Error(result.error || "AI tidak menghasilkan audio.");
             }
         } catch(error) {
             console.error(error);

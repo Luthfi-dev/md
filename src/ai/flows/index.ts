@@ -1,7 +1,9 @@
 'use server';
 /**
- * @fileOverview Core AI flow definitions and exported server actions.
+ * @fileOverview This file acts as a central barrel file to export all AI flows.
+ * This makes imports cleaner in other parts of the application.
  */
+
 import {
   chat,
   generateArticleOutline,
@@ -16,12 +18,12 @@ import {
   getAiRecommendation,
   estimateProjectFeature,
   textToSpeech
-} from './flows';
+} from './chat-flow'; // Assuming all simple text flows are in one file for now.
 
-import { convertHtmlToWord as convertHtmlToWordFlow } from './flows/file-converter';
-import type { HtmlToWordInput, HtmlToWordOutput } from './schemas';
+// You can create separate files for more complex flows and export them from here as well.
+// For example:
+// export * from './image-generation-flow';
 
-// Re-export all the flows so they can be used as server actions from the client.
 export {
   chat,
   generateArticleOutline,
@@ -37,8 +39,3 @@ export {
   estimateProjectFeature,
   textToSpeech
 };
-
-// This function does not use AI and can remain as is.
-export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
-  return await convertHtmlToWordFlow(input);
-}

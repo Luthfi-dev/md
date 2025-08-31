@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef } from 'react';
@@ -67,10 +66,9 @@ export default function ContentCreatorPage() {
                 imageDataUri: uploadedImage,
                 style,
             });
-            if (result.response) {
-                const content = result.response;
-                setGeneratedContent(content);
-                if (editorRef.current) editorRef.current.innerHTML = content;
+            if (result.content) {
+                setGeneratedContent(result.content);
+                if (editorRef.current) editorRef.current.innerHTML = result.content;
                 toast({ title: "Konten Berhasil Dibuat!", description: "AI telah selesai menulis. Anda bisa menyempurnakannya." });
             } else {
                  throw new Error("AI tidak memberikan konten.");
@@ -92,30 +90,30 @@ export default function ContentCreatorPage() {
 
         setActionLoading(prev => ({...prev, [actionName]: true}));
         try {
-            const result = await actionFn({ content: currentContent, ...params });
-            const newContent = result.response || result.content;
+            let result: any;
+            if (actionName === 'lengthen') {
+                result = await lengthenArticle({ originalContent: currentContent });
+            } else if (actionName === 'shorten' || actionName === 'headlines' || actionName === 'videoScript') {
+                 result = await actionFn({ content: currentContent });
+            } else if (actionName === 'translate') {
+                result = await translateContent({ content: currentContent, ...params });
+            }
             
-            if (actionName === 'headlines') {
+            const newContent = result?.articleContent || result?.content || result?.translatedContent;
+            
+            if (actionName === 'headlines' && result.headlines) {
                  toast({
                     title: 'Judul Alternatif Dibuat',
                     description: (
                     <ul className="mt-2 w-full rounded-md bg-secondary p-4">
-                        {result.response.map((h: string, i: number) => <li key={i} className="mb-1">💡 {h}</li>)}
+                        {result.headlines.map((h: string, i: number) => <li key={i} className="mb-1">💡 {h}</li>)}
                     </ul>
                     ),
                     duration: 10000,
                  });
-            } else if (actionName === 'translate') {
-                if (result.response) {
-                    setGeneratedContent(result.response);
-                    if (editorRef.current) editorRef.current.innerHTML = result.response;
-                    toast({ title: "Konten Berhasil Diterjemahkan!" });
-                }
-            } else if (actionName === 'videoScript') {
-                 if (result.response) {
-                    setVideoScript(result.response);
-                    setIsVideoScriptOpen(true);
-                 }
+            } else if (actionName === 'videoScript' && result.videoScript) {
+                 setVideoScript(result.videoScript);
+                 setIsVideoScriptOpen(true);
             } else if (newContent) {
                 setGeneratedContent(newContent);
                 if (editorRef.current) editorRef.current.innerHTML = newContent;
@@ -283,5 +281,3 @@ export default function ContentCreatorPage() {
         </>
     );
 }
-
-    

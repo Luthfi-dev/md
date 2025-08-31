@@ -20,13 +20,21 @@ export const chat = ai.defineFlow(
     outputSchema: schemas.ChatMessageSchema,
   },
   async history => {
-    // The model is smart enough to use the last message in the history as the prompt.
-    // We pass the entire history array directly.
+    // Correctly separate the last user message as the prompt
+    // and the rest of the conversation as history.
+    const lastMessage = history.pop();
+    if (!lastMessage || lastMessage.role !== 'user') {
+      // This should ideally not happen in a normal flow.
+      return { role: 'model', content: 'Maaf, sepertinya ada kesalahan dalam format percakapan.' };
+    }
+    
     const {output} = await ai.generate({
       model: gemini15Flash,
-      prompt: history, // Pass the entire history array
+      history: history,
+      prompt: lastMessage.content,
       system: assistantData.systemPrompt,
     });
+
     // Ensure content is never null to prevent schema validation errors.
     return {role: 'model', content: output || ''};
   }

@@ -20,10 +20,13 @@ export const chat = ai.defineFlow(
     outputSchema: schemas.ChatMessageSchema,
   },
   async history => {
+    // This is the robust way to handle chat history.
+    // The model is smart enough to use the last message as the prompt
+    // and the preceding messages as context.
     const {output} = await ai.generate({
       model: gemini15Flash,
-      history: history, // Pass the entire history to the model
-      system: assistantData.systemPrompt, // Provide system instructions separately
+      history: history,
+      system: assistantData.systemPrompt,
     });
 
     // Ensure content is never null to prevent schema validation errors.
@@ -210,7 +213,7 @@ export const estimateProjectFeature = ai.defineFlow({
     outputSchema: schemas.ProjectFeatureOutputSchema,
 }, async(input) => {
     const {output} = await ai.generate({
-        model: geminiJemini15Flash,
+        model: gemini15Flash,
         prompt: `Berikan estimasi harga (minimum dan maksimum) dalam Rupiah (IDR) untuk fitur proyek berikut. Berikan juga justifikasi singkat untuk rentang harga tersebut.\n\nNama Proyek: ${input.projectName}\nDeskripsi Fitur: ${input.featureDescription}`,
         output: { schema: schemas.ProjectFeatureOutputSchema },
     });
@@ -268,5 +271,3 @@ export const textToSpeech = ai.defineFlow({
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 });
-
-    

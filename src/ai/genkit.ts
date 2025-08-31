@@ -78,11 +78,11 @@ export async function generateArticleFromOutline(input: {
     return await callExternalAI({ text: prompt });
 }
 
-export async function lengthenArticle(input: { originalContent: string }) {
+export async function lengthenArticle(input: { content: string }) {
     const validationResult = LengthenArticleInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk perpanjang artikel tidak valid.");
     
-    const prompt = `Tugas: Perpanjang artikel berikut, tambahkan lebih banyak detail dan penjelasan.\nKonten Asli (HTML):\n${input.originalContent}\n\nFormat output harus JSON yang berisi field "articleContent" dengan konten HTML baru yang lebih panjang.`;
+    const prompt = `Tugas: Perpanjang artikel berikut, tambahkan lebih banyak detail dan penjelasan.\nKonten Asli (HTML):\n${input.content}\n\nFormat output harus JSON yang berisi field "response" dengan konten HTML baru yang lebih panjang.`;
     return await callExternalAI({ text: prompt });
 }
 
@@ -90,7 +90,7 @@ export async function shortenArticle(input: { content: string }) {
     const validationResult = ShortenArticleInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk ringkas artikel tidak valid.");
 
-    const prompt = `Tugas: Ringkas artikel berikut menjadi lebih padat dan to-the-point.\nKonten Asli (HTML):\n${input.content}\n\nFormat output harus JSON yang berisi field "content" dengan konten HTML baru yang lebih ringkas.`;
+    const prompt = `Tugas: Ringkas artikel berikut menjadi lebih padat dan to-the-point.\nKonten Asli (HTML):\n${input.content}\n\nFormat output harus JSON yang berisi field "response" dengan konten HTML baru yang lebih ringkas.`;
     return await callExternalAI({ text: prompt });
 }
 
@@ -98,7 +98,7 @@ export async function generateHeadlines(input: { content: string }) {
     const validationResult = GenerateHeadlinesInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk buat judul tidak valid.");
     
-    const prompt = `Tugas: Buat 5 judul alternatif yang menarik dan relevan untuk artikel berikut.\nKonten Artikel:\n${input.content}\n\nFormat output harus JSON yang berisi array string "headlines".`;
+    const prompt = `Tugas: Buat 5 judul alternatif yang menarik dan relevan untuk artikel berikut.\nKonten Artikel:\n${input.content}\n\nFormat output harus JSON yang berisi array string "response".`;
     return await callExternalAI({ text: prompt });
 }
 
@@ -119,7 +119,7 @@ export async function generateCreativeContent(input: CreativeContentInput) {
     imagePrompt = `\nIni adalah Data URI gambar referensi yang harus dipertimbangkan: ${input.imageDataUri}`;
   }
   
-  const prompt = `Tugas: Buat konten pemasaran kreatif.\nGaya Bahasa: ${input.style}\nDeskripsi Teks: ${input.text}${imagePrompt}\n\nFormat output harus JSON yang berisi field "content" dengan konten pemasaran yang dihasilkan dalam format HTML.`;
+  const prompt = `Tugas: Buat konten pemasaran kreatif.\nGaya Bahasa: ${input.style}\nDeskripsi Teks: ${input.text}${imagePrompt}\n\nFormat output harus JSON yang berisi field "response" dengan konten pemasaran yang dihasilkan dalam format HTML.`;
   return await callExternalAI({ text: prompt });
 }
 
@@ -127,7 +127,7 @@ export async function translateContent(input: TranslateContentInput) {
     const validationResult = TranslateContentInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk terjemahan tidak valid.");
 
-    const prompt = `Tugas: Terjemahkan konten HTML berikut ke dalam bahasa ${input.targetLanguage}.\nKonten HTML:\n${input.content}\n\nFormat output harus JSON yang berisi field "translatedContent" dengan konten HTML yang sudah diterjemahkan.`;
+    const prompt = `Tugas: Terjemahkan konten HTML berikut ke dalam bahasa ${input.targetLanguage}.\nKonten HTML:\n${input.content}\n\nFormat output harus JSON yang berisi field "response" dengan konten HTML yang sudah diterjemahkan.`;
     return await callExternalAI({ text: prompt });
 }
 
@@ -135,7 +135,7 @@ export async function generateVideoScript(input: GenerateVideoScriptInput) {
     const validationResult = GenerateVideoScriptInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk naskah video tidak valid.");
 
-    const prompt = `Tugas: Ubah konten berikut menjadi naskah video yang terstruktur.\nKonten Sumber:\n${input.content}\n\nFormat output harus JSON yang berisi field "videoScript" dengan naskah dalam format HTML terstruktur (misalnya, menggunakan heading untuk scene dan paragraf untuk narasi/dialog).`;
+    const prompt = `Tugas: Ubah konten berikut menjadi naskah video yang terstruktur.\nKonten Sumber:\n${input.content}\n\nFormat output harus JSON yang berisi field "response" dengan naskah dalam format HTML terstruktur (misalnya, menggunakan heading untuk scene dan paragraf untuk narasi/dialog).`;
     return await callExternalAI({ text: prompt });
 }
 
@@ -173,3 +173,5 @@ export async function textToSpeech(input: TtsInput) {
 export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
   return await convertHtmlToWordFlow(input);
 }
+
+    

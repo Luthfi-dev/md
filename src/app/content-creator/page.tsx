@@ -67,9 +67,10 @@ export default function ContentCreatorPage() {
                 imageDataUri: uploadedImage,
                 style,
             });
-            if (result.content) {
-                setGeneratedContent(result.content);
-                if (editorRef.current) editorRef.current.innerHTML = result.content;
+            if (result.response) {
+                const content = result.response;
+                setGeneratedContent(content);
+                if (editorRef.current) editorRef.current.innerHTML = content;
                 toast({ title: "Konten Berhasil Dibuat!", description: "AI telah selesai menulis. Anda bisa menyempurnakannya." });
             } else {
                  throw new Error("AI tidak memberikan konten.");
@@ -92,31 +93,32 @@ export default function ContentCreatorPage() {
         setActionLoading(prev => ({...prev, [actionName]: true}));
         try {
             const result = await actionFn({ content: currentContent, ...params });
+            const newContent = result.response || result.content;
             
             if (actionName === 'headlines') {
                  toast({
                     title: 'Judul Alternatif Dibuat',
                     description: (
                     <ul className="mt-2 w-full rounded-md bg-secondary p-4">
-                        {result.headlines.map((h: string, i: number) => <li key={i} className="mb-1">💡 {h}</li>)}
+                        {result.response.map((h: string, i: number) => <li key={i} className="mb-1">💡 {h}</li>)}
                     </ul>
                     ),
                     duration: 10000,
                  });
             } else if (actionName === 'translate') {
-                if (result.translatedContent) {
-                    setGeneratedContent(result.translatedContent);
-                    if (editorRef.current) editorRef.current.innerHTML = result.translatedContent;
+                if (result.response) {
+                    setGeneratedContent(result.response);
+                    if (editorRef.current) editorRef.current.innerHTML = result.response;
                     toast({ title: "Konten Berhasil Diterjemahkan!" });
                 }
             } else if (actionName === 'videoScript') {
-                 if (result.videoScript) {
-                    setVideoScript(result.videoScript);
+                 if (result.response) {
+                    setVideoScript(result.response);
                     setIsVideoScriptOpen(true);
                  }
-            } else if (result.content) {
-                setGeneratedContent(result.content);
-                if (editorRef.current) editorRef.current.innerHTML = result.content;
+            } else if (newContent) {
+                setGeneratedContent(newContent);
+                if (editorRef.current) editorRef.current.innerHTML = newContent;
                 toast({ title: "Konten Berhasil Diperbarui!" });
             } else {
                 throw new Error("AI tidak memberikan respons yang valid.");
@@ -281,3 +283,5 @@ export default function ContentCreatorPage() {
         </>
     );
 }
+
+    

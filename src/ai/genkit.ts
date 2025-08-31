@@ -49,11 +49,11 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
       // You can add more context from history if the API supports it
   });
   
-  if (typeof response.text !== 'string') {
+  if (typeof response.response !== 'string') {
     throw new Error('Respons dari AI tidak berisi teks yang valid.');
   }
   
-  return { role: 'model', content: response.text };
+  return { role: 'model', content: response.response };
 }
 
 export async function generateArticleOutline(input: { description: string }) {

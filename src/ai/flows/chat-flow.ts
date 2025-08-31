@@ -188,7 +188,7 @@ export const getAiRecommendation = ai.defineFlow({
     outputSchema: schemas.AiRecommendationOutputSchema,
 }, async(input) => {
     const promptParts: any[] = [
-        `Anda adalah seorang fashion stylist dan konsultan pencocokan barang yang ahli. Tugas Anda adalah memberikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama, dan pilihan-pilihannya adalah gambar berikutnya. Berikan ringkasan yang menarik dan alasan yang logis.`,
+        `Anda adalah seorang fashion stylist dan konsultan pencocokan barang yang ahli. Tugas Anda adalah memberikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama, dan pilihan-pilihannya adalah gambar berikutnya. Berikan ringkasan yang menarik dan alasan yang logis. Pastikan semua respons (summary dan reasoning) dalam Bahasa Indonesia.`,
         "Item Utama:",
         { media: { url: input.mainItem.dataUri } },
         "Pilihan:",
@@ -210,7 +210,7 @@ export const estimateProjectFeature = ai.defineFlow({
     outputSchema: schemas.ProjectFeatureOutputSchema,
 }, async(input) => {
     const {output} = await ai.generate({
-        model: gemini15Flash,
+        model: geminiJemini15Flash,
         prompt: `Berikan estimasi harga (minimum dan maksimum) dalam Rupiah (IDR) untuk fitur proyek berikut. Berikan juga justifikasi singkat untuk rentang harga tersebut.\n\nNama Proyek: ${input.projectName}\nDeskripsi Fitur: ${input.featureDescription}`,
         output: { schema: schemas.ProjectFeatureOutputSchema },
     });
@@ -268,3 +268,5 @@ export const textToSpeech = ai.defineFlow({
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 });
+
+    

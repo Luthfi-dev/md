@@ -44,9 +44,12 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
     throw new Error('Format riwayat percakapan tidak valid.');
   }
 
+  // Combine system prompt, history, and the latest message into a single text block
+  const historyText = history.map(m => `${m.role}: ${m.content}`).join('\n');
+  const combinedPrompt = `${assistantData.systemPrompt}\n\nRiwayat Percakapan:\n${historyText}\n\nmodel:`;
+
   const response = await callExternalAI({
-      history: history,
-      system_prompt: assistantData.systemPrompt
+      text: combinedPrompt
   });
   
   if (typeof response.response !== 'string') {

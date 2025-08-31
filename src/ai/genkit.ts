@@ -2,502 +2,35 @@
 'use server';
 /**
  * @fileOverview Core AI flow definitions and exported server actions.
+ * This file now acts as a simple bridge to the ExternalAIService.
  */
-
-import { genkit, type GenerationCommonConfig } from 'genkit';
-import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
-import { executeAIGeneration } from '@/services/ApiKeyManager';
-import assistantData from '@/data/assistant.json';
-import wav from 'wav';
+import { callExternalAI } from '@/services/ExternalAIService';
 import {
   ChatHistorySchema,
   ChatMessageSchema,
   ArticleOutlineInputSchema,
-  ArticleOutlineOutputSchema,
   ArticleFromOutlineInputSchema,
-  ArticleFromOutlineOutputSchema,
-  SeoMetaInputSchema,
-  SeoMetaOutputSchema,
-  HtmlToWordInputSchema,
-  HtmlToWordOutputSchema,
-  type HtmlToWordInput,
-  type HtmlToWordOutput,
-  type ChatMessage,
   LengthenArticleInputSchema,
-  LengthenArticleOutputSchema,
   ShortenArticleInputSchema,
-  ShortenArticleOutputSchema,
   GenerateHeadlinesInputSchema,
-  GenerateHeadlinesOutputSchema,
+  SeoMetaInputSchema,
   CreativeContentInputSchema,
-  CreativeContentOutputSchema,
-  type CreativeContentInput,
-  type CreativeContentOutput,
   TranslateContentInputSchema,
-  TranslateContentOutputSchema,
-  type TranslateContentInput,
-  type TranslateContentOutput,
   GenerateVideoScriptInputSchema,
-  GenerateVideoScriptOutputSchema,
-  type GenerateVideoScriptInput,
-  type GenerateVideoScriptOutput,
   AiRecommendationInputSchema,
-  AiRecommendationOutputSchema,
-  type AiRecommendationInput,
-  type AiRecommendationOutput,
   ProjectFeatureInputSchema,
-  ProjectFeatureOutputSchema,
-  type ProjectFeatureInput,
-  type ProjectFeatureOutput,
   TtsInputSchema,
-  TtsOutputSchema,
+  type ChatMessage,
+  type CreativeContentInput,
+  type TranslateContentInput,
+  type GenerateVideoScriptInput,
+  type AiRecommendationInput,
+  type ProjectFeatureInput,
   type TtsInput,
-  type TtsOutput,
 } from './schemas';
-import htmlToDocx from 'html-to-docx';
+import { convertHtmlToWord as convertHtmlToWordFlow } from './flows/file-converter';
+import type { HtmlToWordInput, HtmlToWordOutput } from './schemas';
 
-
-// Initialize the shared AI instance.
-// This is NOT exported, it's used internally by flows defined in this file.
-const ai = genkit({
-  plugins: [
-    googleAI(),
-  ],
-});
-
-
-// --------------------------------------------------------------------------
-//  FLOW DEFINITIONS
-// --------------------------------------------------------------------------
-
-const chatFlow = ai.defineFlow(
-  {
-    name: 'chatFlow',
-    inputSchema: ChatHistorySchema,
-    outputSchema: ChatMessageSchema,
-  },
-  async (history) => {
-    const modelHistory = history.reduce((acc, msg, index) => {
-      if (index === history.length - 1) return acc;
-      acc.push({ role: msg.role, parts: [{ text: msg.content }] });
-      return acc;
-    }, [] as { role: 'user' | 'model'; parts: { text: string }[] }[]);
-
-    const lastMessage = history[history.length - 1];
-    const prompt = lastMessage?.content ?? '';
-
-    const safetySettings: GenerationCommonConfig['safetySettings'] = [
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-    ];
-
-    const response = await executeAIGeneration({
-        model: gemini15Flash,
-        system: assistantData.systemPrompt,
-        history: modelHistory,
-        prompt: prompt,
-        config: { safetySettings },
-    });
-      
-    return { role: 'model', content: response.text };
-  }
-);
-
-const generateArticleOutlineFlow = ai.defineFlow(
-  {
-    name: 'generateArticleOutlineFlow',
-    inputSchema: ArticleOutlineInputSchema,
-    outputSchema: ArticleOutlineOutputSchema,
-  },
-  async (input) => {
-    const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan deskripsi berikut, buatkan 3 opsi kerangka (outline) yang menarik dan terstruktur untuk sebuah artikel blog. Setiap outline harus memiliki judul yang SEO-friendly dan beberapa poin utama (sub-judul).
-
-Deskripsi: ${input.description}`;
-
-    const { output } = await executeAIGeneration({
-        prompt: prompt,
-        model: 'googleai/gemini-1.5-flash-latest',
-        output: { schema: ArticleOutlineOutputSchema },
-    });
-    
-    return output!;
-  }
-);
-
-const generateArticleFromOutlineFlow = ai.defineFlow(
-    {
-        name: 'generateArticleFromOutlineFlow',
-        inputSchema: ArticleFromOutlineInputSchema,
-        outputSchema: ArticleFromOutlineOutputSchema,
-    },
-    async (input) => {
-        const prompt = `Anda adalah seorang penulis konten profesional dan ahli SEO. Berdasarkan kerangka (outline) berikut, tulis sebuah artikel blog yang lengkap, menarik, dan informatif dengan target sekitar ${input.wordCount} kata.
-Gunakan format HTML dengan tag paragraf <p>, sub-judul <h2>, dan daftar <ul><li>. Pastikan gaya bahasanya engaging dan mudah dibaca.
-
-Judul: ${input.selectedOutline.title}
-
-Poin-poin/Sub-judul:
-${input.selectedOutline.points.map(p => `- ${p}`).join('\n')}
-`;
-
-        const { output } = await executeAIGeneration({
-            prompt: prompt,
-            model: 'googleai/gemini-1.5-flash-latest',
-            output: { schema: ArticleFromOutlineOutputSchema },
-        });
-        return output!;
-    }
-);
-
-const lengthenArticleFlow = ai.defineFlow(
-    {
-        name: 'lengthenArticleFlow',
-        inputSchema: LengthenArticleInputSchema,
-        outputSchema: LengthenArticleOutputSchema,
-    },
-    async (input) => {
-        const prompt = `Anda adalah seorang editor dan penulis konten profesional. Tugas Anda adalah memperpanjang artikel berikut tanpa mengubah gaya bahasa dan pesan intinya. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam pada setiap bagian. Pertahankan format HTML yang ada.
-
-Artikel Asli:
----
-${input.originalContent}
----
-`;
-
-        const { output } = await executeAIGeneration({
-            prompt: prompt,
-            model: 'googleai/gemini-1.5-flash-latest',
-            output: { schema: LengthenArticleOutputSchema },
-        });
-        return output!;
-    }
-);
-
-const shortenArticleFlow = ai.defineFlow(
-    {
-        name: 'shortenArticleFlow',
-        inputSchema: ShortenArticleInputSchema,
-        outputSchema: ShortenArticleOutputSchema,
-    },
-    async (input) => {
-        const prompt = `Anda adalah seorang editor konten ahli. Tugas Anda adalah meringkas artikel berikut menjadi lebih padat dan ringkas, sekitar 50-60% dari panjang asli. Fokus pada poin-poin terpenting dan hilangkan kalimat yang berulang atau kurang relevan. Pertahankan format HTML dan gaya bahasa aslinya.
-
-Artikel Asli:
----
-${input.content}
----
-`;
-
-        const { output } = await executeAIGeneration({
-            prompt: prompt,
-            model: 'googleai/gemini-1.5-flash-latest',
-            output: { schema: ShortenArticleOutputSchema },
-        });
-        return output!;
-    }
-);
-
-const generateHeadlinesFlow = ai.defineFlow(
-    {
-        name: 'generateHeadlinesFlow',
-        inputSchema: GenerateHeadlinesInputSchema,
-        outputSchema: GenerateHeadlinesOutputSchema,
-    },
-    async (input) => {
-        const prompt = `Anda adalah seorang copywriter dan pakar branding. Berdasarkan konten berikut, buatkan 5 alternatif judul (headline) atau slogan yang sangat menarik, menjual, dan ringkas.
-
-Konten:
----
-${input.content}
----
-`;
-
-        const { output } = await executeAIGeneration({
-            prompt: prompt,
-            model: 'googleai/gemini-1.5-flash-latest',
-            output: { schema: GenerateHeadlinesOutputSchema },
-        });
-        return output!;
-    }
-);
-
-
-const generateSeoMetaFlow = ai.defineFlow(
-  {
-    name: 'generateSeoMetaFlow',
-    inputSchema: SeoMetaInputSchema,
-    outputSchema: SeoMetaOutputSchema,
-  },
-  async (input) => {
-    const { output } = await executeAIGeneration({
-        model: 'googleai/gemini-1.5-flash-latest',
-        prompt: `You are an SEO expert. Based on the following article content, generate an optimized meta title (around 60 characters) and meta description (around 160 characters).
-
-        Article Content:
-        ${input.articleContent}
-        `,
-        output: { schema: SeoMetaOutputSchema },
-    });
-
-    return output!;
-  }
-);
-
-const generateCreativeContentFlow = ai.defineFlow(
-  {
-    name: 'generateCreativeContentFlow',
-    inputSchema: CreativeContentInputSchema,
-    outputSchema: CreativeContentOutputSchema,
-  },
-  async (input) => {
-    const promptParts = [];
-    
-    const basePrompt = `Anda adalah seorang ahli pemasaran digital dan copywriter yang sangat kreatif. Tugas Anda adalah membuat konten pemasaran yang menarik dan menjual berdasarkan informasi yang diberikan.
-Gaya bahasa yang Anda gunakan harus **${input.style}**.
-Pastikan outputnya dalam format HTML yang rapi, menggunakan tag seperti <h2> untuk judul, <p> untuk paragraf, dan <strong> atau <b> untuk penekanan. Jika relevan, sertakan juga beberapa hashtag yang sesuai.`;
-    
-    promptParts.push({ text: basePrompt });
-
-    if (input.imageDataUri) {
-        promptParts.push({ media: { url: input.imageDataUri } });
-        promptParts.push({ text: '\nGunakan gambar ini sebagai referensi utama. Jelaskan apa yang ada di gambar dan buatlah teks pemasaran yang relevan.' });
-    }
-
-    if (input.text) {
-        promptParts.push({ text: `\n\nBerikut adalah deskripsi tambahan dari pengguna: "${input.text}"` });
-    }
-    
-    const { output } = await executeAIGeneration({
-      prompt: promptParts,
-      model: googleAI.model('gemini-1.5-flash-latest'),
-      output: { schema: CreativeContentOutputSchema },
-    });
-
-    if (!output) {
-      throw new Error("AI tidak dapat menghasilkan konten. Coba lagi.");
-    }
-    return output;
-  }
-);
-
-const translateContentFlow = ai.defineFlow(
-  {
-    name: 'translateContentFlow',
-    inputSchema: TranslateContentInputSchema,
-    outputSchema: TranslateContentOutputSchema,
-  },
-  async (input) => {
-    const prompt = `Anda adalah penerjemah profesional. Terjemahkan konten HTML berikut ke dalam bahasa **${input.targetLanguage}**. Pertahankan semua tag HTML dan struktur aslinya. Pastikan terjemahan akurat dan sesuai dengan konteks aslinya.
-
-Konten Asli:
----
-${input.content}
----
-`;
-    const { output } = await executeAIGeneration({
-      prompt: prompt,
-      model: googleAI.model('gemini-1.5-flash-latest'),
-      output: { schema: TranslateContentOutputSchema },
-    });
-    if (!output) throw new Error("AI tidak memberikan respons terjemahan.");
-    return output;
-  }
-);
-
-
-const generateVideoScriptFlow = ai.defineFlow(
-  {
-    name: 'generateVideoScriptFlow',
-    inputSchema: GenerateVideoScriptInputSchema,
-    outputSchema: GenerateVideoScriptOutputSchema,
-  },
-  async (input) => {
-    const prompt = `Anda adalah seorang penulis naskah video profesional. Ubah konten berikut menjadi naskah video pendek (sekitar 1 menit) yang menarik untuk platform seperti Instagram Reels atau TikTok. Buat format yang jelas dengan bagian-bagian seperti:
-- **Scene [Nomor]:** (Deskripsi singkat adegan visual, B-roll, atau teks di layar)
-- **Narasi/Dialog:** (Teks yang akan diucapkan)
-- **Musik/SFX:** (Saran untuk musik latar atau efek suara)
-
-Pastikan naskahnya dinamis dan mudah diikuti. Gunakan format HTML.
-
-Konten Asli:
----
-${input.content}
----
-`;
-    const { output } = await executeAIGeneration({
-      prompt: prompt,
-      model: googleAI.model('gemini-1.5-flash-latest'),
-      output: { schema: GenerateVideoScriptOutputSchema },
-    });
-    if (!output) throw new Error("AI tidak memberikan respons naskah video.");
-    return output;
-  }
-);
-
-const convertHtmlToWordFlow = ai.defineFlow(
-  {
-    name: 'convertHtmlToWordFlow',
-    inputSchema: HtmlToWordInputSchema,
-    outputSchema: HtmlToWordOutputSchema,
-  },
-  async (input) => {
-    try {
-        const docxBuffer = await htmlToDocx(input.htmlContent, undefined, {
-            table: { row: { cantSplit: true } },
-            footer: true,
-            pageNumber: true,
-             pageSize: {
-                width: 11906,
-                height: 16838,
-            },
-        });
-
-        const docxDataUri = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${(docxBuffer as Buffer).toString('base64')}`;
-
-        return { docxDataUri };
-
-    } catch (e: any) {
-        console.error("Error in convertHtmlToWordFlow:", e);
-        return { error: e.message || 'An unknown error occurred during conversion.' };
-    }
-  }
-);
-
-const getAiRecommendationFlow = ai.defineFlow(
-  {
-    name: 'getAiRecommendationFlow',
-    inputSchema: AiRecommendationInputSchema,
-    outputSchema: AiRecommendationOutputSchema,
-  },
-  async (input) => {
-    const prompt = [
-        { text: "Anda adalah seorang konsultan ahli (seperti stylist, desainer interior, atau penasihat umum) yang sangat baik dalam mencocokkan barang. Tugas Anda adalah menganalisis satu 'Item Utama' dan beberapa 'Item Pilihan', lalu merekomendasikan satu pilihan terbaik yang paling cocok dengan item utama. Berikan juga ringkasan dan alasan yang logis dalam BAHASA INDONESIA." },
-        { text: "ITEM UTAMA (Referensi):" },
-        { media: { url: input.mainItem.dataUri } },
-        { text: "\n\nITEM PILIHAN (Pilih salah satu dari berikut ini):" }
-    ];
-
-    input.choices.forEach((choice, index) => {
-        prompt.push({ text: `\nPilihan ${index}:` });
-        prompt.push({ media: { url: choice.dataUri } });
-    });
-
-    prompt.push({ text: "\n\nAnalisis Anda HARUS dalam Bahasa Indonesia dan mencakup:\n1. Pilihan terbaik (berdasarkan indeks, mulai dari 0).\n2. Ringkasan singkat (misal: 'Kombinasi Klasik & Modern').\n3. Alasan yang jelas dan logis, mempertimbangkan warna, gaya, acara, atau kriteria relevan lainnya." });
-
-    const { output } = await executeAIGeneration({
-      prompt: prompt,
-      model: googleAI.model('gemini-1.5-flash-latest'),
-      output: { schema: AiRecommendationOutputSchema },
-    });
-
-    if (!output) {
-      throw new Error("AI tidak dapat memberikan rekomendasi. Coba lagi.");
-    }
-    return output;
-  }
-);
-
-
-const estimateProjectFeatureFlow = ai.defineFlow(
-  {
-    name: 'estimateProjectFeatureFlow',
-    inputSchema: ProjectFeatureInputSchema,
-    outputSchema: ProjectFeatureOutputSchema,
-  },
-  async (input) => {
-    const prompt = `
-      Anda adalah seorang konsultan bisnis dan manajer proyek senior di Indonesia dengan pengalaman 15 tahun dalam berbagai industri (termasuk IT, desain, konstruksi, event, dll).
-      Tugas Anda adalah memberikan estimasi biaya yang realistis untuk sebuah pekerjaan, fitur, atau item dalam sebuah proyek.
-      Berikan harga dalam Rupiah (IDR).
-
-      Anda HARUS memberikan output dalam format JSON yang sesuai dengan skema yang diberikan.
-      - priceMin dan priceMax harus berupa angka (number), bukan string.
-      - justification harus berupa satu kalimat singkat yang menjelaskan kompleksitas dan alasan rentang harga tersebut.
-
-      Konteks Proyek/Ide: ${input.projectName}
-      Pekerjaan/Fitur yang akan diestimasi: "${input.featureDescription}"
-    `;
-
-    const { output } = await executeAIGeneration({
-      prompt: prompt,
-      model: googleAI.model('gemini-1.5-flash-latest'),
-      output: { schema: ProjectFeatureOutputSchema },
-    });
-
-    if (!output) {
-      throw new Error('Gagal mendapatkan estimasi dari AI. Coba lagi.');
-    }
-
-    return output;
-  }
-);
-
-
-const textToSpeechFlow = ai.defineFlow(
-  {
-    name: 'textToSpeechFlow',
-    inputSchema: TtsInputSchema,
-    outputSchema: TtsOutputSchema,
-  },
-  async (input): Promise<TtsOutput> => {
-    try {
-      const { media } = await executeAIGeneration({
-        model: googleAI.model('gemini-2.5-flash-preview-tts'),
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: input.voice },
-            },
-          },
-        },
-        prompt: input.text,
-      });
-
-      if (!media) {
-        return { error: 'AI tidak menghasilkan output audio. Coba lagi atau gunakan teks yang berbeda.' };
-      }
-
-      const audioBuffer = Buffer.from(
-        media.url.substring(media.url.indexOf(',') + 1),
-        'base64'
-      );
-      
-      const wavDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
-
-      return { media: wavDataUri };
-    } catch (error) {
-      console.error("Error in textToSpeechFlow:", error);
-      const message = error instanceof Error ? error.message : "Terjadi kesalahan yang tidak diketahui saat membuat audio.";
-      return { error: message };
-    }
-  }
-);
-
-
-// --------------------------------------------------------------------------
-//  HELPER FUNCTIONS
-// --------------------------------------------------------------------------
-
-async function toWav( pcmData: Buffer, channels = 1, rate = 24000, sampleWidth = 2): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs: Buffer[] = [];
-    writer.on('error', reject);
-    writer.on('data', (d) => bufs.push(d));
-    writer.on('end', () => resolve(Buffer.concat(bufs).toString('base64')));
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
 
 // --------------------------------------------------------------------------
 //  EXPORTED SERVER ACTIONS
@@ -509,13 +42,20 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
     console.error("Invalid chat history format:", validationResult.error);
     throw new Error('Format riwayat percakapan tidak valid.');
   }
-  return chatFlow(history);
+  const lastMessage = history[history.length - 1];
+
+  const responseText = await callExternalAI({
+      prompt: lastMessage.content,
+      // You can add more context from history if the API supports it
+  });
+  
+  return { role: 'model', content: responseText };
 }
 
 export async function generateArticleOutline(input: { description: string }) {
     const validationResult = ArticleOutlineInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk kerangka artikel tidak valid.");
-    return generateArticleOutlineFlow(input);
+    return await callExternalAI({ task: 'generateArticleOutline', data: input });
 }
 
 export async function generateArticleFromOutline(input: {
@@ -524,75 +64,76 @@ export async function generateArticleFromOutline(input: {
 }) {
     const validationResult = ArticleFromOutlineInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk artikel tidak valid.");
-    return generateArticleFromOutlineFlow(input);
+    return await callExternalAI({ task: 'generateArticleFromOutline', data: input });
 }
 
 export async function lengthenArticle(input: { originalContent: string }) {
     const validationResult = LengthenArticleInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk perpanjang artikel tidak valid.");
-    return lengthenArticleFlow(input);
+    return await callExternalAI({ task: 'lengthenArticle', data: input });
 }
 
 export async function shortenArticle(input: { content: string }) {
     const validationResult = ShortenArticleInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk ringkas artikel tidak valid.");
-    return shortenArticleFlow(input);
+    return await callExternalAI({ task: 'shortenArticle', data: input });
 }
 
 export async function generateHeadlines(input: { content: string }) {
     const validationResult = GenerateHeadlinesInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk buat judul tidak valid.");
-    return generateHeadlinesFlow(input);
+    return await callExternalAI({ task: 'generateHeadlines', data: input });
 }
 
 export async function generateSeoMeta(input: { articleContent: string }) {
     const validationResult = SeoMetaInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk SEO meta tidak valid.");
-    return generateSeoMetaFlow(input);
+    return await callExternalAI({ task: 'generateSeoMeta', data: input });
 }
 
-export async function generateCreativeContent(input: CreativeContentInput): Promise<CreativeContentOutput> {
+export async function generateCreativeContent(input: CreativeContentInput) {
   const validationResult = CreativeContentInputSchema.safeParse(input);
   if (!validationResult.success) throw new Error("Input untuk konten kreatif tidak valid.");
-  return generateCreativeContentFlow(input);
+  return await callExternalAI({ task: 'generateCreativeContent', data: input });
 }
 
-export async function translateContent(input: TranslateContentInput): Promise<TranslateContentOutput> {
+export async function translateContent(input: TranslateContentInput) {
     const validationResult = TranslateContentInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk terjemahan tidak valid.");
-    return translateContentFlow(input);
+    return await callExternalAI({ task: 'translateContent', data: input });
 }
 
-export async function generateVideoScript(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
+export async function generateVideoScript(input: GenerateVideoScriptInput) {
     const validationResult = GenerateVideoScriptInputSchema.safeParse(input);
     if (!validationResult.success) throw new Error("Input untuk naskah video tidak valid.");
-    return generateVideoScriptFlow(input);
+    return await callExternalAI({ task: 'generateVideoScript', data: input });
 }
 
-export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
-  return await convertHtmlToWordFlow(input);
-}
-
-export async function getAiRecommendation(input: AiRecommendationInput): Promise<AiRecommendationOutput> {
+export async function getAiRecommendation(input: AiRecommendationInput) {
     const validationResult = AiRecommendationInputSchema.safeParse(input);
     if (!validationResult.success) {
       throw new Error(`Input untuk rekomendasi AI tidak valid: ${validationResult.error.message}`);
     }
-    return getAiRecommendationFlow(input);
+    return await callExternalAI({ task: 'getAiRecommendation', data: input });
 }
 
-export async function estimateProjectFeature(input: ProjectFeatureInput): Promise<ProjectFeatureOutput> {
+export async function estimateProjectFeature(input: ProjectFeatureInput) {
   const validationResult = ProjectFeatureInputSchema.safeParse(input);
   if (!validationResult.success) {
     throw new Error(`Input untuk estimasi proyek tidak valid: ${validationResult.error.message}`);
   }
-  return await estimateProjectFeatureFlow(input);
+  return await callExternalAI({ task: 'estimateProjectFeature', data: input });
 }
 
-export async function textToSpeech(input: TtsInput): Promise<TtsOutput> {
+export async function textToSpeech(input: TtsInput) {
     const validationResult = TtsInputSchema.safeParse(input);
     if (!validationResult.success) {
         throw new Error(`Input untuk text-to-speech tidak valid: ${validationResult.error.message}`);
     }
-    return await textToSpeechFlow(input);
+    return await callExternalAI({ task: 'textToSpeech', data: input });
+}
+
+// This function does not use AI and can remain as is.
+export async function convertHtmlToWord(input: HtmlToWordInput): Promise<HtmlToWordOutput> {
+  return await convertHtmlToWordFlow(input);
 }

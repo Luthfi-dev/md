@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview All core AI text-based and multimodal generation flows.
@@ -25,7 +26,8 @@ export const chat = ai.defineFlow(
       prompt: history[history.length - 1].content,
       system: assistantData.systemPrompt,
     });
-    return {role: 'model', content: output!};
+    // Ensure content is never null to prevent schema validation errors.
+    return {role: 'model', content: output || ''};
   }
 );
 

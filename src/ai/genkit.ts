@@ -114,13 +114,16 @@ export async function generateCreativeContent(input: CreativeContentInput) {
   const validationResult = CreativeContentInputSchema.safeParse(input);
   if (!validationResult.success) throw new Error("Input untuk konten kreatif tidak valid.");
 
-  // Construct a clear text prompt. The image is sent separately.
-  const prompt = `Tugas: Buat konten pemasaran kreatif.\nGaya Bahasa: ${input.style}\nDeskripsi Teks: ${input.text}\n\nBerdasarkan gambar yang diberikan, buatlah konten yang menarik. Format output harus JSON yang berisi field "response" dengan konten pemasaran yang dihasilkan dalam format HTML.`;
+  // Construct a clear text prompt.
+  const prompt = `Tugas: Buat konten pemasaran kreatif.\nGaya Bahasa: ${input.style}\nDeskripsi Teks: ${input.text || ''}\n\nBerdasarkan gambar (jika ada), buatlah konten yang menarik. Format output harus JSON yang berisi field "response" dengan konten pemasaran yang dihasilkan dalam format HTML.`;
 
-  return await callExternalAI({
-    text: prompt,
-    image_data: input.imageDataUri // Send image data in a separate field
-  });
+  // Send payload based on available data, as per new API spec
+  const payload: { text: string; image_data?: string | null } = { text: prompt };
+  if (input.imageDataUri) {
+    payload.image_data = input.imageDataUri;
+  }
+
+  return await callExternalAI(payload);
 }
 
 export async function translateContent(input: TranslateContentInput) {
@@ -145,16 +148,19 @@ export async function getAiRecommendation(input: AiRecommendationInput) {
       throw new Error(`Input untuk rekomendasi AI tidak valid: ${validationResult.error.message}`);
     }
 
-    // Construct a text prompt with placeholders for choice items.
-    const prompt = `Tugas: Berikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama ada di field 'image_data'. Analisis gaya, warna, dan keserasian dengan pilihan-pilihan berikut.
-Pilihan Item (Pilih salah satu dari berikut, yang datanya ada di bawah ini):
-${input.choices.map((c, i) => `Pilihan ${i}:\n[GAMBAR_DATA_URI_MULAI]\n${c.dataUri}\n[GAMBAR_DATA_URI_SELESAI]\n`).join('\n')}
+    const prompt = `Tugas: Berikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama yang diberikan. Analisis gaya, warna, dan keserasian dengan pilihan-pilihan berikutnya.
 
 Format output harus JSON yang sesuai dengan skema AiRecommendationOutputSchema.`;
     
+    // Combine all image data URIs into a single string, separated by commas
+    const allImageDataUris = [
+        input.mainItem.dataUri,
+        ...input.choices.map(c => c.dataUri)
+    ].join(',');
+
     return await callExternalAI({ 
       text: prompt,
-      image_data: input.mainItem.dataUri
+      image_data: allImageDataUris
     });
 }
 

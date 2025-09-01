@@ -2,6 +2,7 @@
 'use server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth-utils';
+import { db } from '@/lib/db';
 import { ApiKeyManager } from '@/services/ApiKeyManager';
 
 // This is a new route to reset the failure count of an API key
@@ -20,9 +21,11 @@ export async function POST(request: NextRequest) {
     const keyId = parseInt(id, 10);
 
     try {
-        await ApiKeyManager.resetKey(keyId);
+        await ApiKeyManager.resetKeyFailureCount(keyId);
+        // Force a refresh of the key cache
+        await ApiKeyManager.fetchKeys(); 
         
-        return NextResponse.json({ success: true, message: `Status dan counter untuk kunci ${keyId} telah direset.` });
+        return NextResponse.json({ success: true, message: `Failure count for key ${keyId} has been reset.` });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan tidak diketahui.';
         return NextResponse.json({ success: false, message }, { status: 500 });

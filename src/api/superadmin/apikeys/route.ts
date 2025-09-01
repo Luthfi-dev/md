@@ -2,9 +2,11 @@
 'use server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth-utils';
-import { ApiKeyManager } from '@/services/ApiKeyManager';
+import { db } from '@/lib/db';
 import { z } from 'zod';
-import { decrypt } from '@/lib/encryption';
+import { encrypt } from '@/lib/encryption';
+import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { ApiKeyManager } from '@/services/ApiKeyManager';
 
 const apiKeySchema = z.object({
   service: z.enum(['gemini']),
@@ -18,17 +20,19 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, message: 'Tidak diizinkan' }, { status: 403 });
     }
 
+    let connection;
     try {
-        const allKeys = await ApiKeyManager.readKeysFromFile();
-        // Return decrypted keys with a preview
-        const keysForAdmin = allKeys.map(k => ({
-            ...k,
-            key_preview: '...' + k.key.slice(-4),
-        }));
-        return NextResponse.json({ success: true, keys: keysForAdmin });
+        connection = await db.getConnection();
+        const [rows]: [RowDataPacket[], any] = await connection.execute(
+            `SELECT id, service, SUBSTRING(api_key, -4) as key_preview, status, failure_count, last_used_at 
+             FROM ai_api_keys ORDER BY last_used_at DESC`
+        );
+        return NextResponse.json({ success: true, keys: rows });
     } catch (error) {
         console.error("GET API KEYS ERROR: ", error);
         return NextResponse.json({ success: false, message: 'Kesalahan server saat mengambil kunci API.' }, { status: 500 });
+    } finally {
+        if (connection) connection.release();
     }
 }
 
@@ -39,6 +43,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, message: 'Tidak diizinkan' }, { status: 403 });
     }
     
+    let connection;
     try {
         const body = await request.json();
         const validation = apiKeySchema.safeParse(body);
@@ -47,23 +52,23 @@ export async function POST(request: NextRequest) {
         }
         
         const { service, key } = validation.data;
-        
-        const allKeys = await ApiKeyManager.readKeysFromFile();
-        const newKey = {
-            id: allKeys.length > 0 ? Math.max(...allKeys.map(k => k.id)) + 1 : 1,
-            key,
-            service,
-            status: 'active' as const,
-            failure_count: 0,
-            last_used_at: null,
-        };
-        
-        await ApiKeyManager.writeKeysToFile([...allKeys, newKey]);
+        const encryptedKey = encrypt(key);
 
-        return NextResponse.json({ success: true, message: 'Kunci API berhasil ditambahkan', keyId: newKey.id }, { status: 201 });
+        connection = await db.getConnection();
+        const [result] = await connection.execute<ResultSetHeader>(
+            'INSERT INTO ai_api_keys (service, api_key) VALUES (?, ?)',
+            [service, encryptedKey]
+        );
+
+        // Force a refresh of the key cache
+        await ApiKeyManager.fetchKeys();
+
+        return NextResponse.json({ success: true, message: 'Kunci API berhasil ditambahkan', keyId: result.insertId }, { status: 201 });
     } catch (error: any) {
         console.error("CREATE API KEY ERROR: ", error);
         return NextResponse.json({ success: false, message: `Kesalahan server: ${error.message}` }, { status: 500 });
+    } finally {
+        if (connection) connection.release();
     }
 }
 
@@ -79,21 +84,27 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
         return NextResponse.json({ success: false, message: 'ID Kunci API diperlukan' }, { status: 400 });
     }
-    const keyId = parseInt(id, 10);
 
+    let connection;
     try {
-        const allKeys = await ApiKeyManager.readKeysFromFile();
-        const keysAfterDeletion = allKeys.filter(k => k.id !== keyId);
+        connection = await db.getConnection();
+        const [result] = await connection.execute<ResultSetHeader>(
+            'DELETE FROM ai_api_keys WHERE id = ?',
+            [id]
+        );
 
-        if (allKeys.length === keysAfterDeletion.length) {
+        if (result.affectedRows === 0) {
             return NextResponse.json({ success: false, message: 'Kunci API tidak ditemukan.' }, { status: 404 });
         }
-        
-        await ApiKeyManager.writeKeysToFile(keysAfterDeletion);
+
+        // Force a refresh of the key cache
+        await ApiKeyManager.fetchKeys();
 
         return NextResponse.json({ success: true, message: 'Kunci API berhasil dihapus.' });
     } catch (error: any) {
         console.error("DELETE API KEY ERROR: ", error);
         return NextResponse.json({ success: false, message: `Kesalahan server: ${error.message}` }, { status: 500 });
+    } finally {
+        if (connection) connection.release();
     }
 }

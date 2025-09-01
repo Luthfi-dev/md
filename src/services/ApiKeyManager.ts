@@ -1,8 +1,8 @@
 
-'use server';
 /**
  * @fileOverview Manages the lifecycle of AI API keys from the database.
  * Provides functionality for fetching, rotating, and handling failures of API keys.
+ * This file is a server-side utility module and MUST NOT contain 'use server'.
  */
 
 import { db } from '@/lib/db';

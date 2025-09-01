@@ -144,7 +144,7 @@ export default function MessagesPage() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-background relative">
+        <div className="flex flex-col h-full bg-background">
              <CardHeader className="flex flex-row items-center gap-3 border-b bg-card z-10 shrink-0">
                  {isMobile && (
                     <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
@@ -209,8 +209,8 @@ export default function MessagesPage() {
                 </div>
             </ScrollArea>
 
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-card/80 backdrop-blur-sm">
-                <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
+            <div className="fixed bottom-16 left-0 right-0 p-4 border-t bg-card/80 backdrop-blur-sm">
+                <form onSubmit={handleSubmit} className="flex w-full items-center gap-2 max-w-lg mx-auto">
                     <Input
                         value={input}
                         onChange={handleInputChange}

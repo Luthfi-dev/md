@@ -31,7 +31,7 @@ export const chat = ai.defineFlow(
     });
 
     // Ensure content is never null to prevent schema validation errors.
-    return {role: 'model', content: output || ''};
+    return {role: 'model', content: output?.text || ''};
   }
 );
 
@@ -272,3 +272,5 @@ export const textToSpeech = ai.defineFlow({
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 });
+
+    

@@ -19,13 +19,25 @@ const ptSans = PT_Sans({
   display: 'swap',
 });
 
-// Dynamically generate metadata from the JSON file
-export async function generateMetadata(): Promise<Metadata> {
+// Helper to get the base URL
+function getBaseUrl(): string {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // Fallback for Vercel or other environments
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
   const headersList = headers();
   const host = headersList.get('host') || 'localhost:3000';
-  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const baseUrl = `${protocol}://${host}`;
+  const protocol = host.startsWith('localhost') ? 'http' : 'https';
+  return `${protocol}://${host}`;
+}
 
+
+// Dynamically generate metadata from the JSON file
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = getBaseUrl();
   const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/og-image.png`;
 
   return {
@@ -52,10 +64,10 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
     },
     twitter: {
-      card: 'summary_large_image',
-      title: appMetadata.name,
-      description: appMetadata.description,
-      images: [logoUrl],
+       card: 'summary_large_image',
+       title: appMetadata.name,
+       description: appMetadata.description,
+       images: [logoUrl],
     },
     robots: {
       index: true,

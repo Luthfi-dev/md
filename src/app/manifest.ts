@@ -3,11 +3,23 @@ import { MetadataRoute } from 'next'
 import appMetadata from '@/data/app-metadata.json';
 import { headers } from 'next/headers';
  
-export default function manifest(): MetadataRoute.Manifest {
+// Helper to get the base URL
+function getBaseUrl(): string {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // Fallback for Vercel or other environments
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
   const headersList = headers();
   const host = headersList.get('host') || 'localhost:3000';
-  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const baseUrl = `${protocol}://${host}`;
+  const protocol = host.startsWith('localhost') ? 'http' : 'https';
+  return `${protocol}://${host}`;
+}
+
+export default function manifest(): MetadataRoute.Manifest {
+  const baseUrl = getBaseUrl();
   const iconUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icon-512x512.png`;
 
   return {

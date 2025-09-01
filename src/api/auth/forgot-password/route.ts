@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { sendEmail } from '@/services/EmailManager';
+import { headers } from 'next/headers';
+
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -16,6 +18,22 @@ async function hashToken(token: string): Promise<string> {
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
     return Buffer.from(digest).toString('hex');
 }
+
+// Helper to get the base URL
+function getBaseUrl(): string {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // Fallback for Vercel or other environments
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  const headersList = headers();
+  const host = headersList.get('host') || 'localhost:3000';
+  const protocol = host.startsWith('localhost') ? 'http' : 'https';
+  return `${protocol}://${host}`;
+}
+
 
 export async function POST(request: NextRequest) {
   let connection;
@@ -51,10 +69,8 @@ export async function POST(request: NextRequest) {
       [user.id, hashedToken, expiresAt]
     );
 
-    // Get base URL from request headers
-    const { protocol, host } = new URL(request.url);
-    const baseUrl = `${protocol}//${host}`;
-    const resetLink = `${baseUrl}/account/reset-password?token=${token}`;
+    // Use APP_URL from .env file to construct the reset link
+    const resetLink = `${getBaseUrl()}/account/reset-password?token=${token}`;
     
     // Try sending the email. This function will throw an error if all SMTP servers fail.
     await sendEmail({

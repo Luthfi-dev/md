@@ -127,7 +127,7 @@ export default function MessagesPage() {
         setIsLoading(true);
 
         try {
-            const aiResponse = await chat(updatedMessages); 
+            const aiResponse = await chat(updatedMessages);
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
@@ -144,7 +144,7 @@ export default function MessagesPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-background">
+        <div className="flex flex-col h-full bg-background">
              <CardHeader className="flex flex-row items-center gap-3 border-b bg-card z-10 shrink-0">
                  {isMobile && (
                     <Button variant="ghost" size="icon" onClick={() => router.push('/')}>

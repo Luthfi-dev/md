@@ -16,17 +16,18 @@ import wav from 'wav';
 export const chat = ai.defineFlow(
   {
     name: 'chatFlow',
-    inputSchema: z.string(), // Input is now just the user's message
+    inputSchema: z.string(), // Input is just the user's message
     outputSchema: schemas.ChatMessageSchema,
   },
   async (prompt) => {
-    // This is the robust way to handle chat history.
-    // The model is smart enough to use the last message as the prompt
-    // and the preceding messages as context.
+    // Manually combine the system prompt and the user's message.
+    // This is the most robust way to ensure the model gets the full context
+    // and personality instructions on every call.
+    const fullPrompt = `${assistantData.systemPrompt}\n\nUSER QUESTION: ${prompt}`;
+
     const {output} = await ai.generate({
       model: gemini15Flash,
-      prompt: prompt, // Pass the user's message directly as the prompt
-      system: assistantData.systemPrompt,
+      prompt: fullPrompt, // Pass the combined prompt as a single string
     });
 
     // Ensure content is never null to prevent schema validation errors.

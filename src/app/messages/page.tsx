@@ -12,8 +12,8 @@ import { useRouter } from 'next/navigation';
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
-import { chat } from '@/ai/genkit';
 import { type ChatMessage } from '@/ai/schemas';
+import { ExternalAIService } from "@/services/ExternalAIService";
 
 const renderContent = (content: string) => {
     // This regex looks for <Link href="...">...</Link> and captures the href and the text.
@@ -120,15 +120,14 @@ export default function MessagesPage() {
         if (!input.trim() || isLoading) return;
 
         const userMessage: ChatMessage = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMessage]);
-        const currentInput = input;
+        const updatedMessages = [...messages, userMessage];
+        setMessages(updatedMessages);
         setInput('');
         
         setIsLoading(true);
 
         try {
-            // The chat flow now only takes the user's new message.
-            const aiResponse = await chat(currentInput); 
+            const aiResponse = await ExternalAIService.chat(updatedMessages); 
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
@@ -227,5 +226,3 @@ export default function MessagesPage() {
         </div>
     );
 }
-
-    

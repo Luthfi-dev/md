@@ -13,25 +13,18 @@ import {gemini15Flash} from '@genkit-ai/googleai';
 import wav from 'wav';
 
 // --- Chat Flow ---
+// NOTE: The chat flow is currently handled by ExternalAIService.ts for stability.
+// This Genkit flow is disabled.
 export const chat = ai.defineFlow(
   {
     name: 'chatFlow',
-    inputSchema: z.string(), // Input is just the user's message
+    inputSchema: z.string(),
     outputSchema: schemas.ChatMessageSchema,
   },
   async (prompt) => {
-    // Manually combine the system prompt and the user's message.
-    // This is the most robust way to ensure the model gets the full context
-    // and personality instructions on every call.
-    const fullPrompt = `${assistantData.systemPrompt}\n\nUSER QUESTION: ${prompt}`;
-
-    const {output} = await ai.generate({
-      model: gemini15Flash,
-      prompt: fullPrompt, // Pass the combined prompt as a single string
-    });
-
-    // Ensure content is never null to prevent schema validation errors.
-    return {role: 'model', content: output?.text || ''};
+    // This flow is intentionally left blank to use the external service.
+    // To re-enable, implement the Genkit logic here.
+    return { role: 'model', content: 'Flow ini dinonaktifkan. Gunakan ExternalAIService.' };
   }
 );
 
@@ -272,5 +265,3 @@ export const textToSpeech = ai.defineFlow({
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 });
-
-    

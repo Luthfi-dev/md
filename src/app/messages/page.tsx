@@ -19,7 +19,7 @@ const renderContent = (content: string) => {
     // This regex looks for <Link href="...">...</Link> and captures the href and the text.
     const linkRegex = /<Link href="(.+?)">(.+?)<\/Link>/g;
     let lastIndex = 0;
-    const parts = [];
+    const parts: (string | React.ReactNode)[] = [];
 
     let match;
     while ((match = linkRegex.exec(content)) !== null) {

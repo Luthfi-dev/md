@@ -1,34 +1,24 @@
 'use server';
 
 import type { ChatMessage } from '@/ai/schemas';
-import assistantData from '@/data/assistant.json';
 
-const API_URL = 'https://api.openai.com/v1/chat/completions'; // Ganti dengan URL API eksternal yang sebenarnya
-const API_KEY = process.env.GEMINI_API_KEY; // Gunakan variabel lingkungan yang sesuai
+const API_URL = 'https://api.maudigi.com/ai/index.php';
 
 /**
- * Handles the chat functionality by calling an external AI service.
- * This function is a Server Action and should only be called from client components.
- * @param history The entire chat history.
+ * Handles the chat functionality by calling the specified external AI service.
+ * @param history The entire chat history. The last message is used as the prompt.
  * @returns A ChatMessage object with the AI's response.
  */
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
-  if (!API_KEY) {
-    throw new Error('Kunci API untuk layanan AI eksternal tidak dikonfigurasi.');
+  // Extract the last user message as the prompt
+  const lastMessage = history[history.length - 1];
+  if (!lastMessage || lastMessage.role !== 'user') {
+    throw new Error('No valid user prompt found in history.');
   }
-
-  // Ubah format riwayat agar sesuai dengan API eksternal
-  const messagesForApi = history.map(msg => ({
-      role: msg.role === 'model' ? 'assistant' : 'user', // Sesuaikan 'model' menjadi 'assistant' jika diperlukan
-      content: msg.content
-  }));
+  const promptText = lastMessage.content;
 
   const body = {
-    model: 'gpt-3.5-turbo', // Ganti dengan model yang sesuai
-    messages: [
-      { role: 'system', content: assistantData.systemPrompt },
-      ...messagesForApi
-    ]
+    text: promptText,
   };
 
   try {
@@ -36,26 +26,31 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const errorBody = await response.json();
-      throw new Error(`API eksternal merespons dengan error: ${response.status} ${response.statusText} - ${errorBody.error?.message || ''}`);
+      const errorText = await response.text();
+      throw new Error(
+        `External API responded with error: ${response.status} ${response.statusText} - ${errorText}`
+      );
     }
 
     const data = await response.json();
-    const aiContent = data.choices[0]?.message?.content || '';
+    const aiContent = data.response;
+
+    if (typeof aiContent !== 'string') {
+        throw new Error('Invalid response format from external API.');
+    }
 
     return {
       role: 'model',
       content: aiContent,
     };
-
   } catch (error) {
-    console.error('Error saat memanggil API AI eksternal:', error);
+    console.error('Error calling external AI API:', error);
+    // Re-throw the error so the client-side catch block can display it
     throw error;
   }
 }

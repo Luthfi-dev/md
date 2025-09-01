@@ -11,7 +11,7 @@ import * as schemas from '../schemas';
 import assistantData from '@/data/assistant.json';
 import { gemini15Flash } from '@genkit-ai/googleai';
 import wav from 'wav';
-import { ApiKeyManager } from '@/services/ApiKeyManager';
+import { reportFailure } from '@/services/ApiKeyManager';
 
 /**
  * Wrapper function to execute a generation task with API key rotation and retry logic.
@@ -26,7 +26,7 @@ async function executeGeneration(flowName: string, options: any) {
     return await generateWithRetry(options);
   } catch (error) {
     console.error(`[${flowName}] Final failure for key ID ${keyId}.`);
-    await ApiKeyManager.reportFailure(keyId);
+    await reportFailure(keyId);
     throw error; // Re-throw the final error to the client
   }
 }

@@ -27,7 +27,7 @@ let currentIndex = 0;
 /**
  * Fetches active API keys from the database, using a cache to prevent excessive queries.
  */
-async function fetchKeys(): Promise<void> {
+export async function fetchKeys(): Promise<void> {
     const now = Date.now();
     if (activeApiKeys.length > 0 && now - lastFetchedTime < CACHE_DURATION_MS) {
         return;
@@ -65,7 +65,7 @@ async function fetchKeys(): Promise<void> {
  * Retrieves the next available API key in a round-robin fashion.
  * @returns The API key record or null if no keys are available.
  */
-async function getNextKey(): Promise<ApiKeyRecord | null> {
+export async function getNextKey(): Promise<ApiKeyRecord | null> {
     await fetchKeys(); 
     if (activeApiKeys.length === 0) {
         return null;
@@ -79,7 +79,7 @@ async function getNextKey(): Promise<ApiKeyRecord | null> {
  * Updates the last used timestamp for a given key ID.
  * @param keyId The ID of the key that was used.
  */
-async function updateLastUsed(keyId: number): Promise<void> {
+export async function updateLastUsed(keyId: number): Promise<void> {
     let connection;
     try {
         connection = await db.getConnection();
@@ -95,7 +95,7 @@ async function updateLastUsed(keyId: number): Promise<void> {
  * Reports a failure for a given key ID, incrementing its failure count.
  * @param keyId The ID of the key that failed.
  */
-async function reportFailure(keyId: number): Promise<void> {
+export async function reportFailure(keyId: number): Promise<void> {
     console.warn(`Reporting failure for API Key ID: ${keyId}`);
     let connection;
     try {
@@ -119,7 +119,7 @@ async function reportFailure(keyId: number): Promise<void> {
  * Resets the failure count for a key, typically used by an admin.
  * @param keyId The ID of the key to reset.
  */
-async function resetKeyFailureCount(keyId: number): Promise<void> {
+export async function resetKeyFailureCount(keyId: number): Promise<void> {
     let connection;
     try {
         connection = await db.getConnection();
@@ -133,12 +133,3 @@ async function resetKeyFailureCount(keyId: number): Promise<void> {
         if (connection) connection.release();
     }
 }
-
-
-export const ApiKeyManager = {
-    getNextKey,
-    updateLastUsed,
-    reportFailure,
-    resetKeyFailureCount,
-    fetchKeys, // Expose for admin route to refresh cache after changes
-};

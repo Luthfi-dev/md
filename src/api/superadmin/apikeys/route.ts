@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 import { encrypt } from '@/lib/encryption';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { ApiKeyManager } from '@/services/ApiKeyManager';
+import { fetchKeys } from '@/services/ApiKeyManager';
 
 const apiKeySchema = z.object({
   service: z.enum(['gemini']),
@@ -15,7 +15,7 @@ const apiKeySchema = z.object({
 
 // GET all keys (previews only for security)
 export async function GET(request: NextRequest) {
-    const user = getAuthFromRequest(request);
+    const user = await getAuthFromRequest(request);
     if (!user || user.role !== 1) { // Super Admin Only
         return NextResponse.json({ success: false, message: 'Tidak diizinkan' }, { status: 403 });
     }
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
 // CREATE a new key
 export async function POST(request: NextRequest) {
-    const user = getAuthFromRequest(request);
+    const user = await getAuthFromRequest(request);
     if (!user || user.role !== 1) {
         return NextResponse.json({ success: false, message: 'Tidak diizinkan' }, { status: 403 });
     }
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Force a refresh of the key cache
-        await ApiKeyManager.fetchKeys();
+        await fetchKeys();
 
         return NextResponse.json({ success: true, message: 'Kunci API berhasil ditambahkan', keyId: result.insertId }, { status: 201 });
     } catch (error: any) {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE a key
 export async function DELETE(request: NextRequest) {
-    const user = getAuthFromRequest(request);
+    const user = await getAuthFromRequest(request);
     if (!user || user.role !== 1) {
         return NextResponse.json({ success: false, message: 'Tidak diizinkan' }, { status: 403 });
     }
@@ -98,7 +98,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Force a refresh of the key cache
-        await ApiKeyManager.fetchKeys();
+        await fetchKeys();
 
         return NextResponse.json({ success: true, message: 'Kunci API berhasil dihapus.' });
     } catch (error: any) {

@@ -6,7 +6,7 @@
  */
 import { genkit, type Plugin, GenerativeAIError } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { ApiKeyManager } from '@/services/ApiKeyManager';
+import { getNextKey, reportFailure, updateLastUsed } from '@/services/ApiKeyManager';
 
 const MAX_RETRIES = 3;
 
@@ -20,7 +20,7 @@ export async function getConfiguredAi(flowName: string) {
     let lastError: any = null;
 
     for (let i = 0; i < MAX_RETRIES; i++) {
-        const apiKeyRecord = await ApiKeyManager.getNextKey();
+        const apiKeyRecord = await getNextKey();
         
         if (!apiKeyRecord) {
             console.error("No active API keys available from ApiKeyManager.");
@@ -44,7 +44,7 @@ export async function getConfiguredAi(flowName: string) {
             const generateWithRetry = async (options: any) => {
                 try {
                     const result = await ai.generate(options);
-                    await ApiKeyManager.updateLastUsed(keyId);
+                    await updateLastUsed(keyId);
                     return result;
                 } catch (error) {
                     // Re-throw to be caught by the outer catch block
@@ -60,7 +60,7 @@ export async function getConfiguredAi(flowName: string) {
 
         } catch (error) {
             console.warn(`[${flowName}] API Key ID ${keyId} failed. Error:`, error);
-            await ApiKeyManager.reportFailure(keyId);
+            await reportFailure(keyId);
             lastError = error;
         }
     }

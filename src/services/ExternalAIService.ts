@@ -1,6 +1,8 @@
+
 'use server';
 
 import type { ChatMessage } from '@/ai/schemas';
+import assistantData from '@/data/assistant.json';
 
 const API_URL = 'https://api.maudigi.com/ai/index.php';
 
@@ -15,10 +17,13 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
   if (!lastMessage || lastMessage.role !== 'user') {
     throw new Error('No valid user prompt found in history.');
   }
-  const promptText = lastMessage.content;
+  const userPrompt = lastMessage.content;
+
+  // Combine the system prompt with the user's prompt
+  const fullPrompt = `${assistantData.systemPrompt}\n\nUser: ${userPrompt}\nAssistant:`;
 
   const body = {
-    text: promptText,
+    text: fullPrompt,
   };
 
   try {

@@ -13,7 +13,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
 import { type ChatMessage } from '@/ai/schemas';
-import * as ExternalAIServiceModule from "@/services/ExternalAIService";
+import { chat } from "@/services/ExternalAIService";
 
 const renderContent = (content: string) => {
     // This regex looks for <Link href="...">...</Link> and captures the href and the text.
@@ -127,7 +127,7 @@ export default function MessagesPage() {
         setIsLoading(true);
 
         try {
-            const aiResponse = await ExternalAIServiceModule.ExternalAIService.chat(updatedMessages); 
+            const aiResponse = await chat(updatedMessages); 
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {

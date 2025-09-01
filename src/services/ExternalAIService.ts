@@ -8,19 +8,22 @@ const API_URL = 'https://api.maudigi.com/ai/index.php';
 
 /**
  * Handles the chat functionality by calling the specified external AI service.
- * @param history The entire chat history. The last message is used as the prompt.
+ * It now includes the full chat history for contextual responses.
+ * @param history The entire chat history.
  * @returns A ChatMessage object with the AI's response.
  */
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
-  // Extract the last user message as the prompt
-  const lastMessage = history[history.length - 1];
-  if (!lastMessage || lastMessage.role !== 'user') {
-    throw new Error('No valid user prompt found in history.');
-  }
-  const userPrompt = lastMessage.content;
 
-  // Combine the system prompt with the user's prompt
-  const fullPrompt = `${assistantData.systemPrompt}\n\nUser: ${userPrompt}\nAssistant:`;
+  // Format the entire history into a single string for the API
+  const formattedHistory = history.map(message => {
+    if (message.role === 'user') {
+      return `User: ${message.content}`;
+    }
+    return `Assistant: ${message.content}`;
+  }).join('\n');
+
+  // Combine the system prompt with the formatted chat history
+  const fullPrompt = `${assistantData.systemPrompt}\n\n${formattedHistory}\nAssistant:`;
 
   const body = {
     text: fullPrompt,

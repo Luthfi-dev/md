@@ -125,7 +125,7 @@ export const generateCreativeContent = async (input: schemas.CreativeContentInpu
     if (input.imageDataUri) {
         promptParts.push({ media: { url: input.imageDataUri } });
     }
-    promptParts.push("\n\nPastikan output berupa format HTML yang kaya dan menarik.");
+    promptParts.push("\n\nPastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.");
 
     const { output } = await executeGeneration('generateCreativeContent', {
         model: gemini15Flash,

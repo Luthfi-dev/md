@@ -160,7 +160,8 @@ export default function MessagesPage() {
                     <CardDescription className="text-sm text-muted-foreground">Online</CardDescription>
                 </div>
             </CardHeader>
-            <div className="flex-grow p-0 overflow-hidden">
+
+            <div className="flex-grow overflow-y-auto">
                 <ScrollArea className="h-full" viewportRef={viewportRef}>
                     <div className="space-y-6 p-4">
                         {messages.map((message, index) => (
@@ -172,7 +173,7 @@ export default function MessagesPage() {
                                     </Avatar>
                                 )}
                                 <div className={cn(
-                                    "max-w-[75%] rounded-2xl px-4 py-2 text-sm",
+                                    "max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow",
                                     message.role === 'user'
                                         ? "bg-primary text-primary-foreground rounded-br-none"
                                         : "bg-card text-card-foreground border rounded-bl-none"
@@ -192,7 +193,7 @@ export default function MessagesPage() {
                                     <AvatarImage src={assistantAvatar} alt={assistantName} />
                                     <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
                                 </Avatar>
-                                <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1">
+                                <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1 shadow">
                                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '0ms'}}></span>
                                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '200ms'}}></span>
                                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '400ms'}}></span>
@@ -209,6 +210,7 @@ export default function MessagesPage() {
                     </div>
                 </ScrollArea>
             </div>
+
             <div className="p-4 border-t bg-card shrink-0">
                 <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
                     <Input
@@ -225,4 +227,5 @@ export default function MessagesPage() {
             </div>
         </div>
     );
-}
+
+    

@@ -2,7 +2,6 @@
 'use server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth-utils';
-import { db } from '@/lib/db';
 import { resetKeyFailureCount, fetchKeys } from '@/services/ApiKeyManager';
 
 // This is a new route to reset the failure count of an API key

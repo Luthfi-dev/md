@@ -21,13 +21,15 @@ const ptSans = PT_Sans({
 
 // Helper to get the base URL
 function getBaseUrl(): string {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL;
-  }
-  // Fallback for Vercel or other environments
+  // 1. Priority: Vercel deployment URL
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
+  // 2. Fallback to custom APP_URL from .env
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // 3. Fallback for local development from headers
   const headersList = headers();
   const host = headersList.get('host') || 'localhost:3000';
   const protocol = host.startsWith('localhost') ? 'http' : 'https';
@@ -38,7 +40,7 @@ function getBaseUrl(): string {
 // Dynamically generate metadata from the JSON file
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = getBaseUrl();
-  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : null;
+  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-512x512.png`;
 
   return {
     title: {
@@ -54,10 +56,10 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: appMetadata.name,
       images: [
         {
-          url: logoUrl || `${baseUrl}/icons/og-image.png`,
-          width: 1200,
-          height: 630,
-          alt: `${appMetadata.name} App`,
+          url: logoUrl,
+          width: 512,
+          height: 512,
+          alt: `${appMetadata.name} App Logo`,
         },
       ],
       locale: 'id_ID',
@@ -67,7 +69,7 @@ export async function generateMetadata(): Promise<Metadata> {
        card: 'summary_large_image',
        title: appMetadata.name,
        description: appMetadata.description,
-       images: [logoUrl || `${baseUrl}/icons/og-image.png`],
+       images: [logoUrl],
     },
     robots: {
       index: true,
@@ -82,9 +84,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     manifest: '/manifest.webmanifest',
     icons: {
-        icon: logoUrl || '/icons/favicon.ico',
-        shortcut: logoUrl || '/icons/apple-touch-icon.png',
-        apple: logoUrl || '/icons/apple-touch-icon.png',
+        icon: appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : '/icons/favicon.ico',
+        shortcut: appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
+        apple: appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
     },
     other: {
       'app-version': versionData.versionId,

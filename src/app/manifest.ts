@@ -5,13 +5,15 @@ import { headers } from 'next/headers';
  
 // Helper to get the base URL
 function getBaseUrl(): string {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL;
-  }
-  // Fallback for Vercel or other environments
+  // 1. Priority: Vercel deployment URL
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
+  // 2. Fallback to custom APP_URL from .env
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // 3. Fallback for local development from headers
   const headersList = headers();
   const host = headersList.get('host') || 'localhost:3000';
   const protocol = host.startsWith('localhost') ? 'http' : 'https';

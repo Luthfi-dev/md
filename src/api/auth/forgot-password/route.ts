@@ -21,13 +21,15 @@ async function hashToken(token: string): Promise<string> {
 
 // Helper to get the base URL
 function getBaseUrl(): string {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL;
-  }
-  // Fallback for Vercel or other environments
+  // 1. Priority: Vercel deployment URL
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
+  // 2. Fallback to custom APP_URL from .env
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // 3. Fallback for local development from headers
   const headersList = headers();
   const host = headersList.get('host') || 'localhost:3000';
   const protocol = host.startsWith('localhost') ? 'http' : 'https';
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
       [user.id, hashedToken, expiresAt]
     );
 
-    // Use APP_URL from .env file to construct the reset link
+    // Use getBaseUrl() to construct the reset link
     const resetLink = `${getBaseUrl()}/account/reset-password?token=${token}`;
     
     // Try sending the email. This function will throw an error if all SMTP servers fail.

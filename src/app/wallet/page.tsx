@@ -38,20 +38,32 @@ export default function WalletDashboardPage() {
       if (!data.success) throw new Error(data.message);
       
       const now = new Date();
-      const currentMonthTxs = data.transactions.filter((t: any) => {
-        const txDate = new Date(t.transaction_date);
-        return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
-      });
+      
+      let totalIncome = 0;
+      let totalExpense = 0;
+      let currentMonthIncome = 0;
+      let currentMonthExpense = 0;
 
-      let income = 0;
-      let expense = 0;
-      currentMonthTxs.forEach((t: any) => {
-        if (t.type === 'income') income += parseFloat(t.amount);
-        if (t.type === 'expense') expense += parseFloat(t.amount);
+      data.transactions.forEach((t: any) => {
+        const txDate = new Date(t.transaction_date);
+        const amount = parseFloat(t.amount);
+
+        if (t.type === 'income') {
+          totalIncome += amount;
+          if (txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear()) {
+            currentMonthIncome += amount;
+          }
+        }
+        if (t.type === 'expense') {
+          totalExpense += amount;
+          if (txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear()) {
+            currentMonthExpense += amount;
+          }
+        }
       });
       
       setTransactions(data.transactions.slice(0, 5));
-      setStats({ balance: income - expense, income, expense });
+      setStats({ balance: totalIncome - totalExpense, income: currentMonthIncome, expense: currentMonthExpense });
 
     } catch (error) {
       console.error(error);
@@ -81,16 +93,10 @@ export default function WalletDashboardPage() {
     <AddTransactionSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} onTransactionAdded={handleTransactionAdded} />
     <div className="min-h-screen bg-card flex flex-col">
       <main className="flex-1 p-4 pb-28">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold font-headline">DompetKu</h1>
-          <p className="text-muted-foreground">Arus kas Anda dalam satu genggaman.</p>
-        </div>
-
         {/* Balance Card */}
         <Card className="w-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-2xl mb-8">
           <CardHeader>
-            <CardDescription className="text-primary-foreground/80">Saldo Bulan Ini</CardDescription>
+            <CardDescription className="text-primary-foreground/80">Total Saldo</CardDescription>
             <CardTitle className="text-4xl">
               Rp <CountUp end={stats.balance} />
             </CardTitle>
@@ -101,7 +107,7 @@ export default function WalletDashboardPage() {
                 <ArrowDown className="text-green-300 w-5 h-5" />
               </div>
               <div>
-                <p className="opacity-80">Pemasukan</p>
+                <p className="opacity-80">Pemasukan Bulan Ini</p>
                 <p className="font-bold">Rp <CountUp end={stats.income} /></p>
               </div>
             </div>
@@ -110,7 +116,7 @@ export default function WalletDashboardPage() {
                 <ArrowUp className="text-red-300 w-5 h-5" />
               </div>
               <div>
-                <p className="opacity-80">Pengeluaran</p>
+                <p className="opacity-80">Pengeluaran Bulan Ini</p>
                 <p className="font-bold">Rp <CountUp end={stats.expense} /></p>
               </div>
             </div>

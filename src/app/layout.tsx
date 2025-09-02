@@ -38,7 +38,7 @@ function getBaseUrl(): string {
 // Dynamically generate metadata from the JSON file
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = getBaseUrl();
-  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/og-image.png`;
+  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : null;
 
   return {
     title: {
@@ -54,7 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: appMetadata.name,
       images: [
         {
-          url: logoUrl,
+          url: logoUrl || `${baseUrl}/icons/og-image.png`,
           width: 1200,
           height: 630,
           alt: `${appMetadata.name} App`,
@@ -67,7 +67,7 @@ export async function generateMetadata(): Promise<Metadata> {
        card: 'summary_large_image',
        title: appMetadata.name,
        description: appMetadata.description,
-       images: [logoUrl],
+       images: [logoUrl || `${baseUrl}/icons/og-image.png`],
     },
     robots: {
       index: true,
@@ -82,9 +82,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     manifest: '/manifest.webmanifest',
     icons: {
-        icon: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
-        shortcut: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
-        apple: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/favicon.ico',
+        icon: logoUrl || '/icons/favicon.ico',
+        shortcut: logoUrl || '/icons/apple-touch-icon.png',
+        apple: logoUrl || '/icons/apple-touch-icon.png',
     },
     other: {
       'app-version': versionData.versionId,

@@ -20,7 +20,7 @@ function getBaseUrl(): string {
 
 export default function manifest(): MetadataRoute.Manifest {
   const baseUrl = getBaseUrl();
-  const iconUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icon-512x512.png`;
+  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : null;
 
   return {
     name: appMetadata.name,
@@ -32,19 +32,19 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#1D88FE',
     icons: [
       {
-        src: iconUrl,
+        src: logoUrl || '/icons/android-chrome-192x192.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: iconUrl,
+        src: logoUrl || '/icons/android-chrome-512x512.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
        {
-        src: iconUrl,
+        src: logoUrl || '/icons/maskable_icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'

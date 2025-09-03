@@ -8,7 +8,6 @@
 import { getConfiguredAi } from '@/ai/init';
 import { z } from 'zod';
 import * as schemas from '../schemas';
-import assistantData from '@/data/assistant.json';
 import { gemini15Flash } from '@genkit-ai/googleai';
 import wav from 'wav';
 import { reportFailure } from '@/services/ApiKeyManager';
@@ -33,12 +32,12 @@ async function executeGeneration(flowName: string, options: any) {
 
 
 // --- Chat Flow ---
-// NOTE: The chat flow is currently handled by ExternalAIService.ts for stability.
-// This Genkit flow is disabled.
+// NOTE: The chat flow is now handled directly by ExternalAIService.ts for public access.
+// This Genkit flow is disabled to prevent conflicts.
 export const chat = async (prompt: string) => {
-    // This flow is intentionally left blank to use the external service.
-    // To re-enable, implement the Genkit logic here.
-    return { role: 'model', content: 'Flow ini dinonaktifkan. Gunakan ExternalAIService.' };
+    // This flow is intentionally left blank.
+    // The UI now calls the service in `src/services/ExternalAIService.ts` directly.
+    return { role: 'model', content: 'This Genkit flow is disabled.' };
 };
 
 

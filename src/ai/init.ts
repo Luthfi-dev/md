@@ -53,7 +53,6 @@ export async function getConfiguredAi(flowName: string) {
             };
             
             return {
-                ai,
                 generateWithRetry,
                 keyId // Return keyId to report failures
             };

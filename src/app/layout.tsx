@@ -40,9 +40,10 @@ function getBaseUrl(): string {
 // Dynamically generate metadata from the JSON file
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = getBaseUrl();
-  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-512x512.png`;
+  const logoPath = appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/android-chrome-512x512.png';
 
   return {
+    metadataBase: new URL(baseUrl), // THIS IS THE FIX
     title: {
       default: appMetadata.name,
       template: `%s | ${appMetadata.name}`,
@@ -52,11 +53,11 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: appMetadata.name,
       description: appMetadata.description,
-      url: baseUrl,
+      url: '/',
       siteName: appMetadata.name,
       images: [
         {
-          url: logoUrl,
+          url: logoPath, // Using relative path now
           width: 512,
           height: 512,
           alt: `${appMetadata.name} App Logo`,
@@ -69,7 +70,7 @@ export async function generateMetadata(): Promise<Metadata> {
        card: 'summary_large_image',
        title: appMetadata.name,
        description: appMetadata.description,
-       images: [logoUrl],
+       images: [logoPath], // Using relative path now
     },
     robots: {
       index: true,
@@ -84,9 +85,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     manifest: '/manifest.webmanifest',
     icons: {
-        icon: appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : '/icons/favicon.ico',
-        shortcut: appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
-        apple: appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
+        icon: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/favicon.ico',
+        shortcut: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
+        apple: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
     },
     other: {
       'app-version': versionData.versionId,
@@ -133,21 +134,6 @@ export default function RootLayout({
             }
           })}}
         />
-        <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js').then(registration => {
-                      console.log('SW registered: ', registration);
-                    }).catch(registrationError => {
-                      console.log('SW registration failed: ', registrationError);
-                    });
-                  });
-                }
-              `,
-            }}
-          />
       </head>
       <body className={cn("font-body antialiased min-h-screen flex flex-col bg-background")}>
         <AuthProvider>

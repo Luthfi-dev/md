@@ -1,91 +1,131 @@
 
-'use strict';
+"use strict";
 
-const CACHE_NAME = 'maudigi-cache-v1'; // Basic cache name
-const OFFLINE_URL = '/'; 
+// sw.js
 
-// List of assets to cache on installation
-const ASSETS_TO_CACHE = [
-  OFFLINE_URL,
+// Version control for the service worker and cache
+const CACHE_VERSION = "v1.0.0-maudigi"; // Change this version to force update
+const CACHE_NAME = `maudigi-cache-${CACHE_VERSION}`;
+
+// List of files to cache
+const URLS_TO_CACHE = [
+  '/',
   '/manifest.webmanifest',
-  // You can add more critical assets here like main CSS or JS files if needed
-  // Example: '/styles/main.css', '/scripts/main.js'
+  // Add other critical assets here. Be selective.
+  // For example: '/styles/main.css', '/scripts/main.js'
+  // Icons are usually a good choice to cache for PWA experience
+  '/icons/android-chrome-192x192.png',
+  '/icons/android-chrome-512x512.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/favicon.ico',
 ];
 
+// Install event: fires when the service worker is first installed.
 self.addEventListener('install', (event) => {
-  console.log('[SW] Install event');
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      try {
-        await cache.addAll(ASSETS_TO_CACHE);
-        console.log('[SW] Cached assets on install');
-      } catch (error) {
-        console.error('[SW] Failed to cache assets on install:', error);
-      }
-    })()
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Opened cache:', CACHE_NAME);
+        // Cache our files
+        return cache.addAll(URLS_TO_CACHE);
+      })
+      .then(() => {
+        // Force the waiting service worker to become the active service worker.
+        return self.skipWaiting();
+      })
+      .catch((err) => {
+        console.error('Cache open/addAll failed:', err);
+      })
   );
-  self.skipWaiting();
 });
 
+// Activate event: fires when the service worker becomes active.
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activate event');
   event.waitUntil(
-    (async () => {
-      // Clean up old caches
-      const cacheNames = await caches.keys();
-      await Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', name);
-            return caches.delete(name);
+    caches.keys().then((cacheNames) => {
+      // Delete old caches that are not our current one
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName.startsWith('maudigi-cache-') && cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
           }
         })
       );
-      await clients.claim();
-      console.log('[SW] Activated and claimed clients');
-    })()
+    }).then(() => {
+      // Tell the active service worker to take control of the page immediately.
+      return self.clients.claim();
+    })
   );
 });
 
 
+// Fetch event: fires for every network request.
 self.addEventListener('fetch', (event) => {
-  // We only want to handle navigation requests for offline fallback
-  if (event.request.mode !== 'navigate') {
+  const { request } = event;
+
+  // We only want to handle GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+  
+  // For navigation requests (e.g., loading a page), use a network-first strategy
+  if (request.mode === 'navigate') {
+     event.respondWith(
+      fetch(request)
+        .then(response => {
+          // If network is available, clone the response and cache it
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then(cache => {
+              cache.put(request, responseToCache);
+            });
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try to serve from cache
+          return caches.match(request)
+            .then(cachedResponse => {
+              return cachedResponse || caches.match('/'); // Fallback to home page if specific page not in cache
+            });
+        })
+    );
     return;
   }
 
+  // For other assets (CSS, JS, images), use a cache-first strategy
   event.respondWith(
-    (async () => {
-      try {
-        // First, try to use the network
-        const networkResponse = await fetch(event.request);
-        return networkResponse;
-      } catch (error) {
-        // Network failed, try to serve from cache
-        console.log('[SW] Network request failed, trying cache.', error);
-        const cache = await caches.open(CACHE_NAME);
-        try {
-            const cachedResponse = await cache.match(OFFLINE_URL);
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-            // If offline URL is not in cache, it's a real issue
-            console.error('[SW] Offline fallback page not found in cache.');
-            // This will result in the browser's default offline page
-            return new Response('Offline page not available', {
-                status: 404,
-                headers: { 'Content-Type': 'text/plain' },
-            });
-        } catch (cacheError) {
-             console.error('[SW] Cache match failed:', cacheError);
-             // This will result in the browser's default offline page
-             return new Response('Cache access failed', {
-                status: 500,
-                headers: { 'Content-Type': 'text/plain' },
-            });
+    caches.match(request)
+      .then((cachedResponse) => {
+        // If we have a cached response, return it
+        if (cachedResponse) {
+          return cachedResponse;
         }
-      }
-    })()
+
+        // Otherwise, fetch from the network
+        return fetch(request)
+          .then((networkResponse) => {
+            // Don't cache opaque responses (e.g., from third-party CDNs without CORS)
+            if (networkResponse.type === 'opaque') {
+              return networkResponse;
+            }
+
+            // Clone the response and cache it for future use
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(request, responseToCache);
+              });
+            
+            return networkResponse;
+          });
+      })
+      .catch((error) => {
+        // If both cache and network fail, you can provide a generic fallback
+        // For example, for images, you could return a placeholder image.
+        console.error('Fetch failed:', error);
+        // For now, we just let the browser's default offline error show.
+      })
   );
 });
+

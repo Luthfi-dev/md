@@ -11,12 +11,12 @@ const publicPaths = [
     '/surat', '/surat/share-fallback', '/surat/shared-template', '/surat-generator',
     '/converter/image-to-pdf', '/converter/pdf-to-word', '/converter/word-to-pdf',
     '/account/forgot-password', '/account/reset-password',
-    '/blog', '/messages', '/project-calculator' 
+    '/blog', '/messages', '/project-calculator', '/install' 
 ];
 
 const userLoginPath = '/login';
 const authPaths = [
-    '/account', '/notebook', '/wallet', '/project-calculator/list'
+    '/account', '/notebook', '/wallet', '/project-calculator/list', '/content-creator', '/recommender', '/tts'
 ];
 
 const adminLoginPath = '/admin/login';
@@ -71,7 +71,6 @@ export function middleware(request: NextRequest) {
     }
     
     // --- Public Paths ---
-    // Check if the path or its dynamic segments match public paths
     const isPublic = publicPaths.some(p => pathname.startsWith(p) && (pathname.length === p.length || pathname[p.length] === '/'));
     if (isPublic) {
         return NextResponse.next();
@@ -98,6 +97,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all paths except for specific static assets and API routes.
-    '/((?!api|_next/static|_next/image|favicon.ico|sounds|icon-|maskable_icon.png|.*\\.png$).*)',
+    // IMPORTANT: sw.js is excluded to allow service worker registration.
+    '/((?!api|_next/static|_next/image|sw.js|favicon.ico|sounds|icon-|maskable_icon.png|.*\\.png$).*)',
   ],
 };

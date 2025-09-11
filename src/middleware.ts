@@ -97,7 +97,8 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all paths except for specific static assets and API routes.
-    // IMPORTANT: sw.js is excluded to allow service worker registration.
-    '/((?!api|_next/static|_next/image|sw.js|favicon.ico|sounds|icon-|maskable_icon.png|.*\\.png$).*)',
+    // IMPORTANT: This list is crucial for PWA functionality. It must exclude
+    // the service worker, manifest, and all icon files.
+    '/((?!api|_next/static|_next/image|sw.js|manifest.webmanifest|favicon.ico|sounds/|icons/).*)',
   ],
 };

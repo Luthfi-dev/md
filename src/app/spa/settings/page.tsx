@@ -11,6 +11,8 @@ import { Save, Bot, KeyRound, Mail, Plus, Trash2, Loader2, RefreshCw } from "luc
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from '@/hooks/use-auth';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { getAllKeysForAdmin, addApiKey, deleteApiKey, resetKeyFailureCount } from '@/services/ApiKeyManager.server';
+import { getAllSmtpConfigs, addSmtpConfig, deleteSmtpConfig } from '@/services/SmtpManager.server';
 
 interface ApiKey {
     id: number;
@@ -30,7 +32,6 @@ interface SmtpConfig {
 
 export default function SuperAdminSettingsPage() {
   const { toast } = useToast();
-  const { fetchWithAuth } = useAuth();
   
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [smtpConfigs, setSmtpConfigs] = useState<SmtpConfig[]>([]);
@@ -44,19 +45,12 @@ export default function SuperAdminSettingsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-        const [keysRes, smtpRes] = await Promise.all([
-            fetchWithAuth('/api/superadmin/apikeys'),
-            fetchWithAuth('/api/superadmin/smtp')
+        const [keysData, smtpData] = await Promise.all([
+            getAllKeysForAdmin(),
+            getAllSmtpConfigs()
         ]);
-        
-        if(!keysRes.ok || !smtpRes.ok) throw new Error("Gagal memuat semua data pengaturan.");
-        
-        const keysData = await keysRes.json();
-        const smtpData = await smtpRes.json();
-        if (!keysData.success || !smtpData.success) throw new Error("Gagal mengambil data dari server.");
-
-        setApiKeys(keysData.keys);
-        setSmtpConfigs(smtpData.configs);
+        setApiKeys(keysData as ApiKey[]);
+        setSmtpConfigs(smtpData as SmtpConfig[]);
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal Memuat", description: (error as Error).message });
     } finally {
@@ -66,7 +60,7 @@ export default function SuperAdminSettingsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchWithAuth, toast]);
+  }, []);
 
   const handleAddApiKey = async () => {
     if (!newApiKey.trim()) {
@@ -75,15 +69,10 @@ export default function SuperAdminSettingsPage() {
     }
     setIsSaving(true);
     try {
-        const res = await fetchWithAuth('/api/superadmin/apikeys', {
-            method: 'POST',
-            body: JSON.stringify({ service: 'gemini', key: newApiKey })
-        });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message);
+        await addApiKey('gemini', newApiKey);
         toast({ title: "Kunci API Ditambahkan!" });
         setNewApiKey('');
-        fetchData();
+        fetchData(); // Refresh data
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal Menambah", description: (error as Error).message });
     } finally {
@@ -94,11 +83,9 @@ export default function SuperAdminSettingsPage() {
   const handleDeleteApiKey = async (id: number) => {
     setIsSaving(true);
      try {
-        const res = await fetchWithAuth(`/api/superadmin/apikeys?id=${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message);
+        await deleteApiKey(id);
         toast({ title: "Kunci API Dihapus!" });
-        fetchData();
+        fetchData(); // Refresh data
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal Menghapus", description: (error as Error).message });
     } finally {
@@ -109,11 +96,9 @@ export default function SuperAdminSettingsPage() {
   const handleResetFailures = async (id: number) => {
       setIsSaving(true);
       try {
-        const res = await fetchWithAuth(`/api/superadmin/apikeys/reset?id=${id}`, { method: 'POST' });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message);
+        await resetKeyFailureCount(id);
         toast({title: "Counter Direset!"});
-        fetchData();
+        fetchData(); // Refresh data
       } catch (e) {
          toast({ variant: 'destructive', title: "Gagal Mereset", description: (e as Error).message });
       } finally {
@@ -129,15 +114,10 @@ export default function SuperAdminSettingsPage() {
     setIsSaving(true);
      try {
         const payload = { ...newSmtp, port: parseInt(newSmtp.port, 10) };
-        const res = await fetchWithAuth('/api/superadmin/smtp', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message);
+        await addSmtpConfig(payload);
         toast({ title: "Konfigurasi SMTP Ditambahkan!" });
         setNewSmtp({ host: '', port: '587', secure: true, user: '', pass: '' });
-        fetchData();
+        fetchData(); // Refresh data
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal Menambah", description: (error as Error).message });
     } finally {
@@ -148,11 +128,9 @@ export default function SuperAdminSettingsPage() {
   const handleDeleteSmtp = async (id: number) => {
       setIsSaving(true);
       try {
-          const res = await fetchWithAuth(`/api/superadmin/smtp?id=${id}`, { method: 'DELETE' });
-          const data = await res.json();
-          if(!data.success) throw new Error(data.message);
+          await deleteSmtpConfig(id);
           toast({title: "Konfigurasi SMTP Dihapus!"});
-          fetchData();
+          fetchData(); // Refresh data
       } catch(e) {
            toast({ variant: 'destructive', title: "Gagal Menghapus", description: (e as Error).message });
       } finally {

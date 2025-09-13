@@ -8,8 +8,9 @@
  */
 
 import { db } from '@/lib/db';
-import { encrypt } from '@/lib/encryption';
+import { encrypt, decrypt } from '@/lib/encryption';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { clearCache } from './ApiKeyManager';
 
 /**
  * Retrieves all keys for the admin panel, including non-active ones.
@@ -33,6 +34,32 @@ export async function getAllKeysForAdmin(): Promise<RowDataPacket[]> {
 }
 
 /**
+ * Fetches a single, decrypted API key.
+ * @param id The ID of the key to fetch.
+ * @returns The decrypted key string.
+ */
+export async function getApiKey(id: number): Promise<string> {
+    let connection;
+    try {
+        connection = await db.getConnection();
+        const [rows] = await connection.execute<RowDataPacket[]>(
+            'SELECT api_key FROM ai_api_keys WHERE id = ?',
+            [id]
+        );
+        if (rows.length === 0) {
+            throw new Error('Kunci tidak ditemukan.');
+        }
+        return decrypt(rows[0].api_key);
+    } catch (error) {
+        console.error("GET API KEY DETAIL ERROR: ", error);
+        throw new Error('Gagal mengambil detail kunci API.');
+    } finally {
+        if (connection) connection.release();
+    }
+}
+
+
+/**
  * Adds a new API key to the database.
  * @param service The service name (e.g., 'gemini').
  * @param apiKey The plaintext API key.
@@ -47,10 +74,37 @@ export async function addApiKey(service: 'gemini', apiKey: string): Promise<numb
             'INSERT INTO ai_api_keys (service, api_key) VALUES (?, ?)',
             [service, encryptedKey]
         );
+        await clearCache();
         return result.insertId;
     } catch (error) {
         console.error("CREATE API KEY ERROR: ", error);
         throw new Error(`Gagal menyimpan kunci API: ${(error as Error).message}`);
+    } finally {
+        if (connection) connection.release();
+    }
+}
+
+/**
+ * Updates an existing API key.
+ * @param id The ID of the key to update.
+ * @param newApiKey The new plaintext API key.
+ */
+export async function updateApiKey(id: number, newApiKey: string): Promise<void> {
+    const encryptedKey = encrypt(newApiKey);
+    let connection;
+    try {
+        connection = await db.getConnection();
+        const [result] = await connection.execute<ResultSetHeader>(
+            'UPDATE ai_api_keys SET api_key = ?, failure_count = 0, status = \'active\' WHERE id = ?',
+            [encryptedKey, id]
+        );
+        if (result.affectedRows === 0) {
+            throw new Error('Kunci API tidak ditemukan.');
+        }
+        await clearCache();
+    } catch (error) {
+        console.error("UPDATE API KEY ERROR: ", error);
+        throw new Error(`Gagal memperbarui kunci API: ${(error as Error).message}`);
     } finally {
         if (connection) connection.release();
     }
@@ -71,6 +125,7 @@ export async function deleteApiKey(id: number): Promise<void> {
         if (result.affectedRows === 0) {
             throw new Error('Kunci API tidak ditemukan.');
         }
+        await clearCache();
     } catch (error) {
         console.error("DELETE API KEY ERROR: ", error);
         throw new Error(`Gagal menghapus kunci API: ${(error as Error).message}`);
@@ -88,6 +143,7 @@ export async function resetKeyFailureCount(keyId: number): Promise<void> {
     try {
         connection = await db.getConnection();
         await connection.execute("UPDATE ai_api_keys SET failure_count = 0, status = 'active' WHERE id = ?", [keyId]);
+        await clearCache();
     } catch (error) {
         console.error(`Failed to reset failure count for key ${keyId}:`, error);
         throw new Error('Gagal mereset counter di database.');

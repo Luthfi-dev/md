@@ -6,29 +6,33 @@
  */
 import { genkit, type GenerativeAIError } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { getNextKey, reportFailure, updateLastUsed } from '@/services/ApiKeyManager';
-
-const MAX_RETRIES = 3;
+import { getNextKey, reportFailure, updateLastUsed, getEnvKeys, clearCache } from '@/services/ApiKeyManager';
 
 /**
  * Creates a Genkit AI instance configured with a dynamically rotated API key.
- * This function will retry with different keys upon failure.
+ * This function will retry with different keys from the database, and then from .env as a fallback.
  * @param flowName The name of the flow for logging purposes.
- * @returns A configured Genkit AI instance and the keyId used.
+ * @returns An object containing the generate function and the keyId used.
  */
 export async function getConfiguredAi(flowName: string) {
+    // 1. Try fetching keys from the database first
+    let availableKeys = await getNextKey(true); // Get all active DB keys
+
+    // 2. If no DB keys, fall back to .env
+    if (!availableKeys || availableKeys.length === 0) {
+        console.warn(`[${flowName}] No active keys in DB. Falling back to .env.`);
+        availableKeys = getEnvKeys();
+        if (availableKeys.length === 0) {
+            throw new Error('Tidak ada kunci API yang aktif baik di database maupun di .env. Mohon konfigurasi kunci API.');
+        }
+    }
+
     let lastError: any = null;
 
-    for (let i = 0; i < MAX_RETRIES; i++) {
-        const apiKeyRecord = await getNextKey();
-        
-        if (!apiKeyRecord) {
-            console.error(`[${flowName}] No active API keys available from ApiKeyManager.`);
-            continue; // Try again, maybe cache is stale
-        }
-
-        const { id: keyId, key: apiKey } = apiKeyRecord;
-        console.log(`[${flowName}] Attempt ${i + 1}/${MAX_RETRIES} using API Key ID: ${keyId}`);
+    // 3. Iterate through all available keys (DB or .env)
+    for (const apiKeyRecord of availableKeys) {
+        const { id: keyId, key: apiKey, isEnv } = apiKeyRecord;
+        console.log(`[${flowName}] Attempting with API Key ID: ${isEnv ? 'env' : keyId}`);
         
         try {
             const ai = genkit({
@@ -42,21 +46,26 @@ export async function getConfiguredAi(flowName: string) {
             const generateWithRetry = async (options: any) => {
                 try {
                     const result = await ai.generate(options);
-                    await updateLastUsed(keyId); // Report success
+                    if (!isEnv) {
+                        await updateLastUsed(keyId as number); // Report success only for DB keys
+                    }
                     return result;
                 } catch (error) {
-                    console.warn(`[${flowName}] API Key ID ${keyId} failed. Error:`, error);
-                    await reportFailure(keyId); // Report failure
-                    throw error; // Re-throw to be caught by the outer catch block
+                    console.warn(`[${flowName}] API Key ${isEnv ? 'from .env' : `ID ${keyId}`} failed.`, (error as Error).message);
+                    if (!isEnv) {
+                        await reportFailure(keyId as number); // Report failure only for DB keys
+                    }
+                    throw error; // Re-throw to be caught by the outer loop
                 }
             };
             
-            return { generateWithRetry, keyId };
+            return { generateWithRetry, keyId: isEnv ? 'env' : keyId };
         } catch (error) {
-            // This catch is for initial configuration errors, less likely but possible.
             lastError = error;
-            console.error(`[${flowName}] Configuration failed for key ID ${keyId}. Error:`, error);
-            await reportFailure(keyId);
+            console.error(`[${flowName}] Configuration failed for key ${isEnv ? 'from .env' : `ID ${keyId}`}.`, error);
+            if (!isEnv) {
+                await reportFailure(keyId as number);
+            }
         }
     }
 

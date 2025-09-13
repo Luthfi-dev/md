@@ -7,18 +7,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Bot, KeyRound, Mail, Plus, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { Save, Bot, KeyRound, Mail, Plus, Trash2, Loader2, RefreshCw, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from '@/hooks/use-auth';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { getAllKeysForAdmin, addApiKey, deleteApiKey, resetKeyFailureCount } from '@/services/ApiKeyManager.server';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+    getAllKeysForAdmin, 
+    addApiKey as addApiKeyAction, 
+    deleteApiKey as deleteApiKeyAction, 
+    resetKeyFailureCount as resetKeyFailureCountAction,
+    getApiKey,
+    updateApiKey as updateApiKeyAction
+} from '@/services/ApiKeyManager.server';
 import { getAllSmtpConfigs, addSmtpConfig, deleteSmtpConfig } from '@/services/SmtpManager.server';
 
 interface ApiKey {
     id: number;
     service: string;
     key_preview: string;
-    status: 'active' | 'inactive';
+    status: 'active' | 'inactive' | 'failed';
     failure_count: number;
     last_used_at: string | null;
 }
@@ -29,6 +36,78 @@ interface SmtpConfig {
     user: string;
     status: 'active' | 'inactive';
 }
+
+function EditApiKeyDialog({ keyId, onKeyUpdated }: { keyId: number, onKeyUpdated: () => void }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFetching, setIsFetching] = useState(false);
+    const [apiKey, setApiKey] = useState('');
+    const { toast } = useToast();
+
+    const fetchKey = async () => {
+        if (!isOpen) return;
+        setIsFetching(true);
+        try {
+            const fetchedKey = await getApiKey(keyId);
+            setApiKey(fetchedKey);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal Memuat Kunci', description: (error as Error).message });
+        } finally {
+            setIsFetching(false);
+        }
+    }
+
+    const handleSave = async () => {
+        setIsLoading(true);
+        try {
+            await updateApiKeyAction(keyId, apiKey);
+            toast({ title: 'Kunci API Diperbarui!' });
+            onKeyUpdated();
+            setIsOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal Memperbarui', description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(open) fetchKey(); }}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon"><Eye className="h-4 w-4 text-blue-500" /></Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Lihat / Edit Kunci API (ID: {keyId})</DialogTitle>
+                    <DialogDescription>
+                        Anda dapat melihat atau memperbarui nilai kunci API di sini. Menyimpan akan mereset status dan jumlah kegagalan.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    {isFetching ? (
+                        <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                        <Textarea 
+                            value={apiKey} 
+                            onChange={(e) => setApiKey(e.target.value)}
+                            rows={5}
+                            placeholder="Masukkan kunci API..."
+                            className="font-mono"
+                        />
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
+                    <Button onClick={handleSave} disabled={isLoading || isFetching || !apiKey.trim()}>
+                        {isLoading ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2" />}
+                        Simpan Perubahan
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 export default function SuperAdminSettingsPage() {
   const { toast } = useToast();
@@ -69,7 +148,7 @@ export default function SuperAdminSettingsPage() {
     }
     setIsSaving(true);
     try {
-        await addApiKey('gemini', newApiKey);
+        await addApiKeyAction('gemini', newApiKey);
         toast({ title: "Kunci API Ditambahkan!" });
         setNewApiKey('');
         fetchData(); // Refresh data
@@ -83,7 +162,7 @@ export default function SuperAdminSettingsPage() {
   const handleDeleteApiKey = async (id: number) => {
     setIsSaving(true);
      try {
-        await deleteApiKey(id);
+        await deleteApiKeyAction(id);
         toast({ title: "Kunci API Dihapus!" });
         fetchData(); // Refresh data
     } catch (error) {
@@ -96,7 +175,7 @@ export default function SuperAdminSettingsPage() {
   const handleResetFailures = async (id: number) => {
       setIsSaving(true);
       try {
-        await resetKeyFailureCount(id);
+        await resetKeyFailureCountAction(id);
         toast({title: "Counter Direset!"});
         fetchData(); // Refresh data
       } catch (e) {
@@ -148,7 +227,7 @@ export default function SuperAdminSettingsPage() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><KeyRound/> Kelola Kunci API Gemini</CardTitle>
                 <CardDescription>
-                    Tambah atau hapus kunci API untuk layanan AI generatif. Sistem akan merotasi kunci secara otomatis.
+                    Tambah atau hapus kunci API untuk layanan AI generatif. Sistem akan merotasi kunci dari database terlebih dahulu, lalu beralih ke `.env` jika semua gagal.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -163,6 +242,7 @@ export default function SuperAdminSettingsPage() {
                                 </p>
                             </div>
                             <div className='flex gap-2 items-center'>
+                               <EditApiKeyDialog keyId={key.id} onKeyUpdated={fetchData} />
                                <Button variant="ghost" size="icon" onClick={() => handleResetFailures(key.id)} disabled={isSaving}><RefreshCw className="h-4 w-4" /></Button>
                                <AlertDialog>
                                  <AlertDialogTrigger asChild>
@@ -188,7 +268,7 @@ export default function SuperAdminSettingsPage() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Mail/> Kelola Konfigurasi SMTP</CardTitle>
                 <CardDescription>
-                    Atur server email untuk mengirim email transaksional. Sistem akan merotasi secara otomatis.
+                    Atur server email untuk mengirim email transaksional seperti reset kata sandi. Sistem akan merotasi secara otomatis.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

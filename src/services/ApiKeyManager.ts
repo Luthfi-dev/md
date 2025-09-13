@@ -1,40 +1,42 @@
 
 /**
- * @fileOverview Manages the lifecycle of AI API keys from the database.
+ * @fileOverview Manages the lifecycle of AI API keys from the database and .env.
  * Provides functionality for fetching, rotating, and handling failures of API keys.
- * This file is a server-side utility module and MUST NOT contain 'use server'.
- * 
- * REFACTOR: This module has been changed from a class-based or stateful module
- * to a collection of stateless async functions to comply with Next.js server module
- * constraints and ensure stability in production builds.
+ * This module is designed to be used server-side.
  */
 
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-interface ApiKeyRecord {
-  id: number;
+export interface ApiKeyRecord {
+  id: number | string; // number for DB, string for .env keys
   key: string;
   service: 'gemini';
-  status: 'active' | 'inactive' | 'failed';
-  failure_count: number;
-  last_used_at: string | null;
+  isEnv: boolean; // Flag to distinguish DB keys from .env keys
 }
 
 // In-memory cache for API keys
-let activeApiKeysCache: ApiKeyRecord[] = [];
+let activeDbApiKeysCache: ApiKeyRecord[] = [];
 let lastCacheUpdateTime: number = 0;
 const CACHE_DURATION_MS = 60000; // Cache for 1 minute
 
 /**
- * Fetches active API keys, utilizing an in-memory cache to reduce DB load.
- * This function is now private to the module to enforce structured access.
+ * Force-clears the in-memory cache.
  */
-async function getCachedKeys(): Promise<ApiKeyRecord[]> {
+export function clearCache() {
+    console.log("API key cache cleared.");
+    lastCacheUpdateTime = 0;
+    activeDbApiKeysCache = [];
+}
+
+/**
+ * Fetches active API keys from the database, utilizing an in-memory cache.
+ */
+async function fetchKeysFromDb(): Promise<ApiKeyRecord[]> {
     const now = Date.now();
-    if (activeApiKeysCache.length > 0 && now - lastCacheUpdateTime < CACHE_DURATION_MS) {
-        return activeApiKeysCache;
+    if (activeDbApiKeysCache.length > 0 && now - lastCacheUpdateTime < CACHE_DURATION_MS) {
+        return activeDbApiKeysCache;
     }
 
     console.log("Re-fetching fresh API keys from database...");
@@ -42,24 +44,22 @@ async function getCachedKeys(): Promise<ApiKeyRecord[]> {
     try {
         connection = await db.getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
-          "SELECT id, api_key, service, status, failure_count, last_used_at FROM ai_api_keys WHERE status = 'active' AND failure_count < 5 ORDER BY last_used_at ASC, id ASC"
+          "SELECT id, api_key, service FROM ai_api_keys WHERE status = 'active' AND failure_count < 5 ORDER BY last_used_at ASC, id ASC"
         );
         
-        activeApiKeysCache = rows.map(row => ({
+        activeDbApiKeysCache = rows.map(row => ({
             id: row.id,
             key: decrypt(row.api_key),
             service: row.service,
-            status: row.status,
-            failure_count: row.failure_count,
-            last_used_at: row.last_used_at,
+            isEnv: false,
         }));
         
         lastCacheUpdateTime = now;
-        console.log(`Successfully fetched ${activeApiKeysCache.length} active API keys.`);
-        return activeApiKeysCache;
+        console.log(`Successfully fetched ${activeDbApiKeysCache.length} active API keys from DB.`);
+        return activeDbApiKeysCache;
     } catch (error) {
         console.error('FATAL: Failed to fetch API keys from database:', error);
-        activeApiKeysCache = []; // Clear cache on error
+        activeDbApiKeysCache = []; // Clear cache on error
         return [];
     } finally {
         if (connection) connection.release();
@@ -67,20 +67,39 @@ async function getCachedKeys(): Promise<ApiKeyRecord[]> {
 }
 
 /**
- * Retrieves the next available API key in a round-robin fashion from the cache.
- * @returns The API key record or null if no keys are available.
+ * Parses API keys from the GEMINI_API_KEY environment variable.
+ * @returns An array of API key records from the .env file.
  */
-export async function getNextKey(): Promise<ApiKeyRecord | null> {
-    const keys = await getCachedKeys();
+export function getEnvKeys(): ApiKeyRecord[] {
+    const envKeysString = process.env.GEMINI_API_KEY || '';
+    if (!envKeysString) {
+        return [];
+    }
+    return envKeysString.split(',').map((key, index) => ({
+        id: `env-${index}`,
+        key: key.trim(),
+        service: 'gemini',
+        isEnv: true,
+    }));
+}
+
+
+/**
+ * Retrieves the next available API keys. By default, it returns only the least recently used one.
+ * If `all` is true, it returns all active keys.
+ * @param all - If true, returns all active keys sorted by last used.
+ * @returns An array of API key records or null.
+ */
+export async function getNextKey(all: boolean = false): Promise<ApiKeyRecord[] | null> {
+    const keys = await fetchKeysFromDb();
     if (keys.length === 0) {
         return null;
     }
-    // Simple round-robin is not safe with serverless. Fetching the least recently used is more robust.
-    return keys[0];
+    return all ? keys : [keys[0]];
 }
 
 /**
- * Updates the last used timestamp for a given key ID.
+ * Updates the last used timestamp for a given database key ID.
  * @param keyId The ID of the key that was used.
  */
 export async function updateLastUsed(keyId: number): Promise<void> {
@@ -96,106 +115,21 @@ export async function updateLastUsed(keyId: number): Promise<void> {
 }
 
 /**
- * Reports a failure for a given key ID, incrementing its failure count.
+ * Reports a failure for a given database key ID, incrementing its failure count.
  * @param keyId The ID of the key that failed.
  */
 export async function reportFailure(keyId: number): Promise<void> {
-    console.warn(`Reporting failure for API Key ID: ${keyId}`);
+    console.warn(`Reporting failure for DB API Key ID: ${keyId}`);
     let connection;
     try {
         connection = await db.getConnection();
         await connection.execute("UPDATE ai_api_keys SET failure_count = failure_count + 1 WHERE id = ?", [keyId]);
         
         // Remove the failed key from the in-memory cache immediately
-        activeApiKeysCache = activeApiKeysCache.filter(key => key.id !== keyId);
+        activeDbApiKeysCache = activeDbApiKeysCache.filter(key => key.id !== keyId);
+        lastCacheUpdateTime = 0; // Force refresh on next call
     } catch (error) {
         console.error(`Failed to report failure for key ${keyId}:`, error);
-    } finally {
-        if (connection) connection.release();
-    }
-}
-
-/**
- * Resets the failure count for a key, typically used by an admin.
- * @param keyId The ID of the key to reset.
- */
-export async function resetKeyFailureCount(keyId: number): Promise<void> {
-    let connection;
-    try {
-        connection = await db.getConnection();
-        await connection.execute("UPDATE ai_api_keys SET failure_count = 0, status = 'active' WHERE id = ?", [keyId]);
-        lastCacheUpdateTime = 0; // Force cache refresh
-    } catch (error) {
-        console.error(`Failed to reset failure count for key ${keyId}:`, error);
-        throw new Error('Gagal mereset counter di database.');
-    } finally {
-        if (connection) connection.release();
-    }
-}
-
-/**
- * Retrieves all keys for the admin panel, including non-active ones.
- */
-export async function getAllKeysForAdmin(): Promise<RowDataPacket[]> {
-    let connection;
-    try {
-        connection = await db.getConnection();
-        const [rows] = await connection.execute<RowDataPacket[]>(
-            `SELECT id, service, SUBSTRING(api_key, -4) as key_preview, status, failure_count, last_used_at 
-             FROM ai_api_keys ORDER BY last_used_at DESC`
-        );
-        return rows;
-    } catch (error) {
-        console.error("GET API KEYS ERROR: ", error);
-        throw new Error('Kesalahan server saat mengambil kunci API.');
-    } finally {
-        if (connection) connection.release();
-    }
-}
-
-/**
- * Adds a new API key to the database.
- * @param service The service name (e.g., 'gemini').
- * @param encryptedKey The encrypted API key.
- * @returns The ID of the newly inserted key.
- */
-export async function addApiKey(service: string, encryptedKey: string): Promise<number> {
-    let connection;
-    try {
-        connection = await db.getConnection();
-        const [result] = await connection.execute<ResultSetHeader>(
-            'INSERT INTO ai_api_keys (service, api_key) VALUES (?, ?)',
-            [service, encryptedKey]
-        );
-        lastCacheUpdateTime = 0; // Force cache refresh
-        return result.insertId;
-    } catch (error) {
-        console.error("CREATE API KEY ERROR: ", error);
-        throw new Error(`Gagal menyimpan kunci API: ${(error as Error).message}`);
-    } finally {
-        if (connection) connection.release();
-    }
-}
-
-/**
- * Deletes an API key from the database.
- * @param id The ID of the key to delete.
- */
-export async function deleteApiKey(id: number): Promise<void> {
-    let connection;
-    try {
-        connection = await db.getConnection();
-        const [result] = await connection.execute<ResultSetHeader>(
-            'DELETE FROM ai_api_keys WHERE id = ?',
-            [id]
-        );
-        if (result.affectedRows === 0) {
-            throw new Error('Kunci API tidak ditemukan.');
-        }
-        lastCacheUpdateTime = 0; // Force cache refresh
-    } catch (error) {
-        console.error("DELETE API KEY ERROR: ", error);
-        throw new Error(`Gagal menghapus kunci API: ${(error as Error).message}`);
     } finally {
         if (connection) connection.release();
     }

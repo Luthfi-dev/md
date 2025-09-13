@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,21 +41,22 @@ interface SmtpConfig {
 function EditApiKeyDialog({ keyId, onKeyUpdated }: { keyId: number, onKeyUpdated: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isFetching, setIsFetching] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [apiKey, setApiKey] = useState('');
     const { toast } = useToast();
 
-    const fetchKey = async () => {
-        if (!isOpen) return;
-        setIsFetching(true);
-        try {
-            const fetchedKey = await getApiKey(keyId);
-            setApiKey(fetchedKey);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Gagal Memuat Kunci', description: (error as Error).message });
-        } finally {
-            setIsFetching(false);
+    const handleOpen = (open: boolean) => {
+        if (open) {
+            startTransition(async () => {
+                try {
+                    const fetchedKey = await getApiKey(keyId);
+                    setApiKey(fetchedKey);
+                } catch (error) {
+                    toast({ variant: 'destructive', title: 'Gagal Memuat Kunci', description: (error as Error).message });
+                }
+            });
         }
+        setIsOpen(open);
     }
 
     const handleSave = async () => {
@@ -73,7 +74,7 @@ function EditApiKeyDialog({ keyId, onKeyUpdated }: { keyId: number, onKeyUpdated
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(open) fetchKey(); }}>
+        <Dialog open={isOpen} onOpenChange={handleOpen}>
             <DialogTrigger asChild>
                 <Button variant="ghost" size="icon"><Eye className="h-4 w-4 text-blue-500" /></Button>
             </DialogTrigger>
@@ -85,7 +86,7 @@ function EditApiKeyDialog({ keyId, onKeyUpdated }: { keyId: number, onKeyUpdated
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    {isFetching ? (
+                    {isPending ? (
                         <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
                     ) : (
                         <Textarea 
@@ -99,7 +100,7 @@ function EditApiKeyDialog({ keyId, onKeyUpdated }: { keyId: number, onKeyUpdated
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
-                    <Button onClick={handleSave} disabled={isLoading || isFetching || !apiKey.trim()}>
+                    <Button onClick={handleSave} disabled={isLoading || isPending || !apiKey.trim()}>
                         {isLoading ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2" />}
                         Simpan Perubahan
                     </Button>
@@ -308,5 +309,7 @@ export default function SuperAdminSettingsPage() {
     </div>
   );
 }
+
+    
 
     

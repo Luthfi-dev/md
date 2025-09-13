@@ -4,9 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth-utils';
 import { db } from '@/lib/db';
 import { z } from 'zod';
-import { encrypt } from '@/lib/encryption';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { fetchKeys } from '@/services/ApiKeyManager';
+import { clearCache } from '@/services/ApiKeyManager';
 
 const apiKeySchema = z.object({
   service: z.enum(['gemini']),
@@ -23,7 +22,7 @@ export async function GET(request: NextRequest) {
     let connection;
     try {
         connection = await db.getConnection();
-        const [rows]: [RowDataPacket[], any] = await connection.execute(
+        const [rows] = await connection.execute<RowDataPacket[]>(
             `SELECT id, service, SUBSTRING(api_key, -4) as key_preview, status, failure_count, last_used_at 
              FROM ai_api_keys ORDER BY last_used_at DESC`
         );
@@ -52,16 +51,14 @@ export async function POST(request: NextRequest) {
         }
         
         const { service, key } = validation.data;
-        const encryptedKey = encrypt(key);
 
         connection = await db.getConnection();
         const [result] = await connection.execute<ResultSetHeader>(
             'INSERT INTO ai_api_keys (service, api_key) VALUES (?, ?)',
-            [service, encryptedKey]
+            [service, key] // Store plain text
         );
 
-        // Force a refresh of the key cache
-        await fetchKeys();
+        await clearCache();
 
         return NextResponse.json({ success: true, message: 'Kunci API berhasil ditambahkan', keyId: result.insertId }, { status: 201 });
     } catch (error: any) {
@@ -97,8 +94,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ success: false, message: 'Kunci API tidak ditemukan.' }, { status: 404 });
         }
 
-        // Force a refresh of the key cache
-        await fetchKeys();
+        await clearCache();
 
         return NextResponse.json({ success: true, message: 'Kunci API berhasil dihapus.' });
     } catch (error: any) {

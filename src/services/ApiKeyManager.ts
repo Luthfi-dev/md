@@ -6,7 +6,6 @@
  */
 
 import { db } from '@/lib/db';
-import { decrypt } from '@/lib/encryption';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 export interface ApiKeyRecord {
@@ -49,7 +48,7 @@ async function fetchKeysFromDb(): Promise<ApiKeyRecord[]> {
         
         activeDbApiKeysCache = rows.map(row => ({
             id: row.id,
-            key: decrypt(row.api_key),
+            key: row.api_key, // Read plain text key
             service: row.service,
             isEnv: false,
         }));

@@ -8,7 +8,6 @@
  */
 
 import { db } from '@/lib/db';
-import { encrypt, decrypt } from '@/lib/encryption';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { clearCache } from './ApiKeyManager';
 
@@ -49,7 +48,8 @@ export async function getApiKey(id: number): Promise<string> {
         if (rows.length === 0) {
             throw new Error('Kunci tidak ditemukan.');
         }
-        return decrypt(rows[0].api_key);
+        // Return the key directly as plain text
+        return rows[0].api_key;
     } catch (error) {
         console.error("GET API KEY DETAIL ERROR: ", error);
         throw new Error('Gagal mengambil detail kunci API.');
@@ -66,13 +66,12 @@ export async function getApiKey(id: number): Promise<string> {
  * @returns The ID of the newly inserted key.
  */
 export async function addApiKey(service: 'gemini', apiKey: string): Promise<number> {
-    const encryptedKey = encrypt(apiKey);
     let connection;
     try {
         connection = await db.getConnection();
         const [result] = await connection.execute<ResultSetHeader>(
             'INSERT INTO ai_api_keys (service, api_key) VALUES (?, ?)',
-            [service, encryptedKey]
+            [service, apiKey] // Store plain text
         );
         await clearCache();
         return result.insertId;
@@ -90,13 +89,12 @@ export async function addApiKey(service: 'gemini', apiKey: string): Promise<numb
  * @param newApiKey The new plaintext API key.
  */
 export async function updateApiKey(id: number, newApiKey: string): Promise<void> {
-    const encryptedKey = encrypt(newApiKey);
     let connection;
     try {
         connection = await db.getConnection();
         const [result] = await connection.execute<ResultSetHeader>(
             'UPDATE ai_api_keys SET api_key = ?, failure_count = 0, status = \'active\' WHERE id = ?',
-            [encryptedKey, id]
+            [newApiKey, id] // Store plain text
         );
         if (result.affectedRows === 0) {
             throw new Error('Kunci API tidak ditemukan.');

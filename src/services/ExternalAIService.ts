@@ -5,17 +5,20 @@ import type { ChatMessage } from '@/ai/schemas';
 import assistantData from '@/data/assistant.json';
 
 const API_URL = 'https://api.maudigi.com/ai/index.php';
+const HISTORY_LIMIT = 20; // Keep the last 20 messages for context
 
 /**
  * Handles the chat functionality by calling the specified external AI service.
- * It now includes the full chat history for contextual responses.
+ * It now includes a limited chat history for contextual responses to optimize memory.
  * @param history The entire chat history.
  * @returns A ChatMessage object with the AI's response.
  */
 export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
+  // Take only the last N messages to optimize payload size
+  const recentHistory = history.slice(-HISTORY_LIMIT);
 
-  // Format the entire history into a single string for the API
-  const formattedHistory = history.map(message => {
+  // Format the recent history into a single string for the API
+  const formattedHistory = recentHistory.map(message => {
     if (message.role === 'user') {
       return `User: ${message.content}`;
     }

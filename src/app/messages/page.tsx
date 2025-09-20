@@ -68,19 +68,17 @@ export default function MessagesPage() {
     const typingSoundRef = useRef<HTMLAudioElement | null>(null);
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
+    const welcomeMessage: ChatMessage = {
+        role: 'model',
+        content: `Hai! Aku ${assistantData.name}. Ada yang bisa kubantu hari ini?`
+    };
+
     useEffect(() => {
         // Load assistant data
         setAssistantName(assistantData.name);
         if (assistantData.avatarUrl) {
             setAssistantAvatar(assistantData.avatarUrl);
         }
-
-        // Set initial welcome message
-        const welcomeMessage: ChatMessage = {
-            role: 'model',
-            content: `Hai! Aku ${assistantData.name}. Ada yang bisa kubantu hari ini?`
-        };
-        setMessages([welcomeMessage]);
 
         // Initialize audio on client
         if (typeof window !== 'undefined') {
@@ -90,12 +88,11 @@ export default function MessagesPage() {
         }
     }, []);
     
-    // Play notification sound for the initial message
     useEffect(() => {
-        if (messages.length === 1 && messages[0].role === 'model') {
+        if(messages.length === 0) {
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
         }
-    }, [messages]);
+    }, [messages.length]);
 
     const scrollToBottom = () => {
         if (viewportRef.current) {
@@ -120,14 +117,15 @@ export default function MessagesPage() {
         if (!input.trim() || isLoading) return;
 
         const userMessage: ChatMessage = { role: 'user', content: input };
-        const updatedMessages = [...messages, userMessage];
-        setMessages(updatedMessages);
+        const conversationHistory = [...messages, userMessage];
+        setMessages(conversationHistory);
         setInput('');
         
         setIsLoading(true);
 
         try {
-            const aiResponse = await chat(updatedMessages);
+            // We send the current conversation history to the chat function
+            const aiResponse = await chat(conversationHistory);
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
@@ -163,6 +161,18 @@ export default function MessagesPage() {
             
              <ScrollArea className="flex-1" viewportRef={viewportRef}>
                 <div className="space-y-6 p-4 pb-24">
+                     {/* Welcome message rendered separately */}
+                    <div className="flex items-end gap-2 justify-start">
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={assistantAvatar} alt={assistantName} />
+                            <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
+                        </Avatar>
+                        <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-2 text-sm shadow">
+                            {renderContent(welcomeMessage.content)}
+                        </div>
+                    </div>
+                    
+                    {/* Conversation history */}
                     {messages.map((message, index) => (
                         <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
                             {message.role === 'model' && (
@@ -186,6 +196,7 @@ export default function MessagesPage() {
                             )}
                         </div>
                     ))}
+
                     {isLoading && (
                          <div className="flex items-end gap-2 justify-start">
                              <Avatar className="h-8 w-8">
@@ -197,13 +208,6 @@ export default function MessagesPage() {
                                 <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '200ms'}}></span>
                                 <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '400ms'}}></span>
                             </div>
-                        </div>
-                    )}
-                     {messages.length === 0 && !isLoading && (
-                        <div className="text-center py-16 text-muted-foreground">
-                            <Bot className="mx-auto h-12 w-12 mb-4" />
-                            <p className="font-semibold">Selamat Datang!</p>
-                            <p className="text-sm">Ketik pesan untuk memulai percakapan.</p>
                         </div>
                     )}
                 </div>

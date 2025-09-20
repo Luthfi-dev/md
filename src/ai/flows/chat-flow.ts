@@ -5,23 +5,13 @@
  * This file centralizes the logic for interacting with the Genkit AI models
  * for various content generation and analysis tasks.
  */
-import { performGenerationWithRotation } from '@/ai/init';
+import { performGeneration } from '@/ai/init';
 import { z } from 'zod';
 import * as schemas from '../schemas';
 import { gemini15Flash } from '@genkit-ai/googleai';
 import wav from 'wav';
 import assistantData from '@/data/assistant.json';
 import type { ChatMessage } from '@/ai/schemas';
-
-/**
- * Wrapper function to execute a generation task with API key rotation and retry logic.
- * @param flowName Name of the flow for logging.
- * @param options The options to pass to the generation function (e.g., ai.generate).
- * @returns The output of the generation function.
- */
-async function executeGeneration(flowName: string, options: any) {
-    return performGenerationWithRotation(flowName, options);
-}
 
 
 // --- Chat Flow ---
@@ -32,7 +22,7 @@ export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
         content: message.content
     }));
 
-    const { output } = await executeGeneration('chat', {
+    const { output } = await performGeneration('chat', {
         model: gemini15Flash,
         prompt: [
            assistantData.systemPrompt,
@@ -40,7 +30,12 @@ export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
         ],
     });
     
-    const content = output?.[0]?.content?.[0]?.text || "Maaf, saya tidak dapat memberikan respons saat ini.";
+    // Improved error handling and content extraction
+    const content = output?.[0]?.content?.[0]?.text;
+    if (typeof content !== 'string') {
+        console.error("Invalid AI response structure:", output);
+        throw new Error("Maaf, saya tidak dapat memberikan respons yang valid saat ini.");
+    }
 
     return { role: 'model', content };
 };
@@ -49,7 +44,7 @@ export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
 // --- Article Generation Flows ---
 
 export const generateArticleOutline = async (input: schemas.ArticleOutlineInput) => {
-    const { output } = await executeGeneration('generateArticleOutline', {
+    const { output } = await performGeneration('generateArticleOutline', {
         model: gemini15Flash,
         prompt: `Buat 3 opsi kerangka artikel (outlines) yang komprehensif berdasarkan deskripsi berikut: "${input.description}". Setiap kerangka harus memiliki judul yang menarik dan poin-poin utama yang jelas.`,
         output: {
@@ -61,7 +56,7 @@ export const generateArticleOutline = async (input: schemas.ArticleOutlineInput)
 
 
 export const generateArticleFromOutline = async (input: schemas.ArticleFromOutlineInput) => {
-    const { output } = await executeGeneration('generateArticleFromOutline', {
+    const { output } = await performGeneration('generateArticleFromOutline', {
         model: gemini15Flash,
         prompt: `Tulis artikel lengkap dalam format HTML berdasarkan kerangka berikut. Target jumlah kata sekitar ${input.wordCount} kata.\n\nJudul: ${input.selectedOutline.title}\nPoin-poin:\n- ${input.selectedOutline.points.join('\n- ')}`,
         output: {
@@ -73,7 +68,7 @@ export const generateArticleFromOutline = async (input: schemas.ArticleFromOutli
 
 
 export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
-    const { output } = await executeGeneration('lengthenArticle', {
+    const { output } = await performGeneration('lengthenArticle', {
         model: gemini15Flash,
         prompt: `Perpanjang dan elaborasi konten artikel HTML berikut. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam untuk membuatnya lebih komprehensif. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.originalContent}`,
         output: {
@@ -84,7 +79,7 @@ export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
 };
 
 export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
-    const { output } = await executeGeneration('shortenArticle', {
+    const { output } = await performGeneration('shortenArticle', {
         model: gemini15Flash,
         prompt: `Ringkas konten artikel HTML berikut menjadi lebih padat dan to-the-point. Hilangkan kalimat yang berulang atau tidak perlu, tetapi pertahankan ide utamanya. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.content}`,
         output: {
@@ -96,7 +91,7 @@ export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
 
 
 export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) => {
-    const { output } = await executeGeneration('generateHeadlines', {
+    const { output } = await performGeneration('generateHeadlines', {
         model: gemini15Flash,
         prompt: `Buat 5 judul alternatif yang menarik, informatif, dan SEO-friendly untuk artikel berikut:\n\n${input.content}`,
         output: {
@@ -107,7 +102,7 @@ export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) =
 };
 
 export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
-    const { output } = await executeGeneration('generateSeoMeta', {
+    const { output } = await performGeneration('generateSeoMeta', {
         model: gemini15Flash,
         prompt: `Buat meta title (sekitar 60 karakter) dan meta description (sekitar 155-160 karakter) yang SEO-friendly untuk artikel berikut:\n\n${input.articleContent}`,
         output: {
@@ -131,7 +126,7 @@ export const generateCreativeContent = async (input: schemas.CreativeContentInpu
     }
     promptParts.push("\n\nPastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.");
 
-    const { output } = await executeGeneration('generateCreativeContent', {
+    const { output } = await performGeneration('generateCreativeContent', {
         model: gemini15Flash,
         prompt: promptParts,
         output: { schema: schemas.CreativeContentOutputSchema },
@@ -142,7 +137,7 @@ export const generateCreativeContent = async (input: schemas.CreativeContentInpu
 
 // --- Translation & Video Script Flows ---
 export const translateContent = async (input: schemas.TranslateContentInput) => {
-    const { output } = await executeGeneration('translateContent', {
+    const { output } = await performGeneration('translateContent', {
         model: gemini15Flash,
         prompt: `Terjemahkan konten HTML berikut ke dalam bahasa ${input.targetLanguage}. Pertahankan semua tag HTML.\n\nKonten:\n${input.content}`,
         output: { schema: schemas.TranslateContentOutputSchema },
@@ -151,7 +146,7 @@ export const translateContent = async (input: schemas.TranslateContentInput) => 
 };
 
 export const generateVideoScript = async (input: schemas.GenerateVideoScriptInput) => {
-    const { output } = await executeGeneration('generateVideoScript', {
+    const { output } = await performGeneration('generateVideoScript', {
         model: gemini15Flash,
         prompt: `Ubah konten berikut menjadi naskah video yang terstruktur. Gunakan heading (<h1>, <h2>) untuk adegan dan paragraf untuk narasi/dialog.\n\nKonten:\n${input.content}`,
         output: { schema: schemas.GenerateVideoScriptOutputSchema },
@@ -169,7 +164,7 @@ export const getAiRecommendation = async (input: schemas.AiRecommendationInput) 
         ...input.choices.map(choice => ({ media: { url: choice.dataUri } })),
     ];
 
-    const { output } = await executeGeneration('getAiRecommendation', {
+    const { output } = await performGeneration('getAiRecommendation', {
         model: gemini15Flash,
         prompt: promptParts,
         output: { schema: schemas.AiRecommendationOutputSchema },
@@ -179,7 +174,7 @@ export const getAiRecommendation = async (input: schemas.AiRecommendationInput) 
 
 
 export const estimateProjectFeature = async (input: schemas.ProjectFeatureInput) => {
-    const { output } = await executeGeneration('estimateProjectFeature', {
+    const { output } = await performGeneration('estimateProjectFeature', {
         model: gemini15Flash,
         prompt: `Berikan estimasi harga (minimum dan maksimum) dalam Rupiah (IDR) untuk fitur proyek berikut. Berikan juga justifikasi singkat untuk rentang harga tersebut.\n\nNama Proyek: ${input.projectName}\nDeskripsi Fitur: ${input.featureDescription}`,
         output: { schema: schemas.ProjectFeatureOutputSchema },
@@ -208,7 +203,7 @@ async function toWav(pcmData: Buffer, channels = 1, rate = 24000, sampleWidth = 
 
 export const textToSpeech = async (input: schemas.TtsInput) => {
     try {
-        const { media } = await executeGeneration('textToSpeech', {
+        const { media } = await performGeneration('textToSpeech', {
             model: 'googleai/gemini-2.5-flash-preview-tts',
             config: {
                 responseModalities: ['AUDIO'],
@@ -234,3 +229,4 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
+

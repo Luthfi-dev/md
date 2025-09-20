@@ -18,7 +18,7 @@ import { getNextKey, reportFailure, updateLastUsed, getEnvKeys, clearCache } fro
  * @returns The result from a successful `ai.generate` call.
  * @throws An error if all keys from both the database and .env fail.
  */
-export async function performGenerationWithRotation(flowName: string, options: any) {
+export async function performGeneration(flowName: string, options: any) {
     // 1. Get all available keys, DB first, then .env as a fallback list
     const dbKeys = await getNextKey(true) || [];
     const envKeys = getEnvKeys();
@@ -69,18 +69,4 @@ export async function performGenerationWithRotation(flowName: string, options: a
     // 3. If the loop completes without a successful return, it means all keys have failed.
     console.error(`[${flowName}] All API key attempts failed.`);
     throw new Error(lastError?.message || 'Layanan AI sedang sibuk atau mengalami gangguan setelah mencoba semua kunci yang tersedia. Coba lagi nanti.');
-}
-
-// Kept for compatibility but should be deprecated in favor of the new robust performGenerationWithRotation
-export async function getConfiguredAi(flowName: string) {
-    // This function's logic is now integrated into performGenerationWithRotation
-    // It is kept to prevent breaking changes in other files that might still call it.
-    // The core logic is now more robust in the new function.
-    return {
-        // This function is a placeholder and should not be called directly.
-        generateWithRetry: async (options: any) => {
-            return performGenerationWithRotation(flowName, options);
-        },
-        keyId: 'multiple'
-    };
 }

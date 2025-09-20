@@ -13,7 +13,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import Link from "next/link";
 import assistantData from '@/data/assistant.json';
 import { type ChatMessage } from '@/ai/schemas';
-import { chat } from "@/services/ExternalAIService";
+import { chat } from "@/ai/genkit";
 
 const renderContent = (content: string) => {
     // This regex looks for <Link href="...">...</Link> and captures the href and the text.

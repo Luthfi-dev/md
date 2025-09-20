@@ -10,6 +10,8 @@ import { z } from 'zod';
 import * as schemas from '../schemas';
 import { gemini15Flash } from '@genkit-ai/googleai';
 import wav from 'wav';
+import assistantData from '@/data/assistant.json';
+import type { ChatMessage } from '@/ai/schemas';
 
 /**
  * Wrapper function to execute a generation task with API key rotation and retry logic.
@@ -23,12 +25,24 @@ async function executeGeneration(flowName: string, options: any) {
 
 
 // --- Chat Flow ---
-// NOTE: The chat flow is now handled directly by ExternalAIService.ts for public access.
-// This Genkit flow is disabled to prevent conflicts.
-export const chat = async (prompt: string) => {
-    // This flow is intentionally left blank.
-    // The UI now calls the service in `src/services/ExternalAIService.ts` directly.
-    return { role: 'model', content: 'This Genkit flow is disabled.' };
+export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
+    // Format the recent history into a format suitable for the prompt
+    const formattedHistory = history.map(message => ({
+        role: message.role === 'model' ? 'model' : 'user',
+        content: [{ text: message.content }]
+    }));
+
+    const { output } = await executeGeneration('chat', {
+        model: gemini15Flash,
+        prompt: {
+            system: assistantData.systemPrompt,
+            history: formattedHistory,
+        },
+    });
+    
+    const content = output?.[0]?.content?.[0]?.text || "Maaf, saya tidak dapat memberikan respons saat ini.";
+
+    return { role: 'model', content };
 };
 
 

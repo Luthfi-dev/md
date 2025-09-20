@@ -25,7 +25,7 @@ export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
     const { output } = await performGeneration('chat', {
         model: gemini15Flash,
         prompt: [
-           assistantData.systemPrompt,
+           { role: 'system', content: assistantData.systemPrompt },
            ...formattedHistory
         ],
     });

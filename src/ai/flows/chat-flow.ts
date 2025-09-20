@@ -34,10 +34,10 @@ export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
 
     const { output } = await executeGeneration('chat', {
         model: gemini15Flash,
-        prompt: {
-            system: assistantData.systemPrompt,
-            history: formattedHistory,
-        },
+        prompt: [
+           assistantData.systemPrompt,
+           ...formattedHistory
+        ],
     });
     
     const content = output?.[0]?.content?.[0]?.text || "Maaf, saya tidak dapat memberikan respons saat ini.";

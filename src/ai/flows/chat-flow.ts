@@ -28,8 +28,8 @@ async function executeGeneration(flowName: string, options: any) {
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
     // Format the recent history into a format suitable for the prompt
     const formattedHistory = history.map(message => ({
-        role: message.role === 'model' ? 'model' : 'user',
-        content: [{ text: message.content }]
+        role: message.role,
+        content: message.content
     }));
 
     const { output } = await executeGeneration('chat', {

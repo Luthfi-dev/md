@@ -5,29 +5,20 @@
  * This file centralizes the logic for interacting with the Genkit AI models
  * for various content generation and analysis tasks.
  */
-import { getConfiguredAi } from '@/ai/init';
+import { performGenerationWithRotation } from '@/ai/init';
 import { z } from 'zod';
 import * as schemas from '../schemas';
 import { gemini15Flash } from '@genkit-ai/googleai';
 import wav from 'wav';
-import { reportFailure } from '@/services/ApiKeyManager';
 
 /**
  * Wrapper function to execute a generation task with API key rotation and retry logic.
  * @param flowName Name of the flow for logging.
- * @param generateFn The generation function to execute (e.g., ai.generate).
- * @param options The options to pass to the generation function.
+ * @param options The options to pass to the generation function (e.g., ai.generate).
  * @returns The output of the generation function.
  */
 async function executeGeneration(flowName: string, options: any) {
-  const { generateWithRetry, keyId } = await getConfiguredAi(flowName);
-  try {
-    return await generateWithRetry(options);
-  } catch (error) {
-    console.error(`[${flowName}] Final failure for key ID ${keyId}.`);
-    await reportFailure(keyId);
-    throw error; // Re-throw the final error to the client
-  }
+    return performGenerationWithRotation(flowName, options);
 }
 
 

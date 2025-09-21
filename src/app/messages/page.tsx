@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useRef, useEffect, FormEvent } from "react";
+import React, { useState, useRef, useEffect, FormEvent, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -57,7 +57,7 @@ const renderContent = (content: string) => {
 export default function MessagesPage() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [assistantName, setAssistantName] = useState('Assistant');
     const [assistantAvatar, setAssistantAvatar] = useState('/avatar-placeholder.png');
     const viewportRef = useRef<HTMLDivElement>(null);
@@ -68,13 +68,29 @@ export default function MessagesPage() {
     const typingSoundRef = useRef<HTMLAudioElement | null>(null);
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
-    const welcomeMessage: ChatMessage = {
-        role: 'model',
-        content: `Hai! Aku ${assistantData.name}. Ada yang bisa kubantu hari ini?`
-    };
+    // Fetch initial welcome message from the AI
+    const getWelcomeMessage = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            // A "hello" message to trigger the assistant's introduction.
+            const initialHistory: ChatMessage[] = [{ role: 'user', content: 'Halo, perkenalkan dirimu.' }];
+            const welcomeMsg = await chat(initialHistory);
+            setMessages([welcomeMsg]);
+        } catch (error) {
+            console.error("Failed to get welcome message:", error);
+            const errorMessage: ChatMessage = {
+                role: 'model',
+                content: `Maaf, terjadi masalah saat memulai: ${(error as Error).message}`
+            };
+            setMessages([errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+    
 
     useEffect(() => {
-        // Load assistant data
+        // Load assistant data from JSON
         setAssistantName(assistantData.name);
         if (assistantData.avatarUrl) {
             setAssistantAvatar(assistantData.avatarUrl);
@@ -86,14 +102,12 @@ export default function MessagesPage() {
             typingSoundRef.current.volume = 0.2;
             notificationSoundRef.current = new Audio('/sounds/notification.mp3');
         }
-    }, []);
-    
-    useEffect(() => {
-        if(messages.length === 0) {
-            notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
-        }
-    }, [messages.length]);
+        
+        // Fetch the welcome message when component mounts
+        getWelcomeMessage();
 
+    }, [getWelcomeMessage]);
+    
     const scrollToBottom = () => {
         if (viewportRef.current) {
             viewportRef.current.scrollTo({
@@ -161,17 +175,6 @@ export default function MessagesPage() {
             
              <ScrollArea className="flex-1" viewportRef={viewportRef}>
                 <div className="space-y-6 p-4 pb-24">
-                     {/* Welcome message rendered separately */}
-                    <div className="flex items-end gap-2 justify-start">
-                        <Avatar className="h-8 w-8">
-                            <AvatarImage src={assistantAvatar} alt={assistantName} />
-                            <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
-                        </Avatar>
-                        <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-2 text-sm shadow">
-                            {renderContent(welcomeMessage.content)}
-                        </div>
-                    </div>
-                    
                     {/* Conversation history */}
                     {messages.map((message, index) => (
                         <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
@@ -230,5 +233,3 @@ export default function MessagesPage() {
         </div>
     );
 }
-
-    

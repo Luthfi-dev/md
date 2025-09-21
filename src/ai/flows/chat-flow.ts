@@ -8,39 +8,31 @@
 import { performGeneration } from '@/ai/init';
 import { z } from 'zod';
 import * as schemas from '../schemas';
-import { gemini15Flash } from '@genkit-ai/googleai';
+import { gemini15Flash, gemini15Pro } from '@genkit-ai/googleai';
 import wav from 'wav';
 import assistantData from '@/data/assistant.json';
 import type { ChatMessage } from '@/ai/schemas';
 
-
 // --- Chat Flow ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
-    const lastUserMessage = history.pop();
-    if (!lastUserMessage) {
-        throw new Error("Tidak ada pesan pengguna untuk dijawab.");
-    }
+    // The system prompt defines the AI's personality and knowledge base.
+    const systemPrompt = {
+        role: 'system' as const,
+        content: [{ text: assistantData.systemPrompt }],
+    };
+
+    // The full prompt includes the system instructions and the entire user history.
+    // The model needs the full context to provide relevant answers.
+    const fullPrompt = [systemPrompt, ...history];
     
-    const historyLog = history.map(msg => 
-        `${msg.role === 'user' ? 'Pengguna' : 'Asisten'}: ${msg.content}`
-    ).join('\n');
-    
-    const finalPromptText = `
-${assistantData.systemPrompt}
-
-## Riwayat Percakapan:
-${historyLog || '(Tidak ada)'}
-
-## Pertanyaan Pengguna:
-${lastUserMessage.content}
-    `.trim();
-
     const { output } = await performGeneration('chat', {
-        model: gemini15Flash,
-        prompt: [{ text: finalPromptText }], // Correct format: array of parts
+        model: gemini15Pro, // Using a more robust model for chat
+        prompt: fullPrompt,
     });
     
     const content = output?.text;
+
+    // The validation that was previously failing. This should now work correctly.
     if (typeof content !== 'string') {
         console.error("Invalid AI response structure:", output);
         throw new Error("Maaf, saya tidak dapat memberikan respons yang valid saat ini.");

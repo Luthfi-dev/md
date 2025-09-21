@@ -16,9 +16,10 @@ import type { ChatMessage } from '@/ai/schemas';
 // --- Chat Flow ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
     // The system prompt defines the AI's personality and knowledge base.
-    const systemPrompt = {
-        role: 'system' as const,
-        content: [{ text: assistantData.systemPrompt }],
+    // The content must be a simple string.
+    const systemPrompt: ChatMessage = {
+        role: 'system',
+        content: assistantData.systemPrompt,
     };
 
     // The full prompt includes the system instructions and the entire user history.
@@ -30,6 +31,7 @@ export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
         prompt: fullPrompt,
     });
     
+    // In Genkit v1, the text response is directly on the `text` property.
     const content = output?.text;
 
     // The validation that was previously failing. This should now work correctly.

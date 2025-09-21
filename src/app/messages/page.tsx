@@ -57,7 +57,8 @@ const renderContent = (content: string) => {
 export default function MessagesPage() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false); // isLoading is for the AI response
+    const [isInitializing, setIsInitializing] = useState(true); // For the initial welcome message
     const [assistantName, setAssistantName] = useState('Assistant');
     const [assistantAvatar, setAssistantAvatar] = useState('/avatar-placeholder.png');
     const viewportRef = useRef<HTMLDivElement>(null);
@@ -70,7 +71,7 @@ export default function MessagesPage() {
 
     // Fetch initial welcome message from the AI
     const getWelcomeMessage = useCallback(async () => {
-        setIsLoading(true);
+        setIsInitializing(true);
         try {
             // A "hello" message to trigger the assistant's introduction.
             const initialHistory: ChatMessage[] = [{ role: 'user', content: 'Halo, perkenalkan dirimu.' }];
@@ -84,7 +85,7 @@ export default function MessagesPage() {
             };
             setMessages([errorMessage]);
         } finally {
-            setIsLoading(false);
+            setIsInitializing(false);
         }
     }, []);
     
@@ -119,7 +120,7 @@ export default function MessagesPage() {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, isLoading]);
+    }, [messages, isLoading, isInitializing]);
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInput(e.target.value);
@@ -175,6 +176,20 @@ export default function MessagesPage() {
             
              <ScrollArea className="flex-1" viewportRef={viewportRef}>
                 <div className="space-y-6 p-4 pb-24">
+                    {/* Initial Loading */}
+                    {isInitializing && (
+                         <div className="flex items-end gap-2 justify-start">
+                             <Avatar className="h-8 w-8">
+                                <AvatarImage src={assistantAvatar} alt={assistantName} />
+                                <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
+                            </Avatar>
+                            <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1 shadow">
+                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '0ms'}}></span>
+                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '200ms'}}></span>
+                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '400ms'}}></span>
+                            </div>
+                        </div>
+                    )}
                     {/* Conversation history */}
                     {messages.map((message, index) => (
                         <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>
@@ -200,6 +215,7 @@ export default function MessagesPage() {
                         </div>
                     ))}
 
+                    {/* Loading bubble for AI response */}
                     {isLoading && (
                          <div className="flex items-end gap-2 justify-start">
                              <Avatar className="h-8 w-8">
@@ -223,9 +239,9 @@ export default function MessagesPage() {
                         onChange={handleInputChange}
                         placeholder={`Ketik pesan untuk ${assistantName}...`}
                         className="flex-grow rounded-full h-12 px-5"
-                        disabled={isLoading}
+                        disabled={isLoading || isInitializing}
                     />
-                    <Button type="submit" size="icon" className="rounded-full w-12 h-12" disabled={isLoading || !input.trim()}>
+                    <Button type="submit" size="icon" className="rounded-full w-12 h-12" disabled={isLoading || isInitializing || !input.trim()}>
                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                 </form>

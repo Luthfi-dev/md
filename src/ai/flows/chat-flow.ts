@@ -16,22 +16,15 @@ import type { ChatMessage } from '@/ai/schemas';
 
 // --- Chat Flow ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
-    // Gemini 1.5 Flash doesn't support a direct 'system' role or a structured history object in the prompt array itself.
-    // The best practice is to format the entire context, including the system prompt and conversation history,
-    // into a single, cohesive string prompt.
-    
-    // Get the last user message, which is the current question.
     const lastUserMessage = history.pop();
     if (!lastUserMessage) {
         throw new Error("Tidak ada pesan pengguna untuk dijawab.");
     }
     
-    // Format the rest of the history into a simple string log.
     const historyLog = history.map(msg => 
         `${msg.role === 'user' ? 'Pengguna' : 'Asisten'}: ${msg.content}`
     ).join('\n');
     
-    // Construct the final, single prompt string.
     const finalPromptText = `
 ${assistantData.systemPrompt}
 
@@ -44,10 +37,9 @@ ${lastUserMessage.content}
 
     const { output } = await performGeneration('chat', {
         model: gemini15Flash,
-        prompt: finalPromptText, // Pass the single formatted string.
+        prompt: [{ text: finalPromptText }], // Correct format: array of parts
     });
     
-    // Correct way to access the text response in Genkit 1.x
     const content = output?.text;
     if (typeof content !== 'string') {
         console.error("Invalid AI response structure:", output);
@@ -63,7 +55,7 @@ ${lastUserMessage.content}
 export const generateArticleOutline = async (input: schemas.ArticleOutlineInput) => {
     const { output } = await performGeneration('generateArticleOutline', {
         model: gemini15Flash,
-        prompt: `Buat 3 opsi kerangka artikel (outlines) yang komprehensif berdasarkan deskripsi berikut: "${input.description}". Setiap kerangka harus memiliki judul yang menarik dan poin-poin utama yang jelas.`,
+        prompt: [{ text: `Buat 3 opsi kerangka artikel (outlines) yang komprehensif berdasarkan deskripsi berikut: "${input.description}". Setiap kerangka harus memiliki judul yang menarik dan poin-poin utama yang jelas.` }],
         output: {
             schema: schemas.ArticleOutlineOutputSchema,
         },
@@ -75,7 +67,7 @@ export const generateArticleOutline = async (input: schemas.ArticleOutlineInput)
 export const generateArticleFromOutline = async (input: schemas.ArticleFromOutlineInput) => {
     const { output } = await performGeneration('generateArticleFromOutline', {
         model: gemini15Flash,
-        prompt: `Tulis artikel lengkap dalam format HTML berdasarkan kerangka berikut. Target jumlah kata sekitar ${input.wordCount} kata.\n\nJudul: ${input.selectedOutline.title}\nPoin-poin:\n- ${input.selectedOutline.points.join('\n- ')}`,
+        prompt: [{ text: `Tulis artikel lengkap dalam format HTML berdasarkan kerangka berikut. Target jumlah kata sekitar ${input.wordCount} kata.\n\nJudul: ${input.selectedOutline.title}\nPoin-poin:\n- ${input.selectedOutline.points.join('\n- ')}` }],
         output: {
             schema: schemas.ArticleFromOutlineOutputSchema
         }
@@ -87,7 +79,7 @@ export const generateArticleFromOutline = async (input: schemas.ArticleFromOutli
 export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
     const { output } = await performGeneration('lengthenArticle', {
         model: gemini15Flash,
-        prompt: `Perpanjang dan elaborasi konten artikel HTML berikut. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam untuk membuatnya lebih komprehensif. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.originalContent}`,
+        prompt: [{ text: `Perpanjang dan elaborasi konten artikel HTML berikut. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam untuk membuatnya lebih komprehensif. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.originalContent}` }],
         output: {
             schema: schemas.LengthenArticleOutputSchema,
         }
@@ -98,7 +90,7 @@ export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
 export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
     const { output } = await performGeneration('shortenArticle', {
         model: gemini15Flash,
-        prompt: `Ringkas konten artikel HTML berikut menjadi lebih padat dan to-the-point. Hilangkan kalimat yang berulang atau tidak perlu, tetapi pertahankan ide utamanya. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.content}`,
+        prompt: [{ text: `Ringkas konten artikel HTML berikut menjadi lebih padat dan to-the-point. Hilangkan kalimat yang berulang atau tidak perlu, tetapi pertahankan ide utamanya. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.content}` }],
         output: {
             schema: schemas.ShortenArticleOutputSchema,
         }
@@ -110,7 +102,7 @@ export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
 export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) => {
     const { output } = await performGeneration('generateHeadlines', {
         model: gemini15Flash,
-        prompt: `Buat 5 judul alternatif yang menarik, informatif, dan SEO-friendly untuk artikel berikut:\n\n${input.content}`,
+        prompt: [{ text: `Buat 5 judul alternatif yang menarik, informatif, dan SEO-friendly untuk artikel berikut:\n\n${input.content}` }],
         output: {
             schema: schemas.GenerateHeadlinesOutputSchema
         }
@@ -121,7 +113,7 @@ export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) =
 export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
     const { output } = await performGeneration('generateSeoMeta', {
         model: gemini15Flash,
-        prompt: `Buat meta title (sekitar 60 karakter) dan meta description (sekitar 155-160 karakter) yang SEO-friendly untuk artikel berikut:\n\n${input.articleContent}`,
+        prompt: [{ text: `Buat meta title (sekitar 60 karakter) dan meta description (sekitar 155-160 karakter) yang SEO-friendly untuk artikel berikut:\n\n${input.articleContent}` }],
         output: {
             schema: schemas.SeoMetaOutputSchema
         }
@@ -132,16 +124,16 @@ export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
 
 // --- Creative Content Flow ---
 export const generateCreativeContent = async (input: schemas.CreativeContentInput) => {
-    const promptParts = [
-        `Buat konten pemasaran kreatif dengan gaya bahasa "${input.style}".`,
+    const promptParts: any[] = [
+        { text: `Buat konten pemasaran kreatif dengan gaya bahasa "${input.style}".` },
     ];
     if (input.text) {
-        promptParts.push(`Deskripsi produk/ide: ${input.text}`);
+        promptParts.push({ text: `Deskripsi produk/ide: ${input.text}` });
     }
     if (input.imageDataUri) {
         promptParts.push({ media: { url: input.imageDataUri } });
     }
-    promptParts.push("\n\nPastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.");
+    promptParts.push({ text: "\n\nPastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks." });
 
     const { output } = await performGeneration('generateCreativeContent', {
         model: gemini15Flash,
@@ -156,7 +148,7 @@ export const generateCreativeContent = async (input: schemas.CreativeContentInpu
 export const translateContent = async (input: schemas.TranslateContentInput) => {
     const { output } = await performGeneration('translateContent', {
         model: gemini15Flash,
-        prompt: `Terjemahkan konten HTML berikut ke dalam bahasa ${input.targetLanguage}. Pertahankan semua tag HTML.\n\nKonten:\n${input.content}`,
+        prompt: [{ text: `Terjemahkan konten HTML berikut ke dalam bahasa ${input.targetLanguage}. Pertahankan semua tag HTML.\n\nKonten:\n${input.content}` }],
         output: { schema: schemas.TranslateContentOutputSchema },
     });
     return output!;
@@ -165,7 +157,7 @@ export const translateContent = async (input: schemas.TranslateContentInput) => 
 export const generateVideoScript = async (input: schemas.GenerateVideoScriptInput) => {
     const { output } = await performGeneration('generateVideoScript', {
         model: gemini15Flash,
-        prompt: `Ubah konten berikut menjadi naskah video yang terstruktur. Gunakan heading (<h1>, <h2>) untuk adegan dan paragraf untuk narasi/dialog.\n\nKonten:\n${input.content}`,
+        prompt: [{ text: `Ubah konten berikut menjadi naskah video yang terstruktur. Gunakan heading (<h1>, <h2>) untuk adegan dan paragraf untuk narasi/dialog.\n\nKonten:\n${input.content}` }],
         output: { schema: schemas.GenerateVideoScriptOutputSchema },
     });
     return output!;
@@ -174,10 +166,10 @@ export const generateVideoScript = async (input: schemas.GenerateVideoScriptInpu
 // --- Recommendation & Project Estimation Flows ---
 export const getAiRecommendation = async (input: schemas.AiRecommendationInput) => {
     const promptParts: any[] = [
-        `Anda adalah seorang fashion stylist dan konsultan pencocokan barang yang ahli. Tugas Anda adalah memberikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama, dan pilihan-pilihannya adalah gambar berikutnya. Berikan ringkasan yang menarik dan alasan yang logis. Pastikan semua respons (summary dan reasoning) dalam Bahasa Indonesia.`,
-        "Item Utama:",
+        { text: `Anda adalah seorang fashion stylist dan konsultan pencocokan barang yang ahli. Tugas Anda adalah memberikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama, dan pilihan-pilihannya adalah gambar berikutnya. Berikan ringkasan yang menarik dan alasan yang logis. Pastikan semua respons (summary dan reasoning) dalam Bahasa Indonesia.` },
+        { text: "Item Utama:" },
         { media: { url: input.mainItem.dataUri } },
-        "Pilihan:",
+        { text: "Pilihan:" },
         ...input.choices.map(choice => ({ media: { url: choice.dataUri } })),
     ];
 
@@ -193,7 +185,7 @@ export const getAiRecommendation = async (input: schemas.AiRecommendationInput) 
 export const estimateProjectFeature = async (input: schemas.ProjectFeatureInput) => {
     const { output } = await performGeneration('estimateProjectFeature', {
         model: gemini15Flash,
-        prompt: `Berikan estimasi harga (minimum dan maksimum) dalam Rupiah (IDR) untuk fitur proyek berikut. Berikan juga justifikasi singkat untuk rentang harga tersebut.\n\nNama Proyek: ${input.projectName}\nDeskripsi Fitur: ${input.featureDescription}`,
+        prompt: [{ text: `Berikan estimasi harga (minimum dan maksimum) dalam Rupiah (IDR) untuk fitur proyek berikut. Berikan juga justifikasi singkat untuk rentang harga tersebut.\n\nNama Proyek: ${input.projectName}\nDeskripsi Fitur: ${input.featureDescription}` }],
         output: { schema: schemas.ProjectFeatureOutputSchema },
     });
     return output!;
@@ -230,7 +222,7 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
                     },
                 },
             },
-            prompt: input.text,
+            prompt: [{ text: input.text }],
         });
 
         if (!media || !media.url) {
@@ -246,8 +238,3 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
-
-
-    
-
-    

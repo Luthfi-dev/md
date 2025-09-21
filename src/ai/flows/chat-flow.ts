@@ -16,25 +16,35 @@ import type { ChatMessage } from '@/ai/schemas';
 
 // --- Chat Flow ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
-    // Gemini 1.5 Flash expects an array of `Part` objects.
-    // The history from the client is already in the correct format of { role, content },
-    // but we need to map `content: string` to `content: [{ text: string }]`.
-    const formattedHistory = history.map(message => ({
-        role: message.role as 'user' | 'model',
-        content: [{ text: message.content }]
-    }));
-
-    // For gemini-1.5-flash, the system prompt must be part of the first user message.
-    // It does not support a separate 'system' role.
-    const finalPrompt = [...formattedHistory];
-    if (finalPrompt.length > 0 && finalPrompt[0].role === 'user') {
-        const firstUserContent = finalPrompt[0].content[0].text;
-        finalPrompt[0].content[0].text = `${assistantData.systemPrompt}\n\n## Riwayat Percakapan:\n(Tidak ada)\n\n## Pertanyaan Pengguna:\n${firstUserContent}`;
+    // Gemini 1.5 Flash doesn't support a direct 'system' role or a structured history object in the prompt array itself.
+    // The best practice is to format the entire context, including the system prompt and conversation history,
+    // into a single, cohesive string prompt.
+    
+    // Get the last user message, which is the current question.
+    const lastUserMessage = history.pop();
+    if (!lastUserMessage) {
+        throw new Error("Tidak ada pesan pengguna untuk dijawab.");
     }
+    
+    // Format the rest of the history into a simple string log.
+    const historyLog = history.map(msg => 
+        `${msg.role === 'user' ? 'Pengguna' : 'Asisten'}: ${msg.content}`
+    ).join('\n');
+    
+    // Construct the final, single prompt string.
+    const finalPromptText = `
+${assistantData.systemPrompt}
+
+## Riwayat Percakapan:
+${historyLog || '(Tidak ada)'}
+
+## Pertanyaan Pengguna:
+${lastUserMessage.content}
+    `.trim();
 
     const { output, usage } = await performGeneration('chat', {
         model: gemini15Flash,
-        prompt: finalPrompt,
+        prompt: finalPromptText, // Pass the single formatted string.
     });
     
     // Improved error handling and content extraction
@@ -237,5 +247,7 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
     }
 };
 
+
+    
 
     

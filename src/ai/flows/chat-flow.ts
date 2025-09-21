@@ -16,18 +16,22 @@ import type { ChatMessage } from '@/ai/schemas';
 
 // --- Chat Flow ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
-    // Format the recent history into a format suitable for the prompt
     const formattedHistory = history.map(message => ({
-        role: message.role,
-        content: message.content
+        role: message.role as 'user' | 'model',
+        content: [{ text: message.content }]
     }));
 
-    const { output } = await performGeneration('chat', {
+    // For gemini-1.5-flash, the system prompt must be part of the first user message.
+    // It does not support a separate 'system' role.
+    const finalPrompt = [...formattedHistory];
+    if (finalPrompt.length > 0 && finalPrompt[0].role === 'user') {
+        const firstUserContent = finalPrompt[0].content[0].text;
+        finalPrompt[0].content[0].text = `${assistantData.systemPrompt}\n\n## Riwayat Percakapan:\n(Tidak ada)\n\n## Pertanyaan Pengguna:\n${firstUserContent}`;
+    }
+
+    const { output, usage } = await performGeneration('chat', {
         model: gemini15Flash,
-        prompt: [
-           { role: 'system', content: assistantData.systemPrompt },
-           ...formattedHistory
-        ],
+        prompt: finalPrompt,
     });
     
     // Improved error handling and content extraction
@@ -230,3 +234,5 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
     }
 };
 
+
+    

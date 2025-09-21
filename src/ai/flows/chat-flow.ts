@@ -42,13 +42,13 @@ ${historyLog || '(Tidak ada)'}
 ${lastUserMessage.content}
     `.trim();
 
-    const { output, usage } = await performGeneration('chat', {
+    const { output } = await performGeneration('chat', {
         model: gemini15Flash,
         prompt: finalPromptText, // Pass the single formatted string.
     });
     
-    // Improved error handling and content extraction
-    const content = output?.[0]?.content?.[0]?.text;
+    // Correct way to access the text response in Genkit 1.x
+    const content = output?.text;
     if (typeof content !== 'string') {
         console.error("Invalid AI response structure:", output);
         throw new Error("Maaf, saya tidak dapat memberikan respons yang valid saat ini.");

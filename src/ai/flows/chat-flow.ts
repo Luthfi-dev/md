@@ -16,6 +16,9 @@ import type { ChatMessage } from '@/ai/schemas';
 
 // --- Chat Flow ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
+    // Gemini 1.5 Flash expects an array of `Part` objects.
+    // The history from the client is already in the correct format of { role, content },
+    // but we need to map `content: string` to `content: [{ text: string }]`.
     const formattedHistory = history.map(message => ({
         role: message.role as 'user' | 'model',
         content: [{ text: message.content }]

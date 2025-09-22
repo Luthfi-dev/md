@@ -14,7 +14,7 @@ import { getNextKey, reportFailure, updateLastUsed, getEnvKeys, clearCache } fro
  * and only if all of them fail, it proceeds to try keys from the .env file.
  * 
  * @param flowName The name of the flow for logging purposes.
- * @param options The options to pass to the `ai.generate` function.
+ * @param options The options to pass to the `ai.generate` function. This now includes the model.
  * @returns The result from a successful `ai.generate` call.
  * @throws An error if all keys from both the database and .env fail.
  */
@@ -44,7 +44,7 @@ export async function performGeneration(flowName: string, options: any) {
                 enableTracing: false,
             });
 
-            // Attempt the generation
+            // Attempt the generation using the provided options directly
             const result = await ai.generate(options);
 
             // If successful, update its usage timestamp (if it's a DB key) and return

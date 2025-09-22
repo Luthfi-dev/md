@@ -72,9 +72,10 @@ export default function MessagesPage() {
     // Fetch initial welcome message from the AI
     const getWelcomeMessage = useCallback(async () => {
         setIsInitializing(true);
+        // Start with an empty history to get the welcome message.
+        // The system prompt is now handled by the chat flow itself.
+        const initialHistory: ChatMessage[] = [];
         try {
-            // A "hello" message to trigger the assistant's introduction.
-            const initialHistory: ChatMessage[] = [{ role: 'user', content: 'Halo, perkenalkan dirimu.' }];
             const welcomeMsg = await chat(initialHistory);
             setMessages([welcomeMsg]);
         } catch (error) {

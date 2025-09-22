@@ -15,20 +15,13 @@ import type { ChatMessage } from '@/ai/schemas';
 
 // --- Chat Flow ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
-    // The system prompt defines the AI's personality and knowledge base.
-    // The content must be a simple string.
-    const systemPrompt: ChatMessage = {
-        role: 'system',
-        content: assistantData.systemPrompt,
-    };
-
-    // The full prompt includes the system instructions and the entire user history.
-    // The model needs the full context to provide relevant answers.
-    const fullPrompt = [systemPrompt, ...history];
-    
+    // The performGeneration function is now called with a structured prompt,
+    // separating the system instructions from the conversational history.
+    // This is the correct way to interact with chat-optimized models.
     const { output } = await performGeneration('chat', {
-        model: gemini15Pro, // Using a more robust model for chat
-        prompt: fullPrompt,
+        model: gemini15Pro,
+        system: assistantData.systemPrompt, // System instructions passed here.
+        prompt: history,                   // Conversational history passed here.
     });
     
     // In Genkit v1, the text response is directly on the `text` property.

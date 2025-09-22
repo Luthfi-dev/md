@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useRef, useEffect, FormEvent, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -69,10 +68,9 @@ export default function MessagesPage() {
     const typingSoundRef = useRef<HTMLAudioElement | null>(null);
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
-    // Fetch initial welcome message from the AI
+    // Set a static welcome message instead of calling the AI.
     const getWelcomeMessage = useCallback(() => {
         setIsInitializing(true);
-        // Set a static, reliable welcome message instead of calling the AI.
         const welcomeMsg: ChatMessage = {
             role: 'model',
             content: 'Hai! Aku Maudi. Ada yang bisa kubantu hari ini?'
@@ -242,5 +240,3 @@ export default function MessagesPage() {
         </div>
     );
 }
-
-    

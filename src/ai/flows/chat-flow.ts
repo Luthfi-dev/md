@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview All core AI text-based and multimodal generation flows.
@@ -10,18 +9,17 @@ import { z } from 'zod';
 import * as schemas from '../schemas';
 import { gemini15Flash, gemini15Pro, gemini15ProLatest } from '@genkit-ai/googleai';
 import wav from 'wav';
-import assistantData from '@/data/assistant.json';
 import type { ChatMessage } from '@/ai/schemas';
 
 // --- Chat Flow ---
-// This has been refactored to be a stateless question/answer flow to avoid history formatting issues.
+// This has been refactored to be a stateless question/answer flow.
+// It does not retain any memory of the conversation.
 export const chat = async (question: string): Promise<ChatMessage> => {
-  // Combine the system prompt with the user's question for context.
-  const promptText = `${assistantData.systemPrompt}\n\n## Pertanyaan Pengguna:\n${question}`;
-
+  // The prompt only contains the user's current question.
+  // No system prompt or history is included.
   const { output } = await performGeneration('chat', {
-    model: gemini15Flash, // Use flash for faster, stateless responses
-    prompt: [{ text: promptText }],
+    model: gemini15Flash,
+    prompt: [{ text: question }],
   });
 
   const content = output?.text;
@@ -223,6 +221,3 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
-
-    
-    

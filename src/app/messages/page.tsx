@@ -57,7 +57,7 @@ export default function MessagesPage() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false); // isLoading is for the AI response
-    const [isInitializing, setIsInitializing] = useState(true); // For the initial welcome message
+    const [isInitializing, setIsInitializing] = useState(false); // For the initial welcome message
     const [assistantName, setAssistantName] = useState('Assistant');
     const [assistantAvatar, setAssistantAvatar] = useState('/avatar-placeholder.png');
     const viewportRef = useRef<HTMLDivElement>(null);
@@ -68,15 +68,13 @@ export default function MessagesPage() {
     const typingSoundRef = useRef<HTMLAudioElement | null>(null);
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
-    // Set a static welcome message instead of calling the AI.
+    // Set a static welcome message
     const getWelcomeMessage = useCallback(() => {
-        setIsInitializing(true);
         const welcomeMsg: ChatMessage = {
             role: 'model',
             content: 'Hai! Aku Maudi. Ada yang bisa kubantu hari ini?'
         };
         setMessages([welcomeMsg]);
-        setIsInitializing(false);
     }, []);
     
 
@@ -94,7 +92,7 @@ export default function MessagesPage() {
             notificationSoundRef.current = new Audio('/sounds/notification.mp3');
         }
         
-        // Fetch the welcome message when component mounts
+        // Set the static welcome message when component mounts
         getWelcomeMessage();
 
     }, [getWelcomeMessage]);
@@ -122,7 +120,8 @@ export default function MessagesPage() {
         if (!input.trim() || isLoading) return;
 
         const userMessage: ChatMessage = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMessage]);
+        const newHistory = [...messages, userMessage];
+        setMessages(newHistory);
         
         const currentQuestion = input;
         setInput('');
@@ -130,8 +129,8 @@ export default function MessagesPage() {
         setIsLoading(true);
 
         try {
-            // We now send only the current question, making it stateless
-            const aiResponse = await chat(currentQuestion);
+            // Now we send the updated history to the chat function
+            const aiResponse = await chat(newHistory);
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
@@ -167,20 +166,6 @@ export default function MessagesPage() {
             
              <ScrollArea className="flex-1" viewportRef={viewportRef}>
                 <div className="space-y-6 p-4 pb-24">
-                    {/* Initial Loading */}
-                    {isInitializing && (
-                         <div className="flex items-end gap-2 justify-start">
-                             <Avatar className="h-8 w-8">
-                                <AvatarImage src={assistantAvatar} alt={assistantName} />
-                                <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
-                            </Avatar>
-                            <div className="bg-card text-card-foreground border rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1 shadow">
-                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '0ms'}}></span>
-                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '200ms'}}></span>
-                                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{animationDelay: '400ms'}}></span>
-                            </div>
-                        </div>
-                    )}
                     {/* Conversation history */}
                     {messages.map((message, index) => (
                         <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? "justify-end" : "justify-start")}>

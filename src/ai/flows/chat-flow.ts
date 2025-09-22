@@ -1,39 +1,23 @@
 'use server';
 /**
- * @fileOverview All core AI text-based and multimodal generation flows.
- * This file centralizes the logic for interacting with the Genkit AI models
- * for various content generation and analysis tasks.
+ * @fileOverview This file is now a proxy to the ExternalAIService for chat functionality.
+ * Other Genkit flows remain for different features.
  */
+import { chat as externalChat } from '@/services/ExternalAIService';
 import { performGeneration } from '@/ai/init';
 import { z } from 'zod';
 import * as schemas from '../schemas';
-import { gemini15Flash, gemini15Pro, gemini15ProLatest } from '@genkit-ai/googleai';
+import { gemini15Flash } from '@genkit-ai/googleai';
 import wav from 'wav';
 import type { ChatMessage } from '@/ai/schemas';
 
-// --- Chat Flow ---
-// This has been refactored to be a stateless question/answer flow.
-// It does not retain any memory of the conversation.
-export const chat = async (question: string): Promise<ChatMessage> => {
-  // The prompt only contains the user's current question.
-  // No system prompt or history is included.
-  const { output } = await performGeneration('chat', {
-    model: gemini15Flash,
-    prompt: [{ text: question }],
-  });
-
-  const content = output?.text;
-
-  if (typeof content !== 'string') {
-    console.error("Invalid AI response structure:", output);
-    throw new Error("Maaf, saya tidak dapat memberikan respons yang valid saat ini.");
-  }
-
-  return { role: 'model', content };
+// --- Chat Flow (using External Service) ---
+export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
+  // This now calls the optimized external service
+  return await externalChat(history);
 };
 
-
-// --- Article Generation Flows ---
+// --- Article Generation Flows (using Genkit) ---
 
 export const generateArticleOutline = async (input: schemas.ArticleOutlineInput) => {
     const { output } = await performGeneration('generateArticleOutline', {

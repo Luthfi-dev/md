@@ -72,11 +72,9 @@ export default function MessagesPage() {
     // Fetch initial welcome message from the AI
     const getWelcomeMessage = useCallback(async () => {
         setIsInitializing(true);
-        // Start with an empty history to get the welcome message.
-        // The system prompt is now handled by the chat flow itself.
-        const initialHistory: ChatMessage[] = [];
         try {
-            const welcomeMsg = await chat(initialHistory);
+            // Send an empty string to signify a request for a welcome message
+            const welcomeMsg = await chat('');
             setMessages([welcomeMsg]);
         } catch (error) {
             console.error("Failed to get welcome message:", error);
@@ -133,15 +131,16 @@ export default function MessagesPage() {
         if (!input.trim() || isLoading) return;
 
         const userMessage: ChatMessage = { role: 'user', content: input };
-        const conversationHistory = [...messages, userMessage];
-        setMessages(conversationHistory);
+        setMessages(prev => [...prev, userMessage]);
+        
+        const currentQuestion = input;
         setInput('');
         
         setIsLoading(true);
 
         try {
-            // We send the current conversation history to the chat function
-            const aiResponse = await chat(conversationHistory);
+            // We now send only the current question, making it stateless
+            const aiResponse = await chat(currentQuestion);
             notificationSoundRef.current?.play().catch(e => console.log("Audio play failed:", e));
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
@@ -250,3 +249,5 @@ export default function MessagesPage() {
         </div>
     );
 }
+
+    

@@ -8,34 +8,33 @@
 import { performGeneration } from '@/ai/init';
 import { z } from 'zod';
 import * as schemas from '../schemas';
-import { gemini15Flash, gemini15Pro } from '@genkit-ai/googleai';
+import { gemini15Flash, gemini15Pro, gemini15ProLatest } from '@genkit-ai/googleai';
 import wav from 'wav';
 import assistantData from '@/data/assistant.json';
 import type { ChatMessage } from '@/ai/schemas';
 
 // --- Chat Flow ---
-export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
-    // If the history is empty, it means we are asking for a welcome message.
-    // The prompt should be just the system prompt in this case.
-    // Otherwise, we send the full history.
-    const prompt = history.length === 0 ? [] : history;
+// This has been refactored to be a stateless question/answer flow to avoid history formatting issues.
+export const chat = async (question: string): Promise<ChatMessage> => {
+  // Combine the system prompt with the user's question for context.
+  // If the question is empty, it's a request for a welcome message.
+  const promptText = question
+    ? `${assistantData.systemPrompt}\n\n## Pertanyaan Pengguna:\n${question}`
+    : assistantData.systemPrompt;
 
-    const { output } = await performGeneration('chat', {
-        model: gemini15Pro,
-        system: assistantData.systemPrompt, // System instructions passed here.
-        prompt: prompt,                      // Conversational history passed here.
-    });
-    
-    // In Genkit v1, the text response is directly on the `text` property.
-    const content = output?.text;
+  const { output } = await performGeneration('chat', {
+    model: gemini15Flash, // Use flash for faster, stateless responses
+    prompt: [{ text: promptText }],
+  });
 
-    // The validation that was previously failing. This should now work correctly.
-    if (typeof content !== 'string') {
-        console.error("Invalid AI response structure:", output);
-        throw new Error("Maaf, saya tidak dapat memberikan respons yang valid saat ini.");
-    }
+  const content = output?.text;
 
-    return { role: 'model', content };
+  if (typeof content !== 'string') {
+    console.error("Invalid AI response structure:", output);
+    throw new Error("Maaf, saya tidak dapat memberikan respons yang valid saat ini.");
+  }
+
+  return { role: 'model', content };
 };
 
 
@@ -227,3 +226,5 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
+
+    

@@ -70,22 +70,15 @@ export default function MessagesPage() {
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
     // Fetch initial welcome message from the AI
-    const getWelcomeMessage = useCallback(async () => {
+    const getWelcomeMessage = useCallback(() => {
         setIsInitializing(true);
-        try {
-            // Send an empty string to signify a request for a welcome message
-            const welcomeMsg = await chat('');
-            setMessages([welcomeMsg]);
-        } catch (error) {
-            console.error("Failed to get welcome message:", error);
-            const errorMessage: ChatMessage = {
-                role: 'model',
-                content: `Maaf, terjadi masalah saat memulai: ${(error as Error).message}`
-            };
-            setMessages([errorMessage]);
-        } finally {
-            setIsInitializing(false);
-        }
+        // Set a static, reliable welcome message instead of calling the AI.
+        const welcomeMsg: ChatMessage = {
+            role: 'model',
+            content: 'Hai! Aku Maudi. Ada yang bisa kubantu hari ini?'
+        };
+        setMessages([welcomeMsg]);
+        setIsInitializing(false);
     }, []);
     
 

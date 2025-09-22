@@ -17,10 +17,7 @@ import type { ChatMessage } from '@/ai/schemas';
 // This has been refactored to be a stateless question/answer flow to avoid history formatting issues.
 export const chat = async (question: string): Promise<ChatMessage> => {
   // Combine the system prompt with the user's question for context.
-  // If the question is empty, it's a request for a welcome message.
-  const promptText = question
-    ? `${assistantData.systemPrompt}\n\n## Pertanyaan Pengguna:\n${question}`
-    : assistantData.systemPrompt;
+  const promptText = `${assistantData.systemPrompt}\n\n## Pertanyaan Pengguna:\n${question}`;
 
   const { output } = await performGeneration('chat', {
     model: gemini15Flash, // Use flash for faster, stateless responses

@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useRef, useEffect, FormEvent, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -68,20 +69,13 @@ export default function MessagesPage() {
     const typingSoundRef = useRef<HTMLAudioElement | null>(null);
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
 
-    const getWelcomeMessage = useCallback(async () => {
-        try {
-            // A "welcome" call is now just a call with an empty history
-            const welcomeMsg = await chat([]);
-            setMessages([welcomeMsg]);
-        } catch(e) {
-            const errorMessage: ChatMessage = {
-                role: 'model',
-                content: `Maaf, terjadi masalah saat memulai: ${(e as Error).message}`
-             };
-            setMessages([errorMessage]);
-        } finally {
-            setIsInitializing(false);
-        }
+    const getWelcomeMessage = useCallback(() => {
+        const staticWelcomeMessage: ChatMessage = {
+            role: 'model',
+            content: "Hai! Aku Maudi. Ada yang bisa kubantu hari ini?",
+        };
+        setMessages([staticWelcomeMessage]);
+        setIsInitializing(false);
     }, []);
     
 

@@ -40,10 +40,10 @@ function getBaseUrl(): string {
 // Dynamically generate metadata from the JSON file
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = getBaseUrl();
-  const logoPath = appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/android-chrome-512x512.png';
+  const logoPath = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-512x512.png`;
 
   return {
-    metadataBase: new URL(baseUrl), // THIS IS THE FIX
+    metadataBase: new URL(baseUrl),
     title: {
       default: appMetadata.name,
       template: `%s | ${appMetadata.name}`,
@@ -57,7 +57,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: appMetadata.name,
       images: [
         {
-          url: logoPath, // Using relative path now
+          url: logoPath,
           width: 512,
           height: 512,
           alt: `${appMetadata.name} App Logo`,
@@ -70,7 +70,7 @@ export async function generateMetadata(): Promise<Metadata> {
        card: 'summary_large_image',
        title: appMetadata.name,
        description: appMetadata.description,
-       images: [logoPath], // Using relative path now
+       images: [logoPath],
     },
     robots: {
       index: true,

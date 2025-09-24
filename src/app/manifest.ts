@@ -22,7 +22,9 @@ function getBaseUrl(): string {
 
 export default function manifest(): MetadataRoute.Manifest {
   const baseUrl = getBaseUrl();
-  const logoUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : null;
+  const logoUrl192 = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-192x192.png`;
+  const logoUrl512 = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-512x512.png`;
+  const maskableIconUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/maskable_icon.png`;
 
   return {
     name: appMetadata.name,
@@ -34,19 +36,19 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#1D88FE',
     icons: [
       {
-        src: logoUrl || '/icons/android-chrome-192x192.png',
+        src: logoUrl192,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: logoUrl || '/icons/android-chrome-512x512.png',
+        src: logoUrl512,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
        {
-        src: logoUrl || '/icons/maskable_icon.png',
+        src: maskableIconUrl,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'

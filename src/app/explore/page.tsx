@@ -8,6 +8,7 @@ import { Search, Loader2, Star, Flame } from 'lucide-react';
 import { ToolCard } from '@/components/ToolCard';
 import type { AppDefinition } from '@/types/app';
 import * as LucideIcons from 'lucide-react';
+import axios from 'axios';
 
 const BROWSER_STORAGE_KEY_FAVORITES = 'favorite_apps';
 
@@ -31,8 +32,7 @@ export default function ExplorePage() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch('/api/apps');
-        const data = await res.json();
+        const { data } = await axios.get('/api/apps');
         if (data.success) {
           const sortedApps = data.items
             .filter((app: AppDefinition) => app.id !== 'app_all_apps')

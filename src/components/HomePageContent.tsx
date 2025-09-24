@@ -22,6 +22,7 @@ import type { ArticleWithAuthor } from "@/app/admin/cms/articles/editor/actions"
 import { Skeleton } from "./ui/skeleton";
 import { Card, CardContent } from "./ui/card";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
+import axios from "axios";
 
 const getIcon = (iconName: string): React.ReactNode => {
     const IconComponent = (LucideIcons as any)[iconName];
@@ -138,36 +139,29 @@ export default function HomePageContent() {
         const fetchInitialData = async () => {
           setIsLoading(true);
           try {
-            // Fetch Apps from API
-            const appsRes = await fetch('/api/apps');
-            if (appsRes.ok) {
-              const appsData = await appsRes.json();
-              if (appsData.success) {
-                const sortedApps = appsData.items.sort((a: AppDefinition, b: AppDefinition) => a.order - b.order);
+            const [appsRes, carouselRes, articlesRes] = await Promise.all([
+                axios.get('/api/apps'),
+                axios.get('/api/carousel-items'),
+                axios.get('/api/blog/articles')
+            ]);
+            
+            if (appsRes.data.success) {
+                const sortedApps = appsRes.data.items.sort((a: AppDefinition, b: AppDefinition) => a.order - b.order);
                 setMainFeatures(sortedApps);
-              }
             } else {
-              console.error("Failed to fetch apps");
+                console.error("Failed to fetch apps");
             }
-
-            // Fetch Carousel Items from API
-             const carouselRes = await fetch('/api/carousel-items');
-            if (carouselRes.ok) {
-              const carouselData = await carouselRes.json();
-              if (carouselData.success) {
-                setCarouselItems(carouselData.items.filter((item: CarouselItemType) => item.status === 'published'));
-              }
+            
+            if (carouselRes.data.success) {
+                setCarouselItems(carouselRes.data.items.filter((item: CarouselItemType) => item.status === 'published'));
             } else {
-              console.error("Failed to fetch carousel items");
+                console.error("Failed to fetch carousel items");
             }
-
-            // Fetch Latest Articles
-            const res = await fetch('/api/blog/articles');
-            if (res.ok) {
-                const articlesData = await res.json();
-                setLatestArticles(articlesData.articles.slice(0, 3));
+            
+            if (articlesRes.data.success) {
+                setLatestArticles(articlesRes.data.articles.slice(0, 3));
             } else {
-              console.error("Failed to fetch articles");
+                console.error("Failed to fetch articles");
             }
           } catch (e) {
             console.error("Error fetching initial data for homepage:", e);
@@ -369,5 +363,3 @@ export default function HomePageContent() {
     </>
   );
 }
-
-    

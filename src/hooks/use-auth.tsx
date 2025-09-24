@@ -5,6 +5,7 @@ import { jwtDecode } from 'jwt-decode';
 import { useRouter } from 'next/navigation';
 import { getRefreshTokenName } from '@/lib/jwt';
 import { getCookie } from '@/lib/utils';
+import axios, { type AxiosRequestConfig } from 'axios';
 
 export interface User {
     id: number;
@@ -24,7 +25,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<{success: boolean, message: string, user?: User}>;
     register: (data: any) => Promise<{success: boolean, message: string}>;
     logout: () => Promise<void>;
-    fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
+    fetchWithAuth: (url: string, options?: AxiosRequestConfig) => Promise<any>;
     updateUser: (newUser: Partial<User>) => void;
     setAccessToken: (token: string | null) => void;
 }
@@ -87,10 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAccessToken(null); 
         
         try {
-            await fetch('/api/auth/logout', { 
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
+            await axios.post('/api/auth/logout');
         } catch (error) {
             console.error("Logout fetch failed:", error);
         } finally {
@@ -103,9 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const silentRefresh = useCallback(async (): Promise<string | null> => {
         try {
-            const res = await fetch('/api/auth/refresh', { method: 'POST' });
-            
-            const data = await res.json();
+            const { data } = await axios.post('/api/auth/refresh');
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
                 return data.accessToken;
@@ -138,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [silentRefresh, setAccessToken]);
 
 
-    const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
+    const fetchWithAuth = useCallback(async (url: string, options: AxiosRequestConfig = {}) => {
         let token = getAccessTokenClient();
         
         if (!token || isTokenExpired(token)) {
@@ -152,30 +148,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const headers = new Headers(options.headers || {});
         headers.set('Authorization', `Bearer ${token}`);
-        if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+        if (!headers.has('Content-Type') && !(options.data instanceof FormData)) {
             headers.set('Content-Type', 'application/json');
         }
 
-        const response = await fetch(url, { ...options, headers });
-
-        if (response.status === 401) {
-             // Token might have been revoked on the server between refresh and this call
-             await logout();
-             throw new Error('Akses ditolak oleh server. Sesi Anda mungkin telah berakhir.');
+        try {
+            const response = await axios({ url, ...options, headers: Object.fromEntries(headers.entries()) });
+            return response;
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 401) {
+                 await logout();
+                 throw new Error('Akses ditolak oleh server. Sesi Anda mungkin telah berakhir.');
+            }
+            throw error;
         }
-
-        return response;
     }, [silentRefresh, logout]);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
-            const data = await res.json();
+            const { data } = await axios.post('/api/auth/login', { email, password });
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
                 if (typeof window !== 'undefined') {
@@ -188,15 +180,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const register = async (data: any) => {
+    const register = async (payload: any) => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            return await res.json();
+            const { data } = await axios.post('/api/auth/register', payload);
+            return data;
         } finally {
             setIsLoading(false);
         }

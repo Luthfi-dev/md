@@ -15,6 +15,7 @@ import { getArticle, saveArticle, type ArticlePayload, type ArticleWithAuthorAnd
 import { generateSeoMeta } from "@/ai/genkit";
 import { useRouter, useParams } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 
 // A simple Tag input component
 const TagInput = ({ tags, setTags }: { tags: string[], setTags: (tags: string[]) => void }) => {
@@ -145,16 +146,12 @@ export default function ArticleEditorPage() {
     formData.append('subfolder', 'articles');
 
     try {
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-        });
-        const result = await response.json();
-        if (result.success) {
-            setArticle(prev => ({ ...prev, featured_image_url: result.filePath }));
+        const { data } = await axios.post('/api/upload', formData);
+        if (data.success) {
+            setArticle(prev => ({ ...prev, featured_image_url: data.filePath }));
             toast({ title: 'Gambar Unggulan Diunggah' });
         } else {
-            throw new Error(result.message);
+            throw new Error(data.message);
         }
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: (error as Error).message });

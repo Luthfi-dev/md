@@ -50,12 +50,10 @@ export default function SecurityPage() {
         }
 
         try {
-            const response = await fetchWithAuth('/api/user/change-password', {
+            const { data: result } = await fetchWithAuth('/api/user/change-password', {
                 method: 'POST',
-                body: JSON.stringify({ oldPassword, newPassword, confirmPassword })
+                data: { oldPassword, newPassword, confirmPassword }
             });
-
-            const result = await response.json();
 
             if (result.success) {
                 toast({ title: 'Berhasil!', description: 'Kata sandi Anda telah berhasil diperbarui.' });

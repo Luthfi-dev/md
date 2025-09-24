@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Lock } from 'lucide-react';
+import axios from 'axios';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -37,12 +38,7 @@ function ResetPasswordForm() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
-      const result = await response.json();
+      const { data: result } = await axios.post('/api/auth/reset-password', { token, password });
 
       if (result.success) {
         toast({
@@ -54,8 +50,13 @@ function ResetPasswordForm() {
         toast({ variant: 'destructive', title: 'Gagal', description: result.message || 'Token tidak valid atau telah kedaluwarsa.' });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Tidak dapat terhubung ke server.';
-      toast({ variant: 'destructive', title: 'Error', description: message });
+        let message = 'Tidak dapat terhubung ke server.';
+        if (axios.isAxiosError(err) && err.response) {
+            message = err.response.data.message || message;
+        } else if (err instanceof Error) {
+            message = err.message;
+        }
+        toast({ variant: 'destructive', title: 'Error', description: message });
     } finally {
       setIsLoading(false);
     }

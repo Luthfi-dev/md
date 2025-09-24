@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import axios from 'axios';
 
 export default function EditProfilePage() {
     const router = useRouter();
@@ -54,15 +55,11 @@ export default function EditProfilePage() {
         formData.append('subfolder', 'avatars');
 
         try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-            });
-            const result = await response.json();
-            if (result.success) {
-                return result.filePath;
+            const { data } = await axios.post('/api/upload', formData);
+            if (data.success) {
+                return data.filePath;
             } else {
-                toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: result.message });
+                toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: data.message });
                 return null;
             }
         } catch (error) {
@@ -100,13 +97,10 @@ export default function EditProfilePage() {
                 payload.avatar_url = avatarPath;
             }
 
-            const response = await fetchWithAuth('/api/user/update', {
+            const { data: result } = await fetchWithAuth('/api/user/update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                data: payload
             });
-
-            const result = await response.json();
 
             if (result.success && result.user) {
                 updateUser(result.user);

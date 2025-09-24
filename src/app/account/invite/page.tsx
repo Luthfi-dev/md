@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
@@ -70,12 +71,10 @@ export default function InvitePage() {
         }
 
         try {
-            const response = await fetchWithAuth('/api/referral', {
+            const { data: result } = await fetchWithAuth('/api/referral', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ referralCode: code })
+                data: { referralCode: code }
             });
-            const result = await response.json();
 
             toast({
                 variant: result.success ? 'default' : 'destructive',

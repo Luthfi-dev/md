@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import axios from 'axios';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -20,13 +21,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const result = await response.json();
+      const { data: result } = await axios.post('/api/auth/forgot-password', { email });
 
       if (result.success) {
         toast({
@@ -42,8 +37,13 @@ export default function ForgotPasswordPage() {
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Tidak dapat terhubung ke server.';
-      toast({ variant: 'destructive', title: 'Error', description: message });
+        let message = 'Tidak dapat terhubung ke server.';
+        if (axios.isAxiosError(error) && error.response) {
+            message = error.response.data.message || message;
+        } else if (error instanceof Error) {
+            message = error.message;
+        }
+        toast({ variant: 'destructive', title: 'Error', description: message });
     } finally {
       setIsLoading(false);
     }

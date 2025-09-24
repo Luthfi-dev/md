@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { saveAppSettings, type AppMetadata } from './actions';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import appMetadata from '@/data/app-metadata.json';
+import axios from 'axios';
 
 
 export default function AppSettingsPage() {
@@ -43,17 +44,13 @@ export default function AppSettingsPage() {
     formData.append('subfolder', 'app'); // Specify subfolder for app assets
 
     try {
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-        });
-        const result = await response.json();
-        if (result.success) {
+        const { data } = await axios.post('/api/upload', formData);
+        if (data.success) {
             // Update settings state with the new file path
-            setSettings(s => ({ ...s, logoUrl: result.filePath }));
+            setSettings(s => ({ ...s, logoUrl: data.filePath }));
             toast({ title: 'Logo Berhasil Diunggah' });
         } else {
-            toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: result.message });
+            toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: data.message });
         }
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Tidak dapat terhubung ke server.';

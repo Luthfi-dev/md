@@ -35,15 +35,52 @@ export const PWAInstallProvider = ({ children }: { children: ReactNode }) => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+     // Register the service worker and handle versioning
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+          
+          // Send version ID to the service worker
+          const metaElement = document.querySelector('meta[name="app-version"]');
+          const versionId = metaElement ? metaElement.getAttribute('content') : 'unknown';
+
+          if (registration.active) {
+            registration.active.postMessage({ type: 'SET_VERSION', versionId });
+          }
+          
+          // Check for updates
+          registration.addEventListener('updatefound', () => {
+            console.log('New service worker found, installing...');
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New content is available and waiting to be activated.
+                    // You can show a notification to the user here.
+                    console.log('New version is available. Please refresh.');
+                    toast({
+                      title: "Pembaruan Tersedia",
+                      description: "Tutup dan buka kembali aplikasi untuk menggunakan versi terbaru."
+                    })
+                }
+              });
+            }
+          });
+
+        }).catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
+      });
+    }
+
     // Check if the app is already installed
     if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
     }
     
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
@@ -71,7 +108,6 @@ export const PWAInstallProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     await deferredPrompt.prompt();
-    // prompt() is a one-time use event.
     setDeferredPrompt(null);
   }, [deferredPrompt, toast]);
 

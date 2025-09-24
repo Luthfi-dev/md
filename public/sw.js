@@ -1,34 +1,99 @@
 
-// This is a basic service worker for PWA caching.
+// This is a basic service worker for a Progressive Web App (PWA).
 
-self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
-  // We will cache assets upon activation to ensure we get the latest version.
-  event.waitUntil(self.skipWaiting());
+const getVersion = () => {
+    // This function is designed to be called within the service worker context
+    // It's a placeholder since we will get the version from the client page.
+    return 'v1'; 
+};
+
+// This function will be called from the client to set the correct versioned cache name
+let CACHE_NAME = 'maudigi-cache-v1'; // Default cache name
+
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SET_VERSION') {
+        CACHE_NAME = `maudigi-cache-${event.data.versionId}`;
+        console.log(`Service Worker cache name set to: ${CACHE_NAME}`);
+    }
 });
 
+
+// List of assets to cache on install
+const urlsToCache = [
+  '/',
+  '/manifest.webmanifest',
+  // Add other critical static assets here
+  // Be careful not to cache API routes or dynamic pages unless you have a specific strategy
+];
+
+// Install event: cache the essential app shell files
+self.addEventListener('install', (event) => {
+  console.log('Service Worker: Installing...');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Service Worker: Caching app shell');
+        return cache.addAll(urlsToCache);
+      })
+      .then(() => {
+        // Force the waiting service worker to become the active service worker.
+        return self.skipWaiting();
+      })
+  );
+});
+
+// Activate event: clean up old caches
 self.addEventListener('activate', (event) => {
   console.log('Service Worker: Activating...');
-  // On activation, we clean up any old caches.
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // You can define a pattern for your cache names, e.g., 'my-app-cache-v1'
-          // and delete any caches that don't match the current version.
-          // For now, we'll keep it simple and not delete caches automatically on activation,
-          // but this is where you would do it.
-          console.log('Service Worker: Checking cache:', cacheName);
-          return null;
+          // If the cache name is not our current one, delete it
+          if (cacheName !== CACHE_NAME && cacheName.startsWith('maudigi-cache-')) {
+            console.log('Service Worker: Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+        // Tell the active service worker to take control of the page immediately.
+        return self.clients.claim();
+    })
   );
 });
 
+// Fetch event: serve cached content when offline, or fetch from network
 self.addEventListener('fetch', (event) => {
-  // We are not intercepting fetch requests for now.
-  // This would be the place for more complex caching strategies (e.g., stale-while-revalidate).
-  // For a basic "installable" PWA, this is not strictly necessary.
-  event.respondWith(fetch(event.request));
+  // We only want to cache GET requests.
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  // For navigation requests (i.e., for HTML pages), always go to the network first.
+  // This ensures users always get the latest version of the pages.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/'))
+    );
+    return;
+  }
+
+  // For all other requests (CSS, JS, images), use a cache-first strategy.
+  event.respondWith(
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cachedResponse = await cache.match(event.request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      
+      // If not in cache, fetch from network, cache it, and then return it.
+      const networkResponse = await fetch(event.request);
+      // Only cache successful responses
+      if (networkResponse && networkResponse.status === 200) {
+        cache.put(event.request, networkResponse.clone());
+      }
+      return networkResponse;
+    })
+  );
 });

@@ -3,6 +3,7 @@
 
 import type { ChatMessage } from '@/ai/schemas';
 import assistantData from '@/data/assistant.json';
+import axios from 'axios';
 
 const API_URL = 'https://api.maudigi.com/ai/index.php';
 const HISTORY_LIMIT = 20; // Keep the last 20 messages for context
@@ -34,23 +35,13 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
   };
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
+    const response = await axios.post(API_URL, body, {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `External API responded with error: ${response.status} ${response.statusText} - ${errorText}`
-      );
-    }
-
-    const data = await response.json();
-    const aiContent = data.response;
+    const aiContent = response.data.response;
 
     if (typeof aiContent !== 'string') {
         throw new Error('Invalid response format from external API.');
@@ -61,7 +52,7 @@ export async function chat(history: ChatMessage[]): Promise<ChatMessage> {
       content: aiContent,
     };
   } catch (error) {
-    console.error('Error calling external AI API:', error);
+    console.error('Error calling external AI API with Axios:', error);
     // Re-throw the error so the client-side catch block can display it
     throw error;
   }

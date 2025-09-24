@@ -1,23 +1,16 @@
 
 import { MetadataRoute } from 'next'
 import appMetadata from '@/data/app-metadata.json';
-import { headers } from 'next/headers';
- 
-// Helper to get the base URL
-function getBaseUrl(): string {
-  // 1. Priority: Vercel deployment URL
+
+// manifest.ts does not run in the same context as server components,
+// so we cannot use `headers()` to determine the host.
+// We must rely on environment variables.
+const getBaseUrl = () => {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  // 2. Fallback to custom APP_URL from .env
-  if (process.env.APP_URL) {
-    return process.env.APP_URL;
-  }
-  // 3. Fallback for local development from headers
-  const headersList = headers();
-  const host = headersList.get('host') || 'localhost:3000';
-  const protocol = host.startsWith('localhost') ? 'http' : 'https';
-  return `${protocol}://${host}`;
+  // Fallback for local development, ensure APP_URL is set in .env
+  return process.env.APP_URL || 'http://localhost:3000'; 
 }
 
 export default function manifest(): MetadataRoute.Manifest {

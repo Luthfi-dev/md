@@ -40,7 +40,7 @@ function getBaseUrl(): string {
 // Dynamically generate metadata from the JSON file
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = getBaseUrl();
-  const logoPath = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-512x512.png`;
+  const logoPath = appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : `/icons/android-chrome-512x512.png`;
 
   return {
     metadataBase: new URL(baseUrl),

@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview This file is now a proxy to the ExternalAIService for chat functionality.
+ * @fileOverview This file is a proxy to the ExternalAIService for chat functionality.
  * Other Genkit flows remain for different features.
  */
 import { performGeneration } from '@/ai/init';
@@ -12,16 +12,48 @@ import type { ChatMessage } from '@/ai/schemas';
 // This is a placeholder that simulates the external API call for chat.
 // In a real scenario, you'd have your fetch/axios logic here.
 const externalChat = async (history: ChatMessage[]): Promise<ChatMessage> => {
-    // The last message is the user's current question
-    const userMessage = history[history.length - 1]?.content || '';
-    
-    // Simulate a simple response for demonstration
-    const responseContent = `This is a simulated response to: "${userMessage}". The external API call is working.`;
-
-    return {
-        role: 'model',
-        content: responseContent
+    // Take only the last N messages for context to optimize payload size
+    const HISTORY_LIMIT = 20;
+    const recentHistory = history.slice(-HISTORY_LIMIT);
+  
+    // Format the recent history into a single string for the API
+    const formattedHistory = recentHistory.map(message => {
+      if (message.role === 'user') {
+        return `User: ${message.content}`;
+      }
+      // We assume 'model' role for the assistant's parts
+      return `Assistant: ${message.content}`;
+    }).join('\n');
+  
+    // Combine the system prompt with the formatted chat history
+    const fullPrompt = `${assistantData.systemPrompt}\n\n${formattedHistory}\nAssistant:`;
+  
+    const body = {
+      text: fullPrompt,
     };
+  
+    try {
+      const response = await axios.post('https://api.maudigi.com/ai/index.php', body, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      const aiContent = response.data.response;
+  
+      if (typeof aiContent !== 'string') {
+          throw new Error('Invalid response format from external API.');
+      }
+  
+      return {
+        role: 'model',
+        content: aiContent,
+      };
+    } catch (error) {
+      console.error('Error calling external AI API with Axios:', error);
+      // Re-throw the error so the client-side catch block can display it
+      throw error;
+    }
 };
 
 
@@ -105,13 +137,14 @@ export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
 
 // --- Creative Content Flow ---
 export const generateCreativeContent = async (input: schemas.CreativeContentInput) => {
-    const promptParts: any[] = [{
-      text: `Buat konten pemasaran kreatif dengan gaya bahasa "${input.style}". Pastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.`,
-    }];
-
+    const textPrompt = `Buat konten pemasaran kreatif dengan gaya bahasa "${input.style}". Pastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.`;
+    
+    let promptParts: any[] = [{ text: textPrompt }];
+    
     if (input.text) {
         promptParts.unshift({ text: `Deskripsi produk/ide: ${input.text}` });
     }
+    
     if (input.imageDataUri) {
         promptParts.unshift({ media: { url: input.imageDataUri } });
     }
@@ -146,19 +179,20 @@ export const generateVideoScript = async (input: schemas.GenerateVideoScriptInpu
 
 // --- Recommendation & Project Estimation Flows ---
 export const getAiRecommendation = async (input: schemas.AiRecommendationInput) => {
-    const promptParts: any[] = [
-        { text: `Anda adalah seorang fashion stylist dan konsultan pencocokan barang yang ahli. Tugas Anda adalah memberikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama, dan pilihan-pilihannya adalah gambar berikutnya. Berikan ringkasan yang menarik dan alasan yang logis. Pastikan semua respons (summary dan reasoning) dalam Bahasa Indonesia.` },
+    const promptParts = [
+        { text: "Anda adalah seorang fashion stylist dan konsultan pencocokan barang yang ahli. Tugas Anda adalah memberikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama, dan pilihan-pilihannya adalah gambar berikutnya. Berikan ringkasan yang menarik dan alasan yang logis. Pastikan semua respons (summary dan reasoning) dalam Bahasa Indonesia." },
         { text: "Item Utama:" },
         { media: { url: input.mainItem.dataUri } },
         { text: "Pilihan:" },
         ...input.choices.map(choice => ({ media: { url: choice.dataUri } })),
     ];
-
+    
     const { output } = await performGeneration('getAiRecommendation', {
         model: 'googleai/gemini-1.5-flash',
         prompt: promptParts,
         output: { schema: schemas.AiRecommendationOutputSchema },
     });
+    
     return output!;
 };
 
@@ -219,5 +253,3 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
-
-    

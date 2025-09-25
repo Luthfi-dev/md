@@ -42,6 +42,18 @@ const isTokenExpired = (token: string): boolean => {
 };
 
 let accessToken: string | null = null;
+let isRefreshing = false;
+let refreshSubscribers: ((token: string | null) => void)[] = [];
+
+const onRefreshed = (token: string | null) => {
+    refreshSubscribers.forEach(callback => callback(token));
+    refreshSubscribers = [];
+}
+
+const addRefreshSubscriber = (callback: (token: string | null) => void) => {
+    refreshSubscribers.push(callback);
+}
+
 
 const getAccessTokenClient = () => {
     if (typeof window !== 'undefined') {
@@ -83,36 +95,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const logout = useCallback(async () => {
         setIsLoading(true);
-        
-        // Immediately clear client state
         setAccessToken(null); 
-        
         try {
             await axios.post('/api/auth/logout');
         } catch (error) {
             console.error("Logout fetch failed:", error);
         } finally {
             setIsLoading(false);
-            // Force a full page reload to the login page to ensure all state is reset
             window.location.href = '/login'; 
         }
     }, [setAccessToken]);
 
 
     const silentRefresh = useCallback(async (): Promise<string | null> => {
+        if (isRefreshing) {
+            return new Promise(resolve => {
+                addRefreshSubscriber(token => {
+                    resolve(token);
+                });
+            });
+        }
+        isRefreshing = true;
+
         try {
             const { data } = await axios.post('/api/auth/refresh');
             if (data.success && data.accessToken) {
                 setAccessToken(data.accessToken);
+                onRefreshed(data.accessToken);
                 return data.accessToken;
             }
-            throw new Error(data.message || 'Refresh token invalid or expired');
+             throw new Error(data.message || 'Refresh token invalid or expired');
         } catch (error) {
-            console.warn('Silent refresh failed:', error);
-            await logout(); // Logout if silent refresh fails
+            console.warn('Silent refresh failed. User will be logged out.');
+            onRefreshed(null);
+            // This is the critical change: Do NOT call logout() here directly.
+            // Let the auth check flow handle the redirection.
+            setAccessToken(null);
             return null;
+        } finally {
+             isRefreshing = false;
         }
-    }, [setAccessToken, logout]);
+    }, [setAccessToken]);
     
     // Auth Check Effect
     useEffect(() => {
@@ -136,29 +159,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchWithAuth = useCallback(async (url: string, options: AxiosRequestConfig = {}) => {
         let token = getAccessTokenClient();
-        
-        if (!token || isTokenExpired(token)) {
-            token = await silentRefresh();
-        }
 
-        if (!token) {
-            // No need to call logout() here, silentRefresh already does it on failure
-            throw new Error('Sesi berakhir. Silakan login kembali.');
-        }
-
-        const headers = new Headers(options.headers || {});
-        headers.set('Authorization', `Bearer ${token}`);
-        if (!headers.has('Content-Type') && !(options.data instanceof FormData)) {
-            headers.set('Content-Type', 'application/json');
-        }
+        const makeRequest = async (currentToken: string | null) => {
+             if (!currentToken) {
+                throw new Error('Sesi berakhir. Silakan login kembali.');
+             }
+             const headers = new Headers(options.headers || {});
+             headers.set('Authorization', `Bearer ${currentToken}`);
+             if (!headers.has('Content-Type') && !(options.data instanceof FormData)) {
+                headers.set('Content-Type', 'application/json');
+             }
+             return axios({ url, ...options, headers: Object.fromEntries(headers.entries()) });
+        };
 
         try {
-            const response = await axios({ url, ...options, headers: Object.fromEntries(headers.entries()) });
-            return response;
+            return await makeRequest(token);
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 401) {
-                 await logout();
-                 throw new Error('Akses ditolak oleh server. Sesi Anda mungkin telah berakhir.');
+                console.log("Access token expired or invalid. Attempting silent refresh...");
+                try {
+                    const newToken = await silentRefresh();
+                    if (newToken) {
+                        console.log("Token refreshed successfully. Retrying original request.");
+                        return await makeRequest(newToken);
+                    } else {
+                         // If refresh fails, logout the user.
+                         await logout();
+                         throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
+                    }
+                } catch (refreshError) {
+                     await logout();
+                     throw refreshError;
+                }
             }
             throw error;
         }

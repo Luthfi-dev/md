@@ -4,7 +4,7 @@
 import { googleAI } from '@genkit-ai/googleai';
 import { genkit, type GenkitError } from 'genkit';
 import * as schemas from '../schemas';
-import { ApiKeyManager } from '@/services/ApiKeyManager';
+import * as ApiKeyManager from '@/services/ApiKeyManager';
 import wav from 'wav';
 
 /**
@@ -39,7 +39,7 @@ async function performGeneration(flowName: string, generateOptions: any) {
             });
 
             // Explicitly construct the generation object to ensure correctness
-            const result = await ai.generate({ ...generateOptions });
+            const result = await ai.generate(generateOptions);
 
             if (!isEnv) {
                 await ApiKeyManager.updateLastUsed(keyId as number);
@@ -351,5 +351,3 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
-
-    

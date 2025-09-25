@@ -35,7 +35,10 @@ export const generateArticleOutline = async (input: schemas.ArticleOutlineInput)
             schema: schemas.ArticleOutlineOutputSchema,
         },
     });
-    return result?.output;
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk kerangka artikel.");
+    }
+    return result.output;
 };
 
 export const generateArticleFromOutline = async (input: schemas.ArticleFromOutlineInput) => {
@@ -46,7 +49,10 @@ export const generateArticleFromOutline = async (input: schemas.ArticleFromOutli
             schema: schemas.ArticleFromOutlineOutputSchema
         }
     });
-    return result?.output;
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk pembuatan artikel.");
+    }
+    return result.output;
 };
 
 export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
@@ -57,7 +63,10 @@ export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
             schema: schemas.LengthenArticleOutputSchema,
         }
     });
-    return result?.output;
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk perpanjangan artikel.");
+    }
+    return result.output;
 };
 
 export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
@@ -68,7 +77,10 @@ export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
             schema: schemas.ShortenArticleOutputSchema,
         }
     });
-    return result?.output;
+     if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk peringkasan artikel.");
+    }
+    return result.output;
 };
 
 export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) => {
@@ -79,7 +91,10 @@ export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) =
             schema: schemas.GenerateHeadlinesOutputSchema
         }
     });
-    return result?.output;
+     if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk pembuatan judul.");
+    }
+    return result.output;
 };
 
 export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
@@ -90,24 +105,46 @@ export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
             schema: schemas.SeoMetaOutputSchema
         }
     });
-    return result?.output;
+     if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk SEO meta.");
+    }
+    return result.output;
 };
 
 export const generateCreativeContent = async (input: schemas.CreativeContentInput) => {
     let promptParts: any[] = [];
+    const textPromptParts = ['Buat konten pemasaran kreatif'];
+
+    if (input.style) {
+        textPromptParts.push(`dengan gaya bahasa "${input.style}"`);
+    }
+
     if (input.imageDataUri) {
         promptParts.push({ media: { url: input.imageDataUri } });
+        textPromptParts.push('berdasarkan gambar yang diunggah');
     }
-    const textPrompt = `Buat konten pemasaran kreatif dengan gaya bahasa "${input.style}" ${input.imageDataUri ? 'berdasarkan gambar yang diunggah' : ''}. Pastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks. ${input.text ? `Berikut adalah deskripsi produk/idenya: ${input.text}` : ''}`;
-    promptParts.push({ text: textPrompt });
+    
+    textPromptParts.push('Pastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.');
+    
+    if (input.text) {
+        textPromptParts.push(`Berikut adalah deskripsi produk/idenya: ${input.text}`);
+    }
+
+    promptParts.push({ text: textPromptParts.join(' ') });
     
     const result = await performGeneration('generateCreativeContent', {
         model: 'googleai/gemini-1.5-flash',
         prompt: promptParts,
         output: { schema: schemas.CreativeContentOutputSchema },
     });
-    return result?.output;
+
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan konten.");
+    }
+
+    return result.output;
 };
+
 
 export const translateContent = async (input: schemas.TranslateContentInput) => {
     const result = await performGeneration('translateContent', {
@@ -115,7 +152,10 @@ export const translateContent = async (input: schemas.TranslateContentInput) => 
         prompt: `Terjemahkan konten HTML berikut ke dalam bahasa ${input.targetLanguage}. Pertahankan semua tag HTML.\n\nKonten:\n${input.content}`,
         output: { schema: schemas.TranslateContentOutputSchema },
     });
-    return result?.output;
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk terjemahan.");
+    }
+    return result.output;
 };
 
 export const generateVideoScript = async (input: schemas.GenerateVideoScriptInput) => {
@@ -124,7 +164,10 @@ export const generateVideoScript = async (input: schemas.GenerateVideoScriptInpu
         prompt: `Ubah konten berikut menjadi naskah video yang terstruktur. Gunakan heading (<h1>, <h2>) untuk adegan dan paragraf untuk narasi/dialog.\n\nKonten:\n${input.content}`,
         output: { schema: schemas.GenerateVideoScriptOutputSchema },
     });
-    return result?.output;
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk naskah video.");
+    }
+    return result.output;
 };
 
 export const getAiRecommendation = async (input: schemas.AiRecommendationInput) => {
@@ -143,7 +186,10 @@ export const getAiRecommendation = async (input: schemas.AiRecommendationInput) 
     };
     
     const result = await performGeneration('getAiRecommendation', options);
-    return result?.output;
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk rekomendasi.");
+    }
+    return result.output;
 };
 
 export const estimateProjectFeature = async (input: schemas.ProjectFeatureInput) => {
@@ -152,7 +198,10 @@ export const estimateProjectFeature = async (input: schemas.ProjectFeatureInput)
         prompt: `Berikan estimasi harga (minimum dan maksimum) dalam Rupiah (IDR) untuk fitur proyek berikut. Berikan juga justifikasi singkat untuk rentang harga tersebut.\n\nNama Proyek: ${input.projectName}\nDeskripsi Fitur: ${input.featureDescription}`,
         output: { schema: schemas.ProjectFeatureOutputSchema },
     });
-    return result?.output;
+    if (!result?.output) {
+      throw new Error("AI tidak memberikan respons yang valid untuk estimasi proyek.");
+    }
+    return result.output;
 };
 
 async function toWav(pcmData: Buffer, channels = 1, rate = 24000, sampleWidth = 2): Promise<string> {

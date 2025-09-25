@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -33,8 +32,7 @@ export default function WalletDashboardPage() {
     if (!isAuthenticated) return;
     setIsLoading(true);
     try {
-      const res = await fetchWithAuth('/api/wallet/transactions');
-      const data = await res.json();
+      const { data } = await fetchWithAuth('/api/wallet/transactions');
       if (!data.success) throw new Error(data.message);
       
       const now = new Date();

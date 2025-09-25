@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,8 +24,7 @@ export default function WalletTransactionsPage() {
   const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetchWithAuth('/api/wallet/transactions');
-      const data = await res.json();
+      const { data } = await fetchWithAuth('/api/wallet/transactions');
       if (!data.success) throw new Error(data.message);
       setTransactions(data.transactions);
     } catch (error) {
@@ -50,10 +48,9 @@ export default function WalletTransactionsPage() {
     if (isDeleting === null) return;
 
     try {
-      const res = await fetchWithAuth(`/api/wallet/transactions/${isDeleting}`, {
+      const { data } = await fetchWithAuth(`/api/wallet/transactions/${isDeleting}`, {
         method: 'DELETE',
       });
-      const data = await res.json();
       if (!data.success) throw new Error(data.message);
 
       toast({ title: 'Sukses!', description: 'Transaksi telah berhasil dihapus.' });

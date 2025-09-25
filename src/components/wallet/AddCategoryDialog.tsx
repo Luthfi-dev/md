@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -31,11 +30,10 @@ export function AddCategoryDialog({ isOpen, onOpenChange, onCategoryAdded, categ
     setIsLoading(true);
     try {
       const payload = { name, type: categoryType };
-      const res = await fetchWithAuth('/api/wallet/categories', {
+      const { data } = await fetchWithAuth('/api/wallet/categories', {
         method: 'POST',
-        body: JSON.stringify(payload),
+        data: payload,
       });
-      const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Gagal menyimpan kategori');
 
       toast({ title: 'Kategori Ditambahkan!' });

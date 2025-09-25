@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
@@ -47,8 +46,7 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
 
   const fetchCategories = useCallback(async () => {
     try {
-      const res = await fetchWithAuth('/api/wallet/categories');
-      const data = await res.json();
+      const { data } = await fetchWithAuth('/api/wallet/categories');
       if (data.success) {
         setCategories(data.categories);
       }
@@ -99,11 +97,10 @@ export function AddTransactionSheet({ isOpen, onOpenChange, onTransactionAdded }
             description,
             transactionDate: format(transactionDate, 'yyyy-MM-dd')
         };
-        const res = await fetchWithAuth('/api/wallet/transactions', {
+        const { data } = await fetchWithAuth('/api/wallet/transactions', {
             method: 'POST',
-            body: JSON.stringify(payload)
+            data: payload
         });
-        const data = await res.json();
         if(!data.success) throw new Error(data.message || 'Gagal menyimpan transaksi');
 
         toast({ title: 'Sukses!', description: 'Transaksi baru telah berhasil dicatat.'});

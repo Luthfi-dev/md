@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -54,16 +53,10 @@ export default function WalletReportPage() {
                 fetchWithAuth(`/api/wallet/budget?month=${currentMonth}`),
                 fetchWithAuth('/api/wallet/transactions')
             ]);
-            
-            if(!catRes.ok || !budgetRes.ok || !transRes.ok) {
-                const errorData = await Promise.all([catRes.json(), budgetRes.json(), transRes.json()]);
-                console.error("Fetch errors:", errorData);
-                throw new Error('Gagal memuat semua data yang diperlukan.');
-            }
 
-            const catData = await catRes.json();
-            const budgetData = await budgetRes.json();
-            const transData = await transRes.json();
+            const catData = catRes.data;
+            const budgetData = budgetRes.data;
+            const transData = transRes.data;
 
             if (!catData.success || !budgetData.success || !transData.success) {
                 console.error("API errors:", {catData, budgetData, transData});
@@ -77,7 +70,6 @@ export default function WalletReportPage() {
             transData.transactions
                 .filter((t: any) => t.type === 'expense' && t.transaction_date.startsWith(currentMonth))
                 .forEach((t: any) => {
-                    // THE FIX: Use `category_id` which is the actual key from the API response
                     if (t.category_id) { 
                          expenses[t.category_id] = (expenses[t.category_id] || 0) + parseFloat(t.amount);
                     }
@@ -111,11 +103,10 @@ export default function WalletReportPage() {
     const handleSaveBudgets = async () => {
         setIsSaving(true);
         try {
-            const res = await fetchWithAuth('/api/wallet/budget', {
+            const { data } = await fetchWithAuth('/api/wallet/budget', {
                 method: 'POST',
-                body: JSON.stringify({ budgets, month: currentMonth })
+                data: { budgets, month: currentMonth }
             });
-            const data = await res.json();
             if (!data.success) throw new Error(data.message);
             toast({ title: 'Anggaran Disimpan!' });
             setIsEditing(false);

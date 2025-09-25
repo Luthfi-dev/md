@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Separator } from '@/components/ui/separator';
+import axios from 'axios';
 
 interface Feature {
     description: string;

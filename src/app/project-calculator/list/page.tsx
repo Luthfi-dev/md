@@ -11,6 +11,7 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import axios from 'axios';
 
 interface Estimation {
     uuid: string;
@@ -32,12 +33,9 @@ export default function SavedEstimationsPage() {
         if (!isAuthenticated) return;
         setIsLoading(true);
         try {
-            const res = await fetchWithAuth('/api/project-estimator');
-            if (!res.ok) throw new Error("Gagal memuat data estimasi.");
-            
-            const data = await res.json();
+            const { data } = await fetchWithAuth('/api/project-estimator');
             if (!data.success) throw new Error(data.message);
-
+            
             setEstimations(data.estimations || []);
         } catch (e) {
             toast({ variant: 'destructive', title: 'Gagal Memuat Data', description: (e as Error).message });
@@ -47,8 +45,11 @@ export default function SavedEstimationsPage() {
     }, [isAuthenticated, fetchWithAuth, toast]);
     
     useEffect(() => {
-        if (!isAuthLoading && !isAuthenticated) router.push('/account');
-        if (isAuthenticated) fetchData();
+        if (!isAuthLoading && !isAuthenticated) {
+            router.push('/account');
+        } else if (isAuthenticated) {
+            fetchData();
+        }
     }, [isAuthLoading, isAuthenticated, router, fetchData]);
 
     const handleDelete = async () => {
@@ -58,12 +59,11 @@ export default function SavedEstimationsPage() {
         setEstimations(estimations.filter(e => e.uuid !== deletingProject.uuid));
 
         try {
-            const res = await fetchWithAuth(`/api/project-estimator/${deletingProject.uuid}`, {
+            const { data } = await fetchWithAuth(`/api/project-estimator/${deletingProject.uuid}`, {
                 method: 'DELETE'
             });
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.message || "Gagal menghapus proyek di server.");
+            if (!data.success) {
+                throw new Error(data.message || "Gagal menghapus proyek di server.");
             }
             toast({ title: "Proyek Dihapus", description: `"${deletingProject.title}" telah dihapus.` });
         } catch (e) {

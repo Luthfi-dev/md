@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { Separator } from '@/components/ui/separator';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 
 
 interface Feature {
@@ -149,9 +150,8 @@ const ProjectCalculatorContent = () => {
 
             toast({ title: 'Berhasil Disimpan!', description: 'Estimasi proyek Anda telah disimpan.'});
             
-            if (!editId) {
-                router.push('/project-calculator/list');
-            }
+            // Redirect to list page to see the result
+            router.push('/project-calculator/list');
 
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: (error as Error).message });

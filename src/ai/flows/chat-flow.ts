@@ -112,29 +112,29 @@ export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
 };
 
 export const generateCreativeContent = async (input: schemas.CreativeContentInput) => {
-    let promptParts: (string | { media: { url: string } })[] = [];
-    const textPromptParts = ['Buat konten pemasaran kreatif'];
+    const promptParts: (string | { media: { url: string } } | { text: string })[] = [];
+    const textParts = ['Buat konten pemasaran kreatif'];
 
     if (input.style) {
-        textPromptParts.push(`dengan gaya bahasa "${input.style}"`);
+        textParts.push(`dengan gaya bahasa "${input.style}"`);
     }
 
     if (input.imageDataUri) {
         promptParts.push({ media: { url: input.imageDataUri } });
-        textPromptParts.push('berdasarkan gambar yang diunggah');
+        textParts.push('berdasarkan gambar yang diunggah');
     }
     
-    textPromptParts.push('Pastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.');
+    textParts.push('Pastikan output berupa format HTML yang kaya dan menarik, tetapi JANGAN sertakan tag gambar (<img>). Fokus hanya pada konten teks.');
     
     if (input.text) {
-        textPromptParts.push(`Berikut adalah deskripsi produk/idenya: ${input.text}`);
+        textParts.push(`Berikut adalah deskripsi produk/idenya: ${input.text}`);
     }
 
-    const fullPrompt = [...promptParts, { text: textPromptParts.join(' ') }];
+    promptParts.push({ text: textParts.join(' ') });
     
     const result = await performGeneration('generateCreativeContent', {
         model: 'googleai/gemini-1.5-flash',
-        prompt: fullPrompt,
+        prompt: promptParts,
         output: { schema: schemas.CreativeContentOutputSchema },
     });
 
@@ -171,7 +171,7 @@ export const generateVideoScript = async (input: schemas.GenerateVideoScriptInpu
 };
 
 export const getAiRecommendation = async (input: schemas.AiRecommendationInput) => {
-    const promptParts = [
+    const promptParts: ({ text: string } | { media: { url: string } })[] = [
         { text: "Anda adalah seorang fashion stylist dan konsultan pencocokan barang yang ahli. Tugas Anda adalah memberikan rekomendasi item terbaik dari beberapa pilihan untuk item utama. Item utama adalah gambar pertama, dan pilihan-pilihannya adalah gambar berikutnya. Berikan ringkasan yang menarik dan alasan yang logis. Pastikan semua respons (summary dan reasoning) dalam Bahasa Indonesia." },
         { text: "Item Utama:" },
         { media: { url: input.mainItem.dataUri } },
@@ -186,7 +186,8 @@ export const getAiRecommendation = async (input: schemas.AiRecommendationInput) 
     };
     
     const result = await performGeneration('getAiRecommendation', options);
-    if (!result?.output) {
+
+    if (!result?.output || typeof result.output.bestChoiceIndex !== 'number') {
       throw new Error("AI tidak memberikan respons yang valid untuk rekomendasi.");
     }
     return result.output;

@@ -41,12 +41,7 @@ export default function EstimationDetailPage() {
         if (!isAuthenticated || !uuid) return;
         setIsLoading(true);
         try {
-            const res = await fetchWithAuth(`/api/project-estimator/${uuid}`);
-            if (!res.ok) {
-                 const errorData = await res.json();
-                 throw new Error(errorData.message || 'Gagal memuat detail estimasi.');
-            }
-            const data = await res.json();
+            const { data } = await fetchWithAuth(`/api/project-estimator/${uuid}`);
             if (!data.success) throw new Error(data.message);
             setEstimation(data.estimation);
         } catch (e) {

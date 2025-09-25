@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, FormEvent, useEffect, useCallback } from 'react';
@@ -42,9 +43,7 @@ const ProjectCalculatorContent = () => {
     const fetchProjectData = useCallback(async (uuid: string) => {
         setIsLoadingData(true);
         try {
-            const res = await fetchWithAuth(`/api/project-estimator/${uuid}`);
-            if (!res.ok) throw new Error("Gagal memuat data proyek untuk diedit.");
-            const data = await res.json();
+            const { data } = await fetchWithAuth(`/api/project-estimator/${uuid}`);
             if (!data.success) throw new Error(data.message);
             
             const project = data.estimation;
@@ -70,6 +69,7 @@ const ProjectCalculatorContent = () => {
             fetchProjectData(editId);
         } else {
              setProjectTitle('');
+             setFeatures([]);
              setIsLoadingData(false);
         }
     }, [editId, fetchProjectData]);
@@ -140,14 +140,15 @@ const ProjectCalculatorContent = () => {
             };
             
             const method = editId ? 'PUT' : 'POST';
-            const res = await fetchWithAuth('/api/project-estimator', { method, body: JSON.stringify(payload) });
+            const { data } = await fetchWithAuth('/api/project-estimator', {
+                 method,
+                 data: payload
+            });
 
-            const data = await res.json();
             if (!data.success) throw new Error(data.message);
 
             toast({ title: 'Berhasil Disimpan!', description: 'Estimasi proyek Anda telah disimpan.'});
             
-            // If it was a new project, navigate to the list page. If editing, just show success.
             if (!editId) {
                 router.push('/project-calculator/list');
             }

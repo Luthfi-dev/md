@@ -112,7 +112,7 @@ export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
 };
 
 export const generateCreativeContent = async (input: schemas.CreativeContentInput) => {
-    let promptParts: any[] = [];
+    let promptParts: (string | { media: { url: string } })[] = [];
     const textPromptParts = ['Buat konten pemasaran kreatif'];
 
     if (input.style) {
@@ -130,15 +130,15 @@ export const generateCreativeContent = async (input: schemas.CreativeContentInpu
         textPromptParts.push(`Berikut adalah deskripsi produk/idenya: ${input.text}`);
     }
 
-    promptParts.push({ text: textPromptParts.join(' ') });
+    const fullPrompt = [...promptParts, { text: textPromptParts.join(' ') }];
     
     const result = await performGeneration('generateCreativeContent', {
         model: 'googleai/gemini-1.5-flash',
-        prompt: promptParts,
+        prompt: fullPrompt,
         output: { schema: schemas.CreativeContentOutputSchema },
     });
 
-    if (!result?.output) {
+    if (!result?.output?.content) {
       throw new Error("AI tidak memberikan konten.");
     }
 

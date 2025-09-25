@@ -4,12 +4,26 @@
  * @fileOverview This file is now a proxy to the ExternalAIService for chat functionality.
  * Other Genkit flows remain for different features.
  */
-import { chat as externalChat } from '@/services/ExternalAIService';
 import { performGeneration } from '@/ai/init';
-import { z } from 'zod';
 import * as schemas from '../schemas';
 import wav from 'wav';
 import type { ChatMessage } from '@/ai/schemas';
+
+// This is a placeholder that simulates the external API call for chat.
+// In a real scenario, you'd have your fetch/axios logic here.
+const externalChat = async (history: ChatMessage[]): Promise<ChatMessage> => {
+    // The last message is the user's current question
+    const userMessage = history[history.length - 1]?.content || '';
+    
+    // Simulate a simple response for demonstration
+    const responseContent = `This is a simulated response to: "${userMessage}". The external API call is working.`;
+
+    return {
+        role: 'model',
+        content: responseContent
+    };
+};
+
 
 // --- Chat Flow (using External Service) ---
 export const chat = async (history: ChatMessage[]): Promise<ChatMessage> => {
@@ -205,3 +219,5 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
+
+    

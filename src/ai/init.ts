@@ -42,8 +42,13 @@ export async function performGeneration(flowName: string, options: any) {
                 enableTracing: false,
             });
 
-            // Correctly spread the options into a new object for the generate call
-            const result = await ai.generate({ ...options });
+            // Explicitly construct the generation object to ensure correctness
+            const result = await ai.generate({
+                model: options.model,
+                prompt: options.prompt,
+                output: options.output,
+                config: options.config,
+            });
 
             if (!isEnv) {
                 await updateLastUsed(keyId as number);
@@ -64,5 +69,3 @@ export async function performGeneration(flowName: string, options: any) {
     console.error(`[${flowName}] All API key attempts failed.`);
     throw new Error(lastError?.message || 'Layanan AI sedang sibuk atau mengalami gangguan setelah mencoba semua kunci yang tersedia. Coba lagi nanti.');
 }
-
-    

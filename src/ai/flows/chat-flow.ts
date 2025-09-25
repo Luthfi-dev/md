@@ -4,7 +4,7 @@
 import { googleAI } from '@genkit-ai/googleai';
 import { genkit, type GenkitError } from 'genkit';
 import * as schemas from '../schemas';
-import { getNextKey, reportFailure, updateLastUsed, getEnvKeys } from '@/services/ApiKeyManager';
+import { ApiKeyManager } from '@/services/ApiKeyManager';
 import wav from 'wav';
 
 /**
@@ -16,8 +16,8 @@ import wav from 'wav';
  * @throws An error if all keys fail.
  */
 async function performGeneration(flowName: string, generateOptions: any) {
-    const dbKeys = await getNextKey(true) || [];
-    const envKeys = getEnvKeys();
+    const dbKeys = await ApiKeyManager.getNextKey(true) || [];
+    const envKeys = ApiKeyManager.getEnvKeys();
     const allAvailableKeys = [...dbKeys, ...envKeys];
 
     if (allAvailableKeys.length === 0) {
@@ -39,10 +39,10 @@ async function performGeneration(flowName: string, generateOptions: any) {
             });
 
             // Explicitly construct the generation object to ensure correctness
-            const result = await ai.generate(generateOptions);
+            const result = await ai.generate({ ...generateOptions });
 
             if (!isEnv) {
-                await updateLastUsed(keyId as number);
+                await ApiKeyManager.updateLastUsed(keyId as number);
             }
             console.log(`[${flowName}] Generation successful with ${keyIdentifier}.`);
             return result;
@@ -53,7 +53,7 @@ async function performGeneration(flowName: string, generateOptions: any) {
             console.warn(`[${flowName}] Generation FAILED with ${keyIdentifier}. Error:`, errorMessage);
             
             if (!isEnv) {
-                await reportFailure(keyId as number);
+                await ApiKeyManager.reportFailure(keyId as number);
             }
         }
     }
@@ -65,10 +65,16 @@ async function performGeneration(flowName: string, generateOptions: any) {
 
 // This file uses an external, non-Genkit chat service, so it remains unchanged.
 export const chat = async (history: schemas.ChatMessage[]): Promise<schemas.ChatMessage> => {
-    return Promise.resolve({
-        role: 'model',
-        content: 'Fungsi chat asisten saat ini sedang menggunakan API eksternal dan stabil. Fitur AI lain telah dikembalikan ke Genkit.'
-    });
+  try {
+    const aiResponse = await import('@/services/ExternalAIService').then(module => module.chat(history));
+    return aiResponse;
+  } catch (error) {
+    console.error("Chat flow error:", error);
+    return {
+      role: 'model',
+      content: `Maaf, terjadi masalah saat menghubungi asisten. Error: ${(error as Error).message}`
+    };
+  }
 };
 
 
@@ -345,3 +351,5 @@ export const textToSpeech = async (input: schemas.TtsInput) => {
         return { error: (error as Error).message || 'An unknown error occurred during TTS generation.' };
     }
 };
+
+    

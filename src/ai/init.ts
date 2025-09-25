@@ -7,8 +7,10 @@ import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
 // Initialize a default AI instance.
-// The API key will be overridden in each specific flow that uses it.
+// The API key will be overridden in the performGeneration wrapper.
 export const ai = genkit({
   plugins: [googleAI()],
   enableTracing: false,
 });
+
+    

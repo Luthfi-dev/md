@@ -6,18 +6,23 @@ import appMetadata from '@/data/app-metadata.json';
 // so we cannot use `headers()` to determine the host.
 // We must rely on environment variables.
 const getBaseUrl = () => {
+  // 1. Priority: APP_URL from .env
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // 2. Fallback to Vercel deployment URL
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  // Fallback for local development, ensure APP_URL is set in .env
-  return process.env.APP_URL || 'http://localhost:3000'; 
+  // 3. Fallback for local development, ensure APP_URL is set in .env
+  return 'http://localhost:3000'; 
 }
 
 export default function manifest(): MetadataRoute.Manifest {
   const baseUrl = getBaseUrl();
-  const logoUrl192 = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-192x192.png`;
-  const logoUrl512 = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/android-chrome-512x512.png`;
-  const maskableIconUrl = appMetadata.logoUrl ? `${baseUrl}/api/images/${appMetadata.logoUrl}` : `${baseUrl}/icons/maskable_icon.png`;
+  const logoUrl192 = '/icons/android-chrome-192x192.png';
+  const logoUrl512 = '/icons/android-chrome-512x512.png';
+  const maskableIconUrl = '/icons/maskable_icon.png';
 
   return {
     name: appMetadata.name,

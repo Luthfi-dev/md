@@ -57,7 +57,6 @@ export const PWAInstallProvider = ({ children }: { children: ReactNode }) => {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     // New content is available and waiting to be activated.
-                    // You can show a notification to the user here.
                     console.log('New version is available. Please refresh.');
                     toast({
                       title: "Pembaruan Tersedia",

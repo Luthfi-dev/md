@@ -21,13 +21,13 @@ const ptSans = PT_Sans({
 
 // Helper to get the base URL
 function getBaseUrl(): string {
-  // 1. Priority: Vercel deployment URL
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  // 2. Fallback to custom APP_URL from .env
+  // 1. Priority: APP_URL from .env
   if (process.env.APP_URL) {
     return process.env.APP_URL;
+  }
+  // 2. Fallback to Vercel deployment URL
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
   }
   // 3. Fallback for local development from headers
   const headersList = headers();
@@ -85,9 +85,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     manifest: '/manifest.webmanifest',
     icons: {
-        icon: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/favicon.ico',
-        shortcut: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
-        apple: appMetadata.logoUrl ? `/api/images/${appMetadata.logoUrl}` : '/icons/apple-touch-icon.png',
+        icon: '/favicon.ico',
+        shortcut: '/icons/apple-touch-icon.png',
+        apple: '/icons/apple-touch-icon.png',
     },
     other: {
       'app-version': versionData.versionId,

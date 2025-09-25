@@ -17,7 +17,7 @@ import {
   getAiRecommendation,
   estimateProjectFeature,
   textToSpeech
-} from './flows';
+} from './flows/chat-flow';
 
 import { convertHtmlToWord as convertHtmlToWordFlow } from './flows/file-converter';
 import type { HtmlToWordInput, HtmlToWordOutput } from './schemas';

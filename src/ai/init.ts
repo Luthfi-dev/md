@@ -42,7 +42,7 @@ export async function performGeneration(flowName: string, options: any) {
                 enableTracing: false,
             });
 
-            // Correctly spread the options into the generate call
+            // Correctly spread the options into a new object for the generate call
             const result = await ai.generate({ ...options });
 
             if (!isEnv) {

@@ -2,10 +2,66 @@
 'use server';
 
 import { googleAI } from '@genkit-ai/googleai';
-import { genkit } from 'genkit';
+import { genkit, type GenkitError } from 'genkit';
 import * as schemas from '../schemas';
-import { performGeneration } from '../init';
+import { getNextKey, reportFailure, updateLastUsed, getEnvKeys } from '@/services/ApiKeyManager';
 import wav from 'wav';
+
+/**
+ * A robust wrapper for making Genkit API calls with key rotation and error handling.
+ * This will be used by each AI function in this file.
+ * @param flowName The name of the flow for logging.
+ * @param generateOptions The options to pass to `ai.generate()`.
+ * @returns The result from a successful `ai.generate` call.
+ * @throws An error if all keys fail.
+ */
+async function performGeneration(flowName: string, generateOptions: any) {
+    const dbKeys = await getNextKey(true) || [];
+    const envKeys = getEnvKeys();
+    const allAvailableKeys = [...dbKeys, ...envKeys];
+
+    if (allAvailableKeys.length === 0) {
+        throw new Error('Tidak ada kunci API yang aktif baik di database maupun di .env. Mohon konfigurasi kunci API.');
+    }
+
+    let lastError: any = null;
+
+    for (const apiKeyRecord of allAvailableKeys) {
+        const { id: keyId, key: apiKey, isEnv } = apiKeyRecord;
+        const keyIdentifier = isEnv ? `env key ending in ...${apiKey.slice(-4)}` : `DB Key ID ${keyId}`;
+        
+        console.log(`[${flowName}] Attempting generation with: ${keyIdentifier}`);
+        
+        try {
+            const ai = genkit({
+                plugins: [googleAI({ apiKey })],
+                enableTracing: false,
+            });
+
+            // Explicitly construct the generation object to ensure correctness
+            const result = await ai.generate(generateOptions);
+
+            if (!isEnv) {
+                await updateLastUsed(keyId as number);
+            }
+            console.log(`[${flowName}] Generation successful with ${keyIdentifier}.`);
+            return result;
+
+        } catch (error) {
+            lastError = error;
+            const errorMessage = (error as GenkitError)?.message || (error as Error)?.message || 'Unknown error';
+            console.warn(`[${flowName}] Generation FAILED with ${keyIdentifier}. Error:`, errorMessage);
+            
+            if (!isEnv) {
+                await reportFailure(keyId as number);
+            }
+        }
+    }
+
+    console.error(`[${flowName}] All API key attempts failed.`);
+    throw new Error(lastError?.message || 'Layanan AI sedang sibuk atau mengalami gangguan setelah mencoba semua kunci yang tersedia. Coba lagi nanti.');
+}
+
 
 // This file uses an external, non-Genkit chat service, so it remains unchanged.
 export const chat = async (history: schemas.ChatMessage[]): Promise<schemas.ChatMessage> => {

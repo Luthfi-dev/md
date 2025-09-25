@@ -45,7 +45,8 @@ export async function performGeneration(flowName: string, options: any) {
             });
 
             // Attempt the generation using the provided options directly
-            const result = await ai.generate(options);
+            // The spread operator ensures all properties of `options` are passed correctly.
+            const result = await ai.generate({ ...options });
 
             // If successful, update its usage timestamp (if it's a DB key) and return
             console.log(`[${flowName}] Generation successful with ${keyIdentifier}.`);

@@ -128,8 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
             console.warn('Silent refresh failed. User will be logged out.');
             onRefreshed(null);
-            // This is the critical change: Do NOT call logout() here directly.
-            // Let the auth check flow handle the redirection.
             setAccessToken(null);
             return null;
         } finally {
@@ -164,12 +162,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
              if (!currentToken) {
                 throw new Error('Sesi berakhir. Silakan login kembali.');
              }
-             const headers = new Headers(options.headers || {});
-             headers.set('Authorization', `Bearer ${currentToken}`);
-             if (!headers.has('Content-Type') && !(options.data instanceof FormData)) {
-                headers.set('Content-Type', 'application/json');
+             const headers: any = { ...options.headers };
+             headers['Authorization'] = `Bearer ${currentToken}`;
+
+             if (!headers['Content-Type'] && !(options.data instanceof FormData)) {
+                headers['Content-Type'] = 'application/json';
              }
-             return axios({ url, ...options, headers: Object.fromEntries(headers.entries()) });
+             return axios({ url, ...options, headers });
         };
 
         try {
@@ -183,7 +182,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         console.log("Token refreshed successfully. Retrying original request.");
                         return await makeRequest(newToken);
                     } else {
-                         // If refresh fails, logout the user.
                          await logout();
                          throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
                     }

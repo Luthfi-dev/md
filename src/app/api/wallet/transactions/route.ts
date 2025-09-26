@@ -15,26 +15,50 @@ const transactionSchema = z.object({
 });
 
 
-// GET all transactions for a user
+// GET all transactions for a user with pagination
 export async function GET(request: NextRequest) {
     const user = await getAuthFromRequest(request);
     if (!user) {
         return NextResponse.json({ success: false, message: 'Tidak terotentikasi' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const offset = (page - 1) * limit;
+
     let connection;
     try {
         connection = await db.getConnection();
+
+        // Query to get total count
+        const [totalRows]: [RowDataPacket[], any] = await connection.execute(
+            `SELECT COUNT(*) as total FROM transactions WHERE user_id = ?`,
+            [user.id]
+        );
+        const totalItems = totalRows[0].total;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        // Query to get paginated transactions
         const [transactions]: [RowDataPacket[], any] = await connection.execute(
             `SELECT t.id, t.amount, t.type, t.description, t.transaction_date, t.category_id, c.name as category_name, c.icon as category_icon
              FROM transactions t
              JOIN transaction_categories c ON t.category_id = c.id
              WHERE t.user_id = ?
-             ORDER BY t.transaction_date DESC, t.created_at DESC`,
-            [user.id]
+             ORDER BY t.transaction_date DESC, t.created_at DESC
+             LIMIT ? OFFSET ?`,
+            [user.id, limit, offset]
         );
         
-        return NextResponse.json({ success: true, transactions });
+        return NextResponse.json({ 
+            success: true, 
+            transactions,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                hasNextPage: page < totalPages,
+            }
+        });
     } catch (error) {
         console.error("GET TRANSACTIONS ERROR: ", error);
         return NextResponse.json({ success: false, message: 'Kesalahan server saat mengambil transaksi.' }, { status: 500 });
@@ -64,7 +88,7 @@ export async function POST(request: NextRequest) {
 
         connection = await db.getConnection();
         
-        // Verify category belongs to user or is a default category (user_id IS NULL)
+        // Verify category belongs to user
         const [categoryRows]: [RowDataPacket[], any] = await connection.execute(
             'SELECT id FROM transaction_categories WHERE id = ? AND (user_id = ? OR user_id IS NULL) AND type = ?',
             [categoryId, user.id, type]

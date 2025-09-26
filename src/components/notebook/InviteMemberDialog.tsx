@@ -29,11 +29,10 @@ export function InviteMemberDialog({ group, onMemberInvited }: InviteMemberDialo
     }
     setIsInviting(true);
     try {
-      const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/member`, {
+      const { data: result } = await fetchWithAuth(`/api/notebook/group/${group.uuid}/member`, {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        data: { email },
       });
-      const result = await res.json();
       if (!result.success) {
         throw new Error(result.message || 'Gagal mengundang anggota.');
       }

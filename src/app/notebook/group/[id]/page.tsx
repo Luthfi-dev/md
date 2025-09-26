@@ -209,12 +209,10 @@ export default function GroupNotebookPage() {
     if (!isAuthenticated || !id) return;
     setIsLoading(true);
     try {
-        const res = await fetchWithAuth(`/api/notebook/group/${id}`);
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.message || "Gagal mengambil data grup.");
+        const { data } = await fetchWithAuth(`/api/notebook/group/${id}`);
+        if (!data.success) {
+            throw new Error(data.message || "Gagal mengambil data grup.");
         }
-        const data = await res.json();
         setGroup(data.group);
     } catch (e) {
         console.error(e);
@@ -239,11 +237,11 @@ export default function GroupNotebookPage() {
     setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? updatedTask : t) } : null);
 
     try {
-        const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, {
+        const { data } = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, {
             method: 'PUT',
-            body: JSON.stringify({ completed: updatedTask.completed })
+            data: { completed: updatedTask.completed }
         });
-        if (!res.ok) throw new Error("Gagal memperbarui tugas");
+        if (!data.success) throw new Error("Gagal memperbarui tugas");
     } catch (error) {
         setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? task : t) } : null);
         toast({ variant: 'destructive', title: 'Gagal Memperbarui Tugas'});
@@ -262,11 +260,11 @@ export default function GroupNotebookPage() {
         setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? updatedTask : t) } : null);
 
         try {
-            const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, {
+            const { data } = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, {
                 method: 'PUT',
-                body: JSON.stringify({ items: updatedItems, completed: allItemsCompleted })
+                data: { items: updatedItems, completed: allItemsCompleted }
             });
-            if (!res.ok) throw new Error("Gagal memperbarui item checklist");
+            if (!data.success) throw new Error("Gagal memperbarui item checklist");
         } catch (error) {
             // Revert optimistic update
             setGroup(g => g ? { ...g, tasks: g.tasks.map(t => t.uuid === task.uuid ? task : t) } : null);
@@ -279,11 +277,10 @@ export default function GroupNotebookPage() {
     setGroup(g => g ? { ...g, tasks: [newTask, ...g.tasks] } : null);
 
     try {
-        const res = await fetchWithAuth(`/api/notebook/group/task`, {
+        const { data } = await fetchWithAuth(`/api/notebook/group/task`, {
             method: 'POST',
-            body: JSON.stringify({...newTask, groupUuid: group.uuid})
+            data: {...newTask, groupUuid: group.uuid}
         });
-        const data = await res.json();
         if (!data.success) throw new Error(data.message);
         toast({title: "Tugas Ditambahkan!"});
         fetchGroupDetails();
@@ -299,8 +296,8 @@ export default function GroupNotebookPage() {
     setGroup(g => g ? {...g, tasks: g.tasks.filter(t => t.uuid !== task.uuid)} : null);
     
     try {
-        const res = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error("Gagal menghapus tugas");
+        const { data } = await fetchWithAuth(`/api/notebook/group/${group.uuid}/task/${task.uuid}`, { method: 'DELETE' });
+        if (!data.success) throw new Error("Gagal menghapus tugas");
         toast({title: "Tugas Dihapus"});
     } catch (error) {
         setGroup(g => g ? { ...g, tasks: originalTasks } : null);

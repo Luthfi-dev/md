@@ -31,11 +31,11 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
         setIsCreating(true);
         try {
             const groupData = { uuid: uuidv4(), title: groupName, description: '' };
-            const res = await fetchWithAuth('/api/notebook/group', {
+            const { data: result } = await fetchWithAuth('/api/notebook/group', {
                 method: 'POST',
-                body: JSON.stringify(groupData),
+                data: groupData,
             });
-            const result = await res.json();
+            
             if (!result.success) {
                 throw new Error(result.message || 'Gagal membuat grup di server');
             }

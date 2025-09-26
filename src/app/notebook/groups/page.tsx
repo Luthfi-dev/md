@@ -29,9 +29,8 @@ export default function GroupNotebookListPage() {
     if (!isAuthenticated) return;
     setIsLoading(true);
     try {
-      const res = await fetchWithAuth('/api/notebook/group');
-      const data = await res.json();
-      if (!res.ok) {
+      const { data } = await fetchWithAuth('/api/notebook/group');
+      if (!data.success) {
         throw new Error(data.message || "Gagal mengambil data grup.");
       }
       setAllGroups(data.groups || []);
@@ -67,10 +66,9 @@ export default function GroupNotebookListPage() {
     setAllGroups(prev => prev.filter(g => g.uuid !== deletingGroup.uuid));
 
     try {
-        const res = await fetchWithAuth(`/api/notebook/group/${deletingGroup.uuid}`, { method: 'DELETE' });
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.message || 'Gagal menghapus grup di server');
+        const { data } = await fetchWithAuth(`/api/notebook/group/${deletingGroup.uuid}`, { method: 'DELETE' });
+        if (!data.success) {
+            throw new Error(data.message || 'Gagal menghapus grup di server');
         }
         toast({ title: 'Grup Dihapus', description: `Grup "${deletingGroup.title}" telah dihapus.`});
     } catch (error) {
@@ -178,7 +176,7 @@ export default function GroupNotebookListPage() {
             <Notebook className="mx-auto h-12 w-12 mb-4" />
             <h3 className="font-semibold">{searchTerm ? 'Grup Tidak Ditemukan' : 'Belum Ada Grup'}</h3>
             <p className="text-sm">
-              {searchTerm ? `Tidak ada grup yang cocok dengan "${searchTerm}".` : "Klik 'Buat Grup Baru' untuk memulai kolaborasi."}
+              {searchTerm ? `Tidak ada grup yang cocok dengan "${searchTerm}".` : "Klik 'Buat Grup' untuk memulai kolaborasi."}
             </p>
           </div>
         )}

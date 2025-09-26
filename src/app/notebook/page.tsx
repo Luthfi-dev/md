@@ -36,9 +36,8 @@ export default function NotebookListPage() {
     let cloudNotes: Note[] = [];
     try {
       if (isAuthenticated && user) {
-        const res = await fetchWithAuth('/api/notebook/personal');
-        if (res.ok) {
-          const data = await res.json();
+        const { data } = await fetchWithAuth('/api/notebook/personal');
+        if (data.success) {
           cloudNotes = data.notes?.map((n: Note) => ({ ...n, isSynced: true, lastModified: n.lastModified || n.createdAt })) || [];
         }
       }
@@ -131,8 +130,8 @@ export default function NotebookListPage() {
 
       // If it was a synced note, also delete from server
       if (note.isSynced && isAuthenticated) {
-        const res = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error("Gagal menghapus catatan di server");
+        const { data } = await fetchWithAuth(`/api/notebook/personal/${note.uuid}`, { method: 'DELETE' });
+        if (!data.success) throw new Error("Gagal menghapus catatan di server");
       }
       
       toast({title: "Catatan Dihapus"});
@@ -150,13 +149,12 @@ export default function NotebookListPage() {
     }
     setSyncingNoteId(note.uuid);
     try {
-      const res = await fetchWithAuth('/api/notebook/personal/sync', {
+      const { data } = await fetchWithAuth('/api/notebook/personal/sync', {
         method: 'POST',
-        body: JSON.stringify({ notes: [note] })
+        data: { notes: [note] }
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Gagal sinkronisasi');
+      if (!data.success) {
+        throw new Error(data.message || 'Gagal sinkronisasi');
       }
       
       const updatedNote = { ...note, isSynced: true };
@@ -305,7 +303,7 @@ export default function NotebookListPage() {
             <Notebook className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">{searchTerm ? 'Catatan Tidak Ditemukan' : 'Belum Ada Catatan'}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-                {searchTerm ? `Tidak ada catatan pribadi yang cocok dengan "${searchTerm}".` : 'Klik "Buat Catatan Baru" untuk memulai.'}
+                {searchTerm ? `Tidak ada catatan pribadi yang cocok dengan "${searchTerm}".` : 'Klik "Buat Baru" untuk memulai catatan pertama Anda.'}
             </p>
             </div>
         )}

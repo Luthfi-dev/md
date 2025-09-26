@@ -126,9 +126,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
              throw new Error(data.message || 'Refresh token invalid or expired');
         } catch (error) {
-            console.warn('Silent refresh failed. User will be logged out.');
+            console.warn('Silent refresh failed.');
             onRefreshed(null);
-            setAccessToken(null);
+            setAccessToken(null); // This will set isAuthenticated to false
             return null;
         } finally {
              isRefreshing = false;
@@ -172,14 +172,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         try {
+            // Check if token is expired before making the request
+            if (!token || isTokenExpired(token)) {
+                token = await silentRefresh();
+            }
             return await makeRequest(token);
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 401) {
-                console.log("Access token expired or invalid. Attempting silent refresh...");
+                console.log("Access token expired or invalid. Retrying with refresh...");
                 try {
                     const newToken = await silentRefresh();
                     if (newToken) {
-                        console.log("Token refreshed successfully. Retrying original request.");
                         return await makeRequest(newToken);
                     } else {
                          await logout();

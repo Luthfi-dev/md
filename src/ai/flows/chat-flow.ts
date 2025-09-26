@@ -326,7 +326,7 @@ async function toWav(pcmData: Buffer, channels = 1, rate = 24000, sampleWidth = 
 export const textToSpeech = async (input: schemas.TtsInput) => {
     try {
         const result = await performGeneration('textToSpeech', {
-            model: 'googleai/gemini-2.5-pro-preview-tts',
+            model: 'googleai/gemini-1.5-flash-tts',
             config: {
                 responseModalities: ['AUDIO'],
                 speechConfig: {

@@ -135,13 +135,11 @@ export function useDailyReward() {
     
     if(isAuthenticated && user) {
         try {
-            const response = await fetchWithAuth('/api/user/update', {
+            const { data: result } = await fetchWithAuth('/api/user/update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ points: newPoints })
+                data: { points: newPoints }
             });
 
-            const result = await response.json();
             if(!result.success){
                 throw new Error(result.message || 'Server update failed');
             }

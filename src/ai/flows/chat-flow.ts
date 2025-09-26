@@ -3,7 +3,7 @@
 
 import { googleAI } from '@genkit-ai/googleai';
 import { genkit, type GenkitError } from 'genkit';
-import * * as schemas from '../schemas';
+import * as schemas from '../schemas';
 import * as ApiKeyManager from '@/services/ApiKeyManager';
 import wav from 'wav';
 
@@ -326,7 +326,7 @@ async function toWav(pcmData: Buffer, channels = 1, rate = 24000, sampleWidth = 
 export const textToSpeech = async (input: schemas.TtsInput) => {
     try {
         const result = await performGeneration('textToSpeech', {
-            model: 'googleai/gemini-1.5-flash-tts',
+            model: 'googleai/gemini-2.5-pro-preview-tts',
             config: {
                 responseModalities: ['AUDIO'],
                 speechConfig: {

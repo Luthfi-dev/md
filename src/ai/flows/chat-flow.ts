@@ -3,7 +3,7 @@
 
 import { googleAI } from '@genkit-ai/googleai';
 import { genkit, type GenkitError } from 'genkit';
-import * as schemas from '../schemas';
+import * * as schemas from '../schemas';
 import * as ApiKeyManager from '@/services/ApiKeyManager';
 import wav from 'wav';
 

@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useRef, useEffect, ChangeEvent } from 'react';
 import { Button } from "@/components/ui/button";
@@ -16,12 +17,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Link from 'next/link';
 
 const voices = [
-    { name: 'Algenib', label: 'Wanita 1 (Tenang)' },
-    { name: 'Antares', label: 'Pria 1 (Ramah)' },
-    { name: 'Spica', label: 'Wanita 2 (Ceria)' },
-    { name: 'Achernar', label: 'Pria 2 (Profesional)' },
-    { name: 'Arcturus', label: 'Pria 3 (Dalam)' },
-    { name: 'Regulus', label: 'Wanita 3 (Bersemangat)' },
+    { name: 'Aura', label: 'Wanita 1 (Tenang & Jelas)' },
+    { name: 'Zephyr', label: 'Wanita 2 (Ramah & Hangat)' },
+    { name: 'Luna', label: 'Wanita 3 (Lembut & Ceria)' },
+    { name: 'Puck', label: 'Pria 1 (Profesional & Tegas)' },
+    { name: 'Atlas', label: 'Pria 2 (Dalam & Berwibawa)' },
+    { name: 'Orion', label: 'Pria 3 (Bersemangat & Muda)' },
 ];
 
 const GUEST_CHAR_LIMIT = 50;
@@ -33,7 +34,7 @@ export default function TextToSpeechPage() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [text, setText] = useState('');
-    const [voice, setVoice] = useState('Algenib');
+    const [voice, setVoice] = useState('Aura');
     const [audioSrc, setAudioSrc] = useState<string | null>(null);
     const [characterCount, setCharacterCount] = useState(0);
     const [isLoginPromptOpen, setIsLoginPromptOpen] = useState(false);

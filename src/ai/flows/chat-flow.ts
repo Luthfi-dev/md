@@ -81,7 +81,7 @@ export const chat = async (history: schemas.ChatMessage[]): Promise<schemas.Chat
 export const generateArticleOutline = async (input: schemas.ArticleOutlineInput) => {
     try {
         const result = await performGeneration('generateArticleOutline', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Buat 3 opsi kerangka artikel (outlines) yang komprehensif berdasarkan deskripsi berikut: "${input.description}". Setiap kerangka harus memiliki judul yang menarik dan poin-poin utama yang jelas.`,
             output: {
                 schema: schemas.ArticleOutlineOutputSchema,
@@ -100,7 +100,7 @@ export const generateArticleOutline = async (input: schemas.ArticleOutlineInput)
 export const generateArticleFromOutline = async (input: schemas.ArticleFromOutlineInput) => {
     try {
         const result = await performGeneration('generateArticleFromOutline', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Tulis artikel lengkap dalam format HTML berdasarkan kerangka berikut. Target jumlah kata sekitar ${input.wordCount} kata.\n\nJudul: ${input.selectedOutline.title}\nPoin-poin:\n- ${input.selectedOutline.points.join('\n- ')}`,
             output: {
                 schema: schemas.ArticleFromOutlineOutputSchema
@@ -119,7 +119,7 @@ export const generateArticleFromOutline = async (input: schemas.ArticleFromOutli
 export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
     try {
         const result = await performGeneration('lengthenArticle', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Perpanjang dan elaborasi konten artikel HTML berikut. Tambahkan lebih banyak detail, contoh, atau penjelasan mendalam untuk membuatnya lebih komprehensif. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.originalContent}`,
             output: {
                 schema: schemas.LengthenArticleOutputSchema,
@@ -138,7 +138,7 @@ export const lengthenArticle = async (input: schemas.LengthenArticleInput) => {
 export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
     try {
         const result = await performGeneration('shortenArticle', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Ringkas konten artikel HTML berikut menjadi lebih padat dan to-the-point. Hilangkan kalimat yang berulang atau tidak perlu, tetapi pertahankan ide utamanya. Pastikan format HTML tetap terjaga.\n\nKonten Asli:\n${input.content}`,
             output: {
                 schema: schemas.ShortenArticleOutputSchema,
@@ -157,7 +157,7 @@ export const shortenArticle = async (input: schemas.ShortenArticleInput) => {
 export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) => {
     try {
         const result = await performGeneration('generateHeadlines', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Buat 5 judul alternatif yang menarik, informatif, dan SEO-friendly untuk artikel berikut:\n\n${input.content}`,
             output: {
                 schema: schemas.GenerateHeadlinesOutputSchema
@@ -176,7 +176,7 @@ export const generateHeadlines = async (input: schemas.GenerateHeadlinesInput) =
 export const generateSeoMeta = async (input: schemas.SeoMetaInput) => {
     try {
         const result = await performGeneration('generateSeoMeta', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Buat meta title (sekitar 60 karakter) dan meta description (sekitar 155-160 karakter) yang SEO-friendly untuk artikel berikut:\n\n${input.articleContent}`,
             output: {
                 schema: schemas.SeoMetaOutputSchema
@@ -212,7 +212,7 @@ export const generateCreativeContent = async (input: schemas.CreativeContentInpu
         }
         
         const result = await performGeneration('generateCreativeContent', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: prompt,
             output: { schema: schemas.CreativeContentOutputSchema },
         });
@@ -231,7 +231,7 @@ export const generateCreativeContent = async (input: schemas.CreativeContentInpu
 export const translateContent = async (input: schemas.TranslateContentInput) => {
     try {
         const result = await performGeneration('translateContent', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Terjemahkan konten HTML berikut ke dalam bahasa ${input.targetLanguage}. Pertahankan semua tag HTML.\n\nKonten:\n${input.content}`,
             output: { schema: schemas.TranslateContentOutputSchema },
         });
@@ -248,7 +248,7 @@ export const translateContent = async (input: schemas.TranslateContentInput) => 
 export const generateVideoScript = async (input: schemas.GenerateVideoScriptInput) => {
     try {
         const result = await performGeneration('generateVideoScript', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Ubah konten berikut menjadi naskah video yang terstruktur. Gunakan heading (<h1>, <h2>) untuk adegan dan paragraf untuk narasi/dialog.\n\nKonten:\n${input.content}`,
             output: { schema: schemas.GenerateVideoScriptOutputSchema },
         });
@@ -273,7 +273,7 @@ export const getAiRecommendation = async (input: schemas.AiRecommendationInput) 
         ];
         
         const options = {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: promptParts,
             output: { schema: schemas.AiRecommendationOutputSchema },
         };
@@ -293,7 +293,7 @@ export const getAiRecommendation = async (input: schemas.AiRecommendationInput) 
 export const estimateProjectFeature = async (input: schemas.ProjectFeatureInput) => {
     try {
         const result = await performGeneration('estimateProjectFeature', {
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-2.0-flash',
             prompt: `Berikan estimasi harga (minimum dan maksimum) dalam Rupiah (IDR) untuk fitur proyek berikut. Berikan juga justifikasi singkat untuk rentang harga tersebut.\n\nNama Proyek: ${input.projectName}\nDeskripsi Fitur: ${input.featureDescription}`,
             output: { schema: schemas.ProjectFeatureOutputSchema },
         });
